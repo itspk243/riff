@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <header>
+    <div class="brand">Riff</div>
+    <div class="quota" id="quota"></div>
+  </header>
+
+  <!-- Sign-in: hidden when authed -->
+  <section id="auth-section" class="hidden">
+    <div class="auth-box">
+      <div class="small muted" style="margin-bottom: 6px;">Sign in to Riff</div>
+      <input id="token-input" type="password" placeholder="Paste your token from riff.app/dashboard" />
+      <button id="auth-submit">Save token</button>
+      <div class="small muted" style="margin-top: 6px;">Don't have an account? <a id="signup-link" href="#">Sign up</a></div>
+    </div>
+  </section>
+
+  <!-- Settings link when authed -->
+  <section id="auth-status" class="hidden">
+    <div class="small muted auth-status-row">
+      <span id="auth-email"></span>
+      <a id="signout-link" href="#">Sign out</a>
+    </div>
+  </section>
+
+  <section id="profile-state">
+    <div class="hint">Open a LinkedIn profile to draft a message.</div>
+  </section>
+
+  <section id="profile-card" class="hidden">
+    <div class="muted small" id="surface-label">Reading profile</div>
+    <div class="name" id="p-name"></div>
+    <div class="headline" id="p-headline"></div>
+    <div class="role" id="p-role"></div>
+  </section>
+
+  <section class="form">
+    <label>Purpose
+      <select id="purpose">
+        <option value="hire" selected>Hire them</option>
+        <option value="refer">Refer to a role</option>
+        <option value="network">Just network · don't pitch</option>
+        <option value="ask">Ask their take on something</option>
+        <option value="advisor">Advisor / partnership ask</option>
+      </select>
+    </label>
+
+    <label>Pitch template <span id="template-hint" class="small muted"></span>
+      <select id="template">
+        <option value="">Custom — write your own</option>
+      </select>
+    </label>
+
+    <label>Tone
+      <select id="tone">
+        <option value="warm">Warm</option>
+        <option value="direct" selected>Direct</option>
+        <option value="cheeky">Cheeky</option>
+      </select>
+    </label>
+
+    <label>Length
+      <select id="length">
+        <option value="short">Short (~50 words)</option>
+        <option value="medium" selected>Medium (~80 words)</option>
+      </select>
+    </label>
+
+    <label>Your pitch (1-2 sentences)
+      <textarea id="pitch" placeholder="e.g. Hiring a Staff Engineer for payments infra. $250K + equity, fully remote, Series B."></textarea>
+    </label>
+
+    <label>Optional: paste a recent post URL or text
+      <textarea id="post" placeholder="(optional — adds deeper personalization)"></textarea>
+    </label>
+
+    <button id="generate" disabled>Generate</button>
+  </section>
+
+  <section id="results" class="hidden"></section>
+
+  <!-- Stats panel (collapses when no data) -->
+  <section id="stats" class="hidden">
+    <div class="small muted" style="margin-bottom: 6px;">Your reply rates</div>
+    <div id="stats-body" class="stats-grid"></div>
+    <a href="#" id="stats-clear" class="small muted">Clear stats</a>
+  </section>
+
+  <footer>
+    <span class="small muted">Drafting assistant. No auto-send. Always edit before sending.</span>
+  </footer>
+
+  <script src="popup.js"></script>
+</body>
+</html>

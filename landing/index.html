@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="A Chrome extension that drafts personalized LinkedIn outreach grounded in the candidate's actual recent activity.">
+<meta property="og:title" content="Riff">
+<meta property="og:description" content="A Chrome extension that drafts personalized LinkedIn outreach grounded in the candidate's actual recent activity.">
+<title>Riff</title>
+<style>
+  :root {
+    --bg: #faf9f6;
+    --surface: #ffffff;
+    --ink: #111110;
+    --ink-2: #2a2a28;
+    --muted: #6b6a65;
+    --line: #e7e4dc;
+    --line-2: #d6d2c7;
+    --warm: #f3f0e8;
+    --accent: #b14a1a;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    font-size: 16px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    font-feature-settings: "ss01", "cv11";
+  }
+  ::selection { background: #1110100f; }
+  a { color: inherit; text-decoration: none; }
+
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 28px; }
+
+  /* nav */
+  nav {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 26px 0;
+  }
+  .logo {
+    display: inline-flex; align-items: center; gap: 9px;
+    font-weight: 600; font-size: 18px; letter-spacing: -0.02em;
+  }
+  .logo-mark {
+    display: inline-block; width: 22px; height: 22px;
+    background: var(--ink); border-radius: 5px;
+    position: relative;
+  }
+  .logo-mark::after {
+    content: ""; position: absolute; top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 8px; height: 8px; background: var(--bg); border-radius: 1.5px;
+  }
+  .nav-links { display: flex; gap: 32px; align-items: center; font-size: 14px; }
+  .nav-links a { color: var(--muted); }
+  .nav-links a:hover { color: var(--ink); }
+
+  /* buttons */
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    gap: 6px;
+    padding: 11px 18px;
+    background: var(--ink); color: #fff;
+    border-radius: 8px;
+    font-weight: 500; font-size: 14px;
+    border: 1px solid var(--ink);
+    cursor: pointer;
+    transition: transform 0.08s ease, background 0.15s ease;
+  }
+  .btn:hover { background: #1f1f1d; }
+  .btn:active { transform: translateY(1px); }
+  .btn-ghost {
+    background: transparent; color: var(--ink); border-color: var(--line-2);
+  }
+  .btn-ghost:hover { background: var(--warm); border-color: var(--ink); }
+  .btn-lg { padding: 13px 22px; font-size: 14.5px; }
+  .btn .arrow {
+    display: inline-block; transform: translateX(0); transition: transform 0.15s ease;
+  }
+  .btn:hover .arrow { transform: translateX(2px); }
+
+  /* hero */
+  .hero { padding: 80px 0 32px; }
+  .eyebrow {
+    display: inline-block;
+    font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--muted); margin-bottom: 28px; font-weight: 500;
+  }
+  .eyebrow::before {
+    content: "·"; margin-right: 10px; color: var(--accent);
+  }
+  .hero h1 {
+    font-size: 62px; line-height: 1.02;
+    letter-spacing: -0.04em;
+    font-weight: 600;
+    max-width: 760px;
+    margin: 0 0 24px;
+  }
+  .hero .lede {
+    font-size: 19px; max-width: 580px; color: var(--muted);
+    margin: 0 0 32px; line-height: 1.5;
+  }
+  .hero-cta { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .hero-meta {
+    margin-top: 20px;
+    font-size: 13px; color: var(--muted);
+  }
+  .hero-meta-dot {
+    display: inline-block; width: 5px; height: 5px;
+    background: var(--accent); border-radius: 50%;
+    vertical-align: middle; margin: 0 8px 2px;
+  }
+
+  /* product window */
+  .window {
+    margin: 56px auto 0;
+    max-width: 920px;
+    background: var(--surface);
+    border: 1px solid var(--line-2);
+    border-radius: 12px;
+    box-shadow: 0 30px 80px -30px rgba(20, 18, 12, 0.14), 0 8px 20px -8px rgba(20, 18, 12, 0.06);
+    overflow: hidden;
+  }
+  .window-chrome {
+    display: flex; align-items: center; gap: 8px;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--line);
+    background: linear-gradient(180deg, #fafaf7 0%, #f5f3ed 100%);
+  }
+  .window-dot {
+    display: inline-block; width: 11px; height: 11px; border-radius: 50%;
+  }
+  .window-dot.r { background: #ed6a5e; }
+  .window-dot.y { background: #f5bf4f; }
+  .window-dot.g { background: #62c454; }
+  .window-url {
+    margin-left: 14px;
+    font-size: 12px; color: var(--muted);
+    background: var(--bg); border: 1px solid var(--line);
+    padding: 4px 12px; border-radius: 5px;
+    flex-shrink: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    flex-grow: 1; max-width: 360px;
+  }
+  .window-url::before {
+    content: "🔒  "; opacity: 0.4; font-size: 10px;
+  }
+
+  .window-body { display: grid; grid-template-columns: 1fr 1fr; }
+  @media (max-width: 760px) { .window-body { grid-template-columns: 1fr; } }
+
+  .window-left {
+    padding: 22px 24px;
+    border-right: 1px solid var(--line);
+    background: var(--bg);
+  }
+  @media (max-width: 760px) { .window-left { border-right: none; border-bottom: 1px solid var(--line); } }
+
+  .window-right { padding: 22px 24px; }
+
+  .window-section-label {
+    font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.1em;
+    color: var(--muted); font-weight: 600; margin-bottom: 14px;
+  }
+
+  .field { margin-bottom: 14px; }
+  .field-label {
+    font-size: 11px; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 0.06em;
+    margin-bottom: 4px; font-weight: 500;
+  }
+  .field-val {
+    font-size: 13.5px; color: var(--ink-2); line-height: 1.5;
+  }
+  .field-val .pill {
+    display: inline-block;
+    background: var(--surface); border: 1px solid var(--line);
+    padding: 2px 10px; border-radius: 4px;
+    font-size: 12px; color: var(--ink-2);
+    margin-right: 4px;
+  }
+
+  .draft-card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 16px 18px;
+  }
+  .draft-tag {
+    font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em;
+    color: var(--muted); font-weight: 600; margin-bottom: 10px;
+  }
+  .draft-text {
+    font-size: 14px; line-height: 1.6; color: var(--ink-2);
+    white-space: pre-wrap;
+  }
+  .draft-text strong { font-weight: 500; color: var(--ink); }
+
+  /* sections */
+  section { padding: 88px 0; }
+  section h2 {
+    font-size: 38px; line-height: 1.1; letter-spacing: -0.03em;
+    font-weight: 600; margin: 0 0 16px; max-width: 680px;
+  }
+  section .sub {
+    font-size: 17px; color: var(--muted); max-width: 580px; margin: 0 0 48px;
+    line-height: 1.5;
+  }
+
+  /* steps with custom marks */
+  .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 36px; }
+  @media (max-width: 720px) { .steps { grid-template-columns: 1fr; gap: 28px; } }
+  .step h3 {
+    margin: 0 0 8px; font-size: 17px; font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+  .step p { margin: 0; color: var(--muted); font-size: 14.5px; line-height: 1.6; }
+  .step-mark {
+    width: 28px; height: 28px; margin-bottom: 18px;
+    color: var(--ink);
+  }
+
+  /* principles */
+  .principles {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 0;
+    border-top: 1px solid var(--line);
+    border-left: 1px solid var(--line);
+  }
+  @media (max-width: 720px) { .principles { grid-template-columns: 1fr; } }
+  .principle {
+    padding: 32px;
+    border-right: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+    background: var(--surface);
+  }
+  .principle h3 {
+    margin: 0 0 8px; font-size: 16.5px; font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+  .principle p { margin: 0; color: var(--muted); font-size: 14.5px; line-height: 1.6; }
+  .principle-mark {
+    width: 22px; height: 22px; margin-bottom: 16px; color: var(--ink);
+  }
+
+  /* pricing */
+  .pricing {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;
+  }
+  @media (max-width: 720px) { .pricing { grid-template-columns: 1fr; } }
+  .price-card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 28px;
+  }
+  .price-card.featured { border-color: var(--ink); }
+  .price-name {
+    font-size: 13px; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600;
+    margin-bottom: 6px;
+  }
+  .price-num {
+    font-size: 32px; font-weight: 600; letter-spacing: -0.02em;
+    line-height: 1;
+  }
+  .price-num small {
+    font-size: 14px; font-weight: 400; color: var(--muted);
+    margin-left: 2px;
+  }
+  .price-feats { list-style: none; padding: 0; margin: 18px 0 22px; }
+  .price-feats li {
+    padding: 4px 0; font-size: 14px; color: var(--ink-2);
+    display: flex; align-items: flex-start; gap: 8px;
+    line-height: 1.4;
+  }
+  .price-check {
+    flex-shrink: 0; margin-top: 4px;
+    width: 12px; height: 12px; color: var(--muted);
+  }
+
+  /* faq */
+  .faq { max-width: 680px; }
+  .faq details {
+    border-bottom: 1px solid var(--line);
+    padding: 18px 0;
+    cursor: pointer;
+  }
+  .faq summary {
+    font-weight: 500; font-size: 15.5px;
+    list-style: none; outline: none;
+    display: flex; justify-content: space-between; align-items: center;
+    letter-spacing: -0.005em;
+  }
+  .faq summary::-webkit-details-marker { display: none; }
+  .faq summary::after {
+    content: ""; width: 14px; height: 14px;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 14' fill='none' stroke='%236b6a65' stroke-width='1.5' stroke-linecap='round'><line x1='3' y1='7' x2='11' y2='7'/><line x1='7' y1='3' x2='7' y2='11'/></svg>");
+    background-size: contain; background-repeat: no-repeat; background-position: center;
+    flex-shrink: 0; margin-left: 16px;
+    transition: transform 0.2s ease;
+  }
+  .faq details[open] summary::after {
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 14' fill='none' stroke='%236b6a65' stroke-width='1.5' stroke-linecap='round'><line x1='3' y1='7' x2='11' y2='7'/></svg>");
+  }
+  .faq details p {
+    margin: 14px 0 0;
+    color: var(--muted); font-size: 14.5px; line-height: 1.7;
+    padding-right: 36px;
+  }
+
+  footer {
+    padding: 32px 0 56px;
+    border-top: 1px solid var(--line);
+    color: var(--muted); font-size: 13px;
+  }
+  footer .row {
+    display: flex; justify-content: space-between; flex-wrap: wrap; gap: 16px;
+    align-items: center;
+  }
+  footer .links { display: flex; gap: 28px; }
+  footer a:hover { color: var(--ink); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <nav>
+      <a href="#" class="logo">
+        <span class="logo-mark"></span>Riff
+      </a>
+      <div class="nav-links">
+        <a href="#how">How it works</a>
+        <a href="#pricing">Pricing</a>
+        <a href="#faq">FAQ</a>
+        <a href="/signup" class="btn btn-ghost" style="padding: 8px 14px;">Sign in</a>
+      </div>
+    </nav>
+  </div>
+</header>
+
+<section class="hero">
+  <div class="wrap">
+    <div class="eyebrow">For recruiters who write the messages themselves</div>
+    <h1>Outreach that reads like you actually paid attention.</h1>
+    <p class="lede">A Chrome extension that drafts personalized LinkedIn messages grounded in what the candidate is actually working on. Three variants per profile, ready in fifteen seconds.</p>
+    <div class="hero-cta">
+      <a href="/signup" class="btn btn-lg">Try it free <span class="arrow">→</span></a>
+      <a href="#how" class="btn btn-ghost btn-lg">How it works</a>
+    </div>
+    <div class="hero-meta">
+      No card<span class="hero-meta-dot"></span>Five drafts a week, free<span class="hero-meta-dot"></span>30 seconds to install
+    </div>
+
+    <div class="window">
+      <div class="window-chrome">
+        <span class="window-dot r"></span>
+        <span class="window-dot y"></span>
+        <span class="window-dot g"></span>
+        <div class="window-url">linkedin.com/in/alex-chen — Riff popup</div>
+      </div>
+      <div class="window-body">
+        <div class="window-left">
+          <div class="window-section-label">What Riff sees</div>
+          <div class="field">
+            <div class="field-label">Profile (auto-detected)</div>
+            <div class="field-val">Alex Chen<br><span style="color: var(--muted); font-size: 13px;">Staff Engineer · Distributed Systems · Currently keeping FinTech APIs from falling over</span></div>
+          </div>
+          <div class="field">
+            <div class="field-label">Recent post (pasted)</div>
+            <div class="field-val" style="font-size: 13px; font-style: italic;">"Most teams overspend on K8s reserved capacity because nobody owns the cost line item."</div>
+          </div>
+          <div class="field">
+            <div class="field-label">Your pitch</div>
+            <div class="field-val" style="font-size: 13px;">Hiring a Staff Engineer for our payments infra team. Rebuilding cross-region replay. Series B, remote, $250–300K + equity.</div>
+          </div>
+          <div class="field" style="margin-bottom: 0;">
+            <div class="field-label">Tone &amp; length</div>
+            <div class="field-val">
+              <span class="pill">Direct</span>
+              <span class="pill">Medium</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="window-right">
+          <div class="window-section-label">Generated draft — cold opener</div>
+          <div class="draft-card">
+            <div class="draft-tag">Cold opener</div>
+            <div class="draft-text">Alex — your post this week on K8s reserved capacity is the exact fight we're picking at Loop. <strong>We're rebuilding cross-region replay for our payments infra and "who owns the cost line item" is the question that keeps stalling the design review.</strong>
+
+Worth a 20-min trade of notes this week, even if just to compare scars?</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="how">
+  <div class="wrap">
+    <h2>From a candidate's profile to a sequence ready to send.</h2>
+    <p class="sub">No imports, no CRM, no API keys. Three steps in fifteen seconds.</p>
+
+    <div class="steps">
+      <div class="step">
+        <svg class="step-mark" viewBox="0 0 28 28" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="5" width="22" height="18" rx="2"/>
+          <line x1="3" y1="10" x2="25" y2="10"/>
+          <circle cx="6.5" cy="7.5" r="0.6" fill="currentColor"/>
+          <circle cx="9" cy="7.5" r="0.6" fill="currentColor"/>
+          <circle cx="11.5" cy="7.5" r="0.6" fill="currentColor"/>
+        </svg>
+        <h3>Open a profile</h3>
+        <p>Works on linkedin.com, Sales Navigator, and LinkedIn Recruiter. Click the Riff icon. The profile is auto-detected.</p>
+      </div>
+
+      <div class="step">
+        <svg class="step-mark" viewBox="0 0 28 28" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M5 14h12M5 9h18M5 19h8"/>
+          <circle cx="22" cy="19" r="3"/>
+        </svg>
+        <h3>Write one sentence</h3>
+        <p>Describe what you're hiring for. Pick a tone — warm, direct, or cheeky. Optionally paste a recent post they wrote.</p>
+      </div>
+
+      <div class="step">
+        <svg class="step-mark" viewBox="0 0 28 28" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="4" y="4" width="14" height="18" rx="2"/>
+          <rect x="10" y="8" width="14" height="18" rx="2" fill="var(--bg)"/>
+          <path d="M14 14h6M14 18h4" stroke="currentColor"/>
+        </svg>
+        <h3>Three drafts, your call</h3>
+        <p>Cold opener, follow-up, breakup. Edit, copy, send manually. Mark replies as they come in to track which tones are working.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="why" style="background: var(--warm); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);">
+  <div class="wrap">
+    <h2>What makes the drafts different.</h2>
+    <p class="sub">Four things, baked into the prompt that runs every generation.</p>
+
+    <div class="principles">
+      <div class="principle">
+        <svg class="principle-mark" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 6c4-3 12-3 16 0v10c-4-3-12-3-16 0V6zM11 5v12"/>
+        </svg>
+        <h3>It reads what they wrote</h3>
+        <p>Headline, current role, About — pulled from the profile in front of you. A pasted recent post lifts output more than any other input. The model has substance to reference, not just job titles.</p>
+      </div>
+
+      <div class="principle">
+        <svg class="principle-mark" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"/>
+          <line x1="5" y1="5" x2="17" y2="17"/>
+        </svg>
+        <h3>A blacklist of dead phrases</h3>
+        <p>"I came across your", "great fit", "passion for", "scaling challenges" — the corporate template language a model is otherwise prone to. Banned at the prompt layer, sanitized in the output.</p>
+      </div>
+
+      <div class="principle">
+        <svg class="principle-mark" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 9c0-2 1-4 4-4h6c4 0 4 4 4 4v3c0 2-1 4-4 4H8l-4 3v-3c0-1-.001-2-.001-3-.001-1 0-2 0-4z"/>
+          <circle cx="9" cy="11" r="0.5" fill="currentColor"/>
+          <circle cx="11" cy="11" r="0.5" fill="currentColor"/>
+          <circle cx="13" cy="11" r="0.5" fill="currentColor"/>
+        </svg>
+        <h3>Conversation-starter framing</h3>
+        <p>One specific observation. One concrete reason it might matter to them. One question that isn't a yes/no trap. The opener doesn't pitch — it starts a conversation that earns the pitch.</p>
+      </div>
+
+      <div class="principle">
+        <svg class="principle-mark" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M11 3l7 3v5c0 5-3 8-7 8s-7-3-7-8V6l7-3z"/>
+          <path d="M8 11l2 2 4-4"/>
+        </svg>
+        <h3>No automation, ever</h3>
+        <p>Riff reads what's on screen and produces text. It never types into LinkedIn, never clicks send, never crawls in the background. You manually copy and send. That's the whole product.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="pricing">
+  <div class="wrap">
+    <h2>Pricing.</h2>
+    <p class="sub">Free covers a real test. Pro covers a real practice.</p>
+
+    <div class="pricing">
+      <div class="price-card">
+        <div class="price-name">Free</div>
+        <div class="price-num">$0</div>
+        <ul class="price-feats">
+          <li><svg class="price-check" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,6 5,9 10,3"/></svg>Five drafts a week</li>
+          <li><svg class="price-check" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,6 5,9 10,3"/></svg>One variant per draft</li>
+          <li><svg class="price-check" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,6 5,9 10,3"/></svg>All tones</li>
+          <li><svg class="price-check" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,6 5,9 10,3"/></svg>No card required</li>
+        </ul>
+        <a href="/signup" class="btn btn-ghost" style="width: 100%;">Start</a>
+      </div>
+
+      <div class="price-card featured">
+        <div class="price-name">Pro</div>
+        <div class="price-num">$39<small>/month</small></div>
+        <ul class="price-feats">
+          <li><svg class="price-check" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,6 5,9 10,3"/></svg>Unlimited drafts</li>
+          <li><svg class="price-check" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,6 5,9 10,3"/></svg>Three variants per draft</li>
+          <li><svg class="price-check" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,6 5,9 10,3"/></svg>Tone and length controls</li>
+          <li><svg class="price-check" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,6 5,9 10,3"/></svg>Recent-post personalization</li>
+          <li><svg class="price-check" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,6 5,9 10,3"/></svg>Reply tracking by tone</li>
+        </ul>
+        <a href="/signup?plan=pro" class="btn" style="width: 100%;">Get Pro</a>
+      </div>
+
+      <div class="price-card">
+        <div class="price-name">Team</div>
+        <div class="price-num">$99<small>/3 seats</small></div>
+        <ul class="price-feats">
+          <li><svg class="price-check" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,6 5,9 10,3"/></svg>Everything in Pro</li>
+          <li><svg class="price-check" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,6 5,9 10,3"/></svg>Three seats</li>
+          <li><svg class="price-check" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,6 5,9 10,3"/></svg>Shared library — coming</li>
+          <li><svg class="price-check" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,6 5,9 10,3"/></svg>Team analytics — coming</li>
+        </ul>
+        <a href="/signup?plan=team" class="btn btn-ghost" style="width: 100%;">Get Team</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="faq">
+  <div class="wrap">
+    <h2>Questions.</h2>
+    <div class="faq">
+      <details>
+        <summary>Will my LinkedIn account get flagged?</summary>
+        <p>Riff reads the profile you're already viewing and outputs text. It never types into LinkedIn's message UI, never clicks send, never crawls connections or activity feeds in the background. You copy and paste manually. There's no automated behavior for LinkedIn to act on.</p>
+      </details>
+      <details>
+        <summary>How is this different from pasting a profile into ChatGPT?</summary>
+        <p>The prompt has a phrase blacklist that bans corporate-template language ("I came across", "great fit", "passion for") and a conversation-starter structure that ChatGPT's default output won't reach. It also returns three variants in a single call — cold opener, follow-up, breakup — so a full sequence is ready in one click instead of three sessions.</p>
+      </details>
+      <details>
+        <summary>What happens to the candidate's profile data?</summary>
+        <p>It's sent to our backend, used for that single generation, and not stored. We log only that a generation happened and your account ID for billing and quota. Profile content, candidate names, and the generated messages are never persisted.</p>
+      </details>
+      <details>
+        <summary>Does it work on Sales Navigator and LinkedIn Recruiter?</summary>
+        <p>Yes. The extension auto-detects which surface you're on and reads the right fields. If a field doesn't detect cleanly on a particular profile, ping us and we'll patch within a day.</p>
+      </details>
+      <details>
+        <summary>What if a draft is bad?</summary>
+        <p>Click Generate again — the marginal cost on our side is fractions of a cent. The most common fix: paste a recent post into the optional field. Output quality lifts noticeably when the model has substance to reference.</p>
+      </details>
+      <details>
+        <summary>Does this work for sales or fundraising outreach?</summary>
+        <p>Yes, same prompt approach holds — describe what you're pitching and pick a tone. v1's prompt is tuned for technical recruiting; a sales-tuned variant ships next quarter.</p>
+      </details>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="row">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span class="logo-mark" style="width: 16px; height: 16px;"></span>
+        <span>Riff</span>
+      </div>
+      <div class="links">
+        <a href="/privacy">Privacy</a>
+        <a href="/terms">Terms</a>
+        <a href="mailto:hello@riff.example">Contact</a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

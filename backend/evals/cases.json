@@ -1,0 +1,121 @@
+{
+  "_doc": "Three-tier gold set. Tier 1 = standard difficulty (recency-grounded with a clear post). Tier 2 = hard profiles where bad output is most visible (cynical engineer, stealth founder). Tier 3 = ambiguous (vague PM, no recent activity). Run with: ANTHROPIC_API_KEY=... or GEMINI_API_KEY=... node backend/evals/run.mjs",
+  "cases": [
+    {
+      "id": "direct-medium-stripe-to-grid",
+      "tone": "direct",
+      "length": "medium",
+      "profile": {
+        "profileUrl": "https://www.linkedin.com/in/sarah-patel-test",
+        "name": "Sarah Patel",
+        "headline": "Senior Product Manager · Climate tech · ex-Stripe payments",
+        "about": "Building forecasting tools for grid operators. Before this: 4 years at Stripe shipping payment APIs.",
+        "currentRole": "Senior Product Manager",
+        "currentCompany": "GridAware",
+        "capturedAt": "2026-04-28T17:00:00Z"
+      },
+      "pitch": "Director of Product role at Series A clean energy startup. 12 people, post-A, building demand response software.",
+      "recentPost": null
+    },
+    {
+      "id": "warm-short-meetings-post",
+      "tone": "warm",
+      "length": "short",
+      "profile": {
+        "profileUrl": "https://www.linkedin.com/in/marcus-liu-test",
+        "name": "Marcus Liu",
+        "headline": "Engineering Manager · ex-IC of 10 years",
+        "about": "Trying to give my team more leverage than I had as an IC.",
+        "currentRole": "Engineering Manager",
+        "currentCompany": "TileScale",
+        "capturedAt": "2026-04-28T17:00:00Z"
+      },
+      "pitch": "EM role at Series B infra company. 8 ICs, real autonomy, fewer meetings than typical EM gigs. Comp $230-270K base.",
+      "recentPost": "Posted ~2 weeks ago about the 'manager track' for ex-ICs being mostly a ladder of meetings — argued the EM role is poorly designed and most companies don't admit it."
+    },
+    {
+      "id": "cheeky-medium-k8s-post",
+      "tone": "cheeky",
+      "length": "medium",
+      "profile": {
+        "profileUrl": "https://www.linkedin.com/in/alex-chen-test",
+        "name": "Alex Chen",
+        "headline": "Staff Engineer · Distributed Systems · Currently keeping FinTech APIs from falling over",
+        "about": "Started in compilers, ended up in distributed systems. Currently focused on multi-region failover.",
+        "currentRole": "Staff Engineer",
+        "currentCompany": "FinTech Corp",
+        "capturedAt": "2026-04-28T17:00:00Z"
+      },
+      "pitch": "Staff Engineer for our payments infra team. Rebuilding cross-region replay. Series B, remote, $250-300K + equity.",
+      "recentPost": "Posted ~4 days ago about K8s reserved capacity overspending — argued most teams overspend because nobody owns the cost line item."
+    },
+    {
+      "id": "hard-cynical-dev",
+      "_difficulty": "Tier 2 — the Cynical Dev. Headline explicitly says 'no recruiters please'. Recent post is about deleting AI-generated messages. If our prompt produces output here that gets a reply, it's the real deal. If it produces ANY corporate-template tells, we know we still have work to do.",
+      "tone": "direct",
+      "length": "short",
+      "profile": {
+        "profileUrl": "https://www.linkedin.com/in/jordan-rust-test",
+        "name": "Jordan Reyes",
+        "headline": "Rust / C++ / systems · No recruiters please",
+        "about": "I write performance-critical code. I do not respond to InMails about 'exciting opportunities'. My GitHub speaks louder than any pitch.",
+        "currentRole": "Senior Systems Engineer",
+        "currentCompany": "Velomatic",
+        "capturedAt": "2026-04-28T17:00:00Z"
+      },
+      "pitch": "Hiring a systems engineer for our zero-allocation networking work. Series B, fully async team, $290K + meaningful equity. Lead author works in Rust day-to-day, would be reporting to them.",
+      "recentPost": "Posted yesterday: 'Got another generic recruiter InMail this morning. \"I came across your impressive background.\" Deleted in under two seconds. Nobody actually reads profiles anymore.'"
+    },
+    {
+      "id": "hard-stealth-founder",
+      "_difficulty": "Tier 2 — the Stealth Founder. Profile is intentionally sparse, headline says 'Building something' with no detail. The model has to do real work — anchor on the about-section's tone or pivot to what the recruiter knows about the candidate.",
+      "tone": "warm",
+      "length": "medium",
+      "profile": {
+        "profileUrl": "https://www.linkedin.com/in/priya-stealth-test",
+        "name": "Priya Shah",
+        "headline": "Building something · Stealth",
+        "about": "Previously: PM at Stripe (5 years), early team at Plaid. Now heads-down on a new thing. Quiet for a reason.",
+        "currentRole": "Founder",
+        "currentCompany": "Stealth",
+        "capturedAt": "2026-04-28T17:00:00Z"
+      },
+      "pitch": "I'm an exec recruiter retained by a Sequoia-backed Series A — they're hiring a Head of Product who's done 0-to-1 in fintech infra. Comp $400K + 1.5% equity. The CEO is ex-Plaid and explicitly asked to talk to people who've shipped at companies you've worked at.",
+      "recentPost": null
+    },
+    {
+      "id": "hard-busy-founder-with-target",
+      "_difficulty": "Tier 2 — the Busy Founder who's already publicly looking for a specific hire. Tests whether the prompt can ride the candidate's stated need rather than pitching its own thing.",
+      "tone": "direct",
+      "length": "short",
+      "profile": {
+        "profileUrl": "https://www.linkedin.com/in/diego-fintech-test",
+        "name": "Diego Ramirez",
+        "headline": "Founder · Lendora · Building lending rails for LatAm",
+        "about": "Building Lendora. Pre-seed, three engineers, two PMs. We move fast. Always interested in talking to people who've built credit/risk products in emerging markets.",
+        "currentRole": "Founder & CEO",
+        "currentCompany": "Lendora",
+        "capturedAt": "2026-04-28T17:00:00Z"
+      },
+      "pitch": "I'm an in-house recruiter at Adelantos Capital. Our LP team is hiring a senior risk lead specifically for LatAm consumer credit. $200K + equity. You're not who I'd normally cold-message but I saw your hiring posts and figured we might know overlapping people.",
+      "recentPost": "Posted earlier this week: 'Looking for a Lead Designer who actually understands LatAm consumer behavior — not someone who's read about it. DM if you've shipped fintech product in MX/BR/AR/CO.'"
+    },
+    {
+      "id": "hard-vague-pm",
+      "_difficulty": "Tier 3 — the Vague PM. Generic headline, no recent post, almost no signal. Hardest case for our prompt — it's where 'recency-grounded' becomes 'shrug'. Tests our fallback behavior: does the model produce honest output or fall back to template-y filler?",
+      "tone": "warm",
+      "length": "short",
+      "profile": {
+        "profileUrl": "https://www.linkedin.com/in/sam-pm-test",
+        "name": "Sam Whitfield",
+        "headline": "Product Manager",
+        "about": "Building useful software.",
+        "currentRole": "Product Manager",
+        "currentCompany": "Acme Corp",
+        "capturedAt": "2026-04-28T17:00:00Z"
+      },
+      "pitch": "Senior PM role at a 30-person Series A SaaS company. Vertical-specific (healthcare ops). $180K base + 0.3% equity. Reports to founder, owns roadmap end-to-end.",
+      "recentPost": null
+    }
+  ]
+}
