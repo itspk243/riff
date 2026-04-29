@@ -23,6 +23,16 @@ interface MeResponse {
 
 const FREE_WEEKLY_LIMIT = 3;
 
+// Chrome Web Store listing URL — the only way users get the extension once
+// we go public. Set NEXT_PUBLIC_CHROME_STORE_URL in Vercel once the listing
+// is approved (e.g. "https://chrome.google.com/webstore/detail/riff/<id>").
+// While unset, we render a "Coming soon" state instead of a live install button.
+//
+// We deliberately do NOT serve the .zip from /public — that would let anyone
+// fork the source. The build script writes to dist/ at the repo root for
+// uploading to the Chrome Web Store dev console manually.
+const CHROME_STORE_URL = process.env.NEXT_PUBLIC_CHROME_STORE_URL || '';
+
 function formatDate(iso?: string | null): string {
   if (!iso) return '—';
   try {
@@ -193,17 +203,30 @@ export default function Dashboard() {
               the highest-priority action for any user who hasn't set it up. */}
           {(me?.usage?.all_time ?? 0) === 0 ? (
             <section style={extHeroNewStyle}>
-              <div style={extHeroEyebrowStyle}>Step 1 · 60 seconds</div>
+              <div style={extHeroEyebrowStyle}>Step 1 · 30 seconds</div>
               <div style={extHeroTitleStyle}>Install the Riff extension</div>
               <p style={extHeroBodyStyle}>
                 Riff lives in your Chrome toolbar. Open a LinkedIn, GitHub, or Wellfound
                 profile, click the icon, and Riff drafts the message.
               </p>
               <div style={extHeroBtnRowStyle}>
-                <a href="/riff-extension.zip" download style={primaryBtnStyle} className="riff-btn">
-                  ↓ Download extension
-                </a>
-                <a href="#install-steps" style={ghostBtnStyle} className="riff-ghost-btn">How to install ↓</a>
+                {CHROME_STORE_URL ? (
+                  <>
+                    <a href={CHROME_STORE_URL} target="_blank" rel="noopener noreferrer" style={primaryBtnStyle} className="riff-btn">
+                      Add to Chrome →
+                    </a>
+                    <a href="#install-steps" style={ghostBtnStyle} className="riff-ghost-btn">How to install ↓</a>
+                  </>
+                ) : (
+                  <>
+                    <span style={{ ...primaryBtnStyle, opacity: 0.55, cursor: 'default' }}>
+                      Coming to Chrome Web Store
+                    </span>
+                    <span style={{ fontSize: 12, color: '#888', alignSelf: 'center' }}>
+                      Listing in review — we'll email you when it's live.
+                    </span>
+                  </>
+                )}
               </div>
             </section>
           ) : (
@@ -211,12 +234,16 @@ export default function Dashboard() {
               <div style={{ flex: 1 }}>
                 <strong>Riff extension</strong>
                 <div style={{ fontSize: 12, color: '#777', marginTop: 2 }}>
-                  Need to reinstall, or set it up on a new machine?
+                  {CHROME_STORE_URL
+                    ? 'Set up Riff on a new machine?'
+                    : 'Need to reinstall? The Chrome Web Store listing is in review.'}
                 </div>
               </div>
-              <a href="/riff-extension.zip" download style={ghostBtnSmStyle}>
-                ↓ Re-download
-              </a>
+              {CHROME_STORE_URL && (
+                <a href={CHROME_STORE_URL} target="_blank" rel="noopener noreferrer" style={ghostBtnSmStyle}>
+                  Add to Chrome →
+                </a>
+              )}
             </section>
           )}
 
@@ -365,11 +392,25 @@ export default function Dashboard() {
             )}
           </section>
 
-          {/* Extension setup */}
+          {/* Extension setup — Chrome Web Store flow.
+              Three steps once the listing is live: Add to Chrome, pin,
+              paste-token. While the listing is in review, we still surface
+              the token + the in-review notice so devmode users can paste-test.
+              The dev-only "load unpacked" path is gated behind ?devmode=1. */}
           <section id="install-steps" style={sectionStyle}>
-            <div style={sectionTitleStyle}>Install the extension · step by step</div>
+            <div style={sectionTitleStyle}>Install the extension</div>
+
+            {!CHROME_STORE_URL && (
+              <div style={inReviewBannerStyle}>
+                <strong>In Chrome Web Store review.</strong> Riff submits to the store on every release;
+                Google's review usually takes 1–7 days. We'll email you the moment the listing is live.
+              </div>
+            )}
+
             <p style={pStyle}>
-              About 5 minutes the first time. After that, Riff lives in your Chrome toolbar.
+              {CHROME_STORE_URL
+                ? 'Three clicks. About 30 seconds.'
+                : 'Once the store listing is live, install is three clicks (about 30 seconds).'}
             </p>
 
             <div style={installStepsStyle}>
@@ -377,14 +418,20 @@ export default function Dashboard() {
               <div style={installStepStyle}>
                 <span style={installStepNumStyle}>1</span>
                 <div style={{ flex: 1 }}>
-                  <strong>Download the extension file</strong>
+                  <strong>Add Riff to Chrome</strong>
                   <div style={installBodyStyle}>
-                    <a href="/riff-extension.zip" download style={primaryBtnStyle}>
-                      ↓ Download riff-extension.zip
-                    </a>
+                    {CHROME_STORE_URL ? (
+                      <a href={CHROME_STORE_URL} target="_blank" rel="noopener noreferrer" style={primaryBtnStyle}>
+                        Add to Chrome →
+                      </a>
+                    ) : (
+                      <span style={{ ...primaryBtnStyle, opacity: 0.55, cursor: 'default', display: 'inline-block' }}>
+                        Add to Chrome (coming soon)
+                      </span>
+                    )}
                   </div>
                   <div style={installNoteStyle}>
-                    It's a 16 KB file. It'll go to your <strong>Downloads</strong> folder.
+                    Chrome will ask you to confirm — click <strong>Add extension</strong>.
                   </div>
                 </div>
               </div>
@@ -392,11 +439,11 @@ export default function Dashboard() {
               <div style={installStepStyle}>
                 <span style={installStepNumStyle}>2</span>
                 <div style={{ flex: 1 }}>
-                  <strong>Unzip it</strong>
+                  <strong>Pin Riff to your toolbar</strong>
                   <div style={installNoteStyle}>
-                    On <strong>Mac</strong>: double-click <code>riff-extension.zip</code>. macOS auto-creates a folder next to it.<br />
-                    On <strong>Windows</strong>: right-click the file → <strong>Extract All…</strong> → click Extract.<br />
-                    You should now have a <strong>folder</strong> (not a zip) called <code>riff-extension</code> or similar.
+                    Click the <strong>puzzle-piece icon</strong> in the top-right of Chrome (next to your profile picture).
+                    Find <strong>Riff</strong> in the list and click the <strong>pin icon</strong> next to it.
+                    Riff's icon now sits in your toolbar.
                   </div>
                 </div>
               </div>
@@ -404,74 +451,15 @@ export default function Dashboard() {
               <div style={installStepStyle}>
                 <span style={installStepNumStyle}>3</span>
                 <div style={{ flex: 1 }}>
-                  <strong>Open Chrome's extensions page</strong>
+                  <strong>Sign in with this token</strong>
                   <div style={installNoteStyle}>
-                    Open a new tab in Chrome. In the address bar at the top, type exactly <code>chrome://extensions</code> and hit Enter. (Yes, the <code>chrome://</code> part is required — Chrome won't autocomplete it.)
-                  </div>
-                </div>
-              </div>
-
-              <div style={installStepStyle}>
-                <span style={installStepNumStyle}>4</span>
-                <div style={{ flex: 1 }}>
-                  <strong>Turn on Developer mode</strong>
-                  <div style={installNoteStyle}>
-                    Look at the <strong>top-right corner</strong> of that page. There's a toggle labeled <strong>Developer mode</strong>. Click it so it turns blue / on.
-                  </div>
-                  <div style={installNoteStyle}>
-                    Three new buttons appear at the top: <code>Load unpacked</code>, <code>Pack extension</code>, <code>Update</code>.
-                  </div>
-                </div>
-              </div>
-
-              <div style={installStepStyle}>
-                <span style={installStepNumStyle}>5</span>
-                <div style={{ flex: 1 }}>
-                  <strong>Click "Load unpacked"</strong>
-                  <div style={installNoteStyle}>
-                    A file picker opens. Navigate to your <strong>Downloads</strong> folder. Click on the <strong>riff-extension folder</strong> from Step 2 (single-click — don't double-click in). Click <strong>Select Folder</strong> / <strong>Open</strong>.
-                  </div>
-                  <div style={installNoteStyle}>
-                    A "Riff" card should appear in the extensions list. That means it loaded.
-                  </div>
-                </div>
-              </div>
-
-              <div style={installStepStyle}>
-                <span style={installStepNumStyle}>6</span>
-                <div style={{ flex: 1 }}>
-                  <strong>Pin Riff to your toolbar</strong>
-                  <div style={installNoteStyle}>
-                    Look for a <strong>puzzle-piece icon</strong> in the top-right of Chrome (next to your profile picture). Click it. A list of installed extensions drops down. Find <strong>Riff</strong>. Click the <strong>pin icon</strong> next to it. Riff's icon (a black square) now sits in your toolbar.
-                  </div>
-                </div>
-              </div>
-
-              <div style={installStepStyle}>
-                <span style={installStepNumStyle}>7</span>
-                <div style={{ flex: 1 }}>
-                  <strong>Sign the extension in</strong>
-                  <div style={installNoteStyle}>
-                    Click the Riff icon in your toolbar. The popup opens. At the top it says <strong>"Sign in to Riff"</strong> — paste this token there:
+                    Click the Riff icon in your toolbar. The popup opens. Paste this token where it says <strong>"Sign in to Riff"</strong>, then click <strong>Save token</strong>.
                   </div>
                   <div style={tokenRowStyle}>
                     <code style={tokenPreviewStyle}>{tokenPreview}</code>
                     <button onClick={copyToken} style={tokenBtnStyle}>
                       {tokenCopied ? '✓ Copied' : 'Copy token'}
                     </button>
-                  </div>
-                  <div style={installNoteStyle}>
-                    Click <strong>Save token</strong>. You're in.
-                  </div>
-                </div>
-              </div>
-
-              <div style={installStepStyle}>
-                <span style={installStepNumStyle}>8</span>
-                <div style={{ flex: 1 }}>
-                  <strong>Try it</strong>
-                  <div style={installNoteStyle}>
-                    Open a real LinkedIn profile (any <code>linkedin.com/in/...</code> URL). Click the Riff icon. The popup auto-detects the profile. Type a 1–2 sentence pitch in the box. Click <strong>Generate</strong>. Paste the result into LinkedIn.
                   </div>
                 </div>
               </div>
@@ -481,13 +469,28 @@ export default function Dashboard() {
             <details style={{ marginTop: 24 }}>
               <summary style={detailsSummaryStyle}>Something went wrong?</summary>
               <ul style={troubleshootStyle}>
-                <li><strong>"This extension may have been corrupted"</strong> — you tried to load the .zip file instead of the unzipped folder. Go back to Step 2 and unzip it.</li>
-                <li><strong>Can't find Developer mode toggle</strong> — make sure you're at <code>chrome://extensions</code> (not Settings or anywhere else). The toggle is in the top-right corner, not in a menu.</li>
                 <li><strong>Riff popup says "Open a LinkedIn profile..."</strong> — you're on the LinkedIn home page or feed. Click into a person's profile (URL must contain <code>/in/</code>).</li>
                 <li><strong>Generation says "Sign in first"</strong> — your token wasn't saved. Click the Riff icon again, paste the token, hit Save.</li>
                 <li><strong>Token expired</strong> — Supabase tokens last about an hour. Come back to this dashboard, click <strong>Copy token</strong>, paste it again in the extension.</li>
+                <li><strong>Auto-update isn't picking up new versions</strong> — Chrome auto-updates extensions every few hours. To force it: open <code>chrome://extensions</code>, toggle Developer mode on, click <strong>Update</strong> at the top.</li>
               </ul>
             </details>
+
+            {devMode && (
+              <details style={{ marginTop: 16, borderTop: '1px dashed #ddd', paddingTop: 14 }}>
+                <summary style={detailsSummaryStyle}>devmode: load unpacked from local source</summary>
+                <ol style={{ ...troubleshootStyle, listStyle: 'decimal' }}>
+                  <li>Clone or pull the latest <code>riff</code> repo to your machine.</li>
+                  <li>Open <code>chrome://extensions</code> and turn on <strong>Developer mode</strong> (top-right toggle).</li>
+                  <li>Click <strong>Load unpacked</strong> and select the <code>extension/</code> folder from the repo.</li>
+                  <li>Pin Riff to your toolbar (puzzle-piece icon → pin).</li>
+                  <li>Paste the token above into the popup.</li>
+                </ol>
+                <p style={smallStyle}>
+                  This path is for first-party dogfooding only. We do not serve the unpacked source from a public URL.
+                </p>
+              </details>
+            )}
 
             <p style={smallStyle}>
               Your token is stored only in <code>chrome.storage.local</code> on your computer. It never leaves your machine except when the extension talks to Riff's API. Don't share it — anyone with this token can use Riff as you.
@@ -712,6 +715,16 @@ const extHeroCompactStyle: React.CSSProperties = {
   display: 'flex', alignItems: 'center', gap: 12,
   background: '#fafafa', border: '1px solid #f0f0f2', borderRadius: 10,
   padding: '12px 14px', marginBottom: 24,
+};
+const inReviewBannerStyle: React.CSSProperties = {
+  background: '#fff8eb',
+  border: '1px solid #f3d99a',
+  borderRadius: 8,
+  padding: '10px 14px',
+  marginBottom: 14,
+  fontSize: 13,
+  color: '#6b4a14',
+  lineHeight: 1.55,
 };
 const installStepsStyle: React.CSSProperties = {
   display: 'flex', flexDirection: 'column', gap: 16, marginTop: 14,

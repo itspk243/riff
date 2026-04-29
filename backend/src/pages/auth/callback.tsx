@@ -5,6 +5,11 @@
 import { useEffect, useState } from 'react';
 import Head from 'next/head';
 
+// Chrome Web Store listing URL — set NEXT_PUBLIC_CHROME_STORE_URL in Vercel
+// once the listing is approved. Until then we show an "in review" notice
+// instead of a download link (we never serve the .zip publicly).
+const CHROME_STORE_URL = process.env.NEXT_PUBLIC_CHROME_STORE_URL || '';
+
 export default function AuthCallback() {
   const [token, setToken] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -65,25 +70,45 @@ export default function AuthCallback() {
             <>
               <h1 style={h1Style}>You're signed in.</h1>
               <p style={pStyle}>
-                Two steps to start drafting: download the extension, then paste your token in.
+                {CHROME_STORE_URL
+                  ? 'Two steps: install the extension from the Chrome Web Store, then paste your token in.'
+                  : "We're in Chrome Web Store review. Once it's live, you'll install in two clicks. In the meantime, copy your token below."}
               </p>
 
-              <a
-                href="/riff-extension.zip"
-                download
-                style={{ ...primaryButtonStyle, marginBottom: 12 }}
-              >
-                ↓ Download Riff extension (16 KB)
-              </a>
+              {CHROME_STORE_URL ? (
+                <a
+                  href={CHROME_STORE_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ ...primaryButtonStyle, marginBottom: 12 }}
+                >
+                  Add Riff to Chrome →
+                </a>
+              ) : (
+                <div
+                  style={{
+                    background: '#fff8eb',
+                    border: '1px solid #f3d99a',
+                    borderRadius: 8,
+                    padding: '10px 14px',
+                    marginBottom: 14,
+                    fontSize: 13,
+                    color: '#6b4a14',
+                  }}
+                >
+                  <strong>Riff is in Chrome Web Store review.</strong> We'll email you when the listing goes live (usually 1–7 days).
+                </div>
+              )}
 
-              <ol style={olStyle}>
-                <li><strong>Unzip the file</strong> — double-click <code>riff-extension.zip</code> on Mac, or right-click → Extract All on Windows. You should get a folder.</li>
-                <li><strong>Open <code>chrome://extensions</code></strong> in a new Chrome tab (type that URL exactly). Turn on <strong>Developer mode</strong> in the top-right corner.</li>
-                <li><strong>Click "Load unpacked"</strong> — the file picker that opens, navigate to your unzipped folder, click Select / Open.</li>
-                <li><strong>Click the Riff icon</strong> (a black square) in your Chrome toolbar — pin it from the puzzle-piece menu if you don't see it. Paste the token below into the popup's Sign-in field.</li>
-              </ol>
+              {CHROME_STORE_URL && (
+                <ol style={olStyle}>
+                  <li><strong>Click <em>Add to Chrome</em></strong> on the store listing, then confirm.</li>
+                  <li><strong>Pin Riff to your toolbar</strong> — click the puzzle-piece icon (top-right of Chrome) and pin Riff.</li>
+                  <li><strong>Paste your token</strong> in the popup's "Sign in to Riff" field, then click Save.</li>
+                </ol>
+              )}
               <p style={{ ...smallStyle, marginBottom: 16 }}>
-                Stuck? <a href="/dashboard#install-steps" style={linkStyle}>The full step-by-step guide is on your dashboard.</a>
+                <a href="/dashboard#install-steps" style={linkStyle}>Full instructions on your dashboard.</a>
               </p>
 
               <label style={labelStyle}>Your token</label>

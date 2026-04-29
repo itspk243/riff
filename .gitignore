@@ -28,3 +28,9 @@ yarn-debug.log*
 
 # Vercel
 .vercel/
+
+# Extension build output. The bundle goes to dist/ at repo root — NEVER under
+# backend/public/ — so it can't be served at a public URL. We upload this zip
+# manually to the Chrome Web Store dev console.
+backend/public/riff-extension.zip
+backend/public/*.zip
