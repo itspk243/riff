@@ -226,6 +226,27 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     return true;
   }
 
+  // Active Profile Assist — score the profile against active job specs.
+  // Plus-only on the backend; popup gates rendering separately.
+  if (msg.type === 'RIFF_SCORE') {
+    apiCall('/api/score', { method: 'POST', body: msg.payload }).then(sendResponse);
+    return true;
+  }
+  // Job-specs CRUD passthroughs (used by the dashboard's spec manager and
+  // — eventually — an inline spec editor in the popup).
+  if (msg.type === 'RIFF_JOB_SPECS_LIST') {
+    apiCall('/api/job-specs', { method: 'GET' }).then(sendResponse);
+    return true;
+  }
+  if (msg.type === 'RIFF_JOB_SPECS_CREATE') {
+    apiCall('/api/job-specs', { method: 'POST', body: msg.payload }).then(sendResponse);
+    return true;
+  }
+  if (msg.type === 'RIFF_JOB_SPECS_DELETE') {
+    apiCall(`/api/job-specs/${encodeURIComponent(msg.payload.id)}`, { method: 'DELETE' }).then(sendResponse);
+    return true;
+  }
+
   // Saved templates
   if (msg.type === 'RIFF_TEMPLATES_LIST') {
     apiCall('/api/templates', { method: 'GET' }).then(sendResponse);

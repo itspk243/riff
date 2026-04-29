@@ -347,9 +347,243 @@ async function loadProfile() {
       // follow-up nudge if there's a sent event with no reply yet.
       checkPriorThread(tab.url);
 
+      // Plus tier: Active Profile Assist. Auto-fetch fit score against
+      // the user's saved job specs. Free/Pro users get a small "Plus"
+      // upsell chip in the same slot.
+      renderFitScore(p);
+
       resolve(p);
     });
   });
+}
+
+// ---------- Active Profile Assist (Plus) ----------
+//
+// Renders the #fit-score section with one of three states:
+//   - LOCKED (free/pro)     — small "Score this profile against your job specs · Plus" chip
+//   - NO SPECS (plus, none) — "Add a job spec to start scoring"
+//   - SCORING               — small spinner while we hit /api/score
+//   - SCORED                — fit-score badge with reasoning + matched/missing
+//
+// We don't bombard /api/score on every popup open if nothing has changed —
+// but for v1 we just always score (cheap with Haiku). Caching by candidate
+// URL is a phase 2 nice-to-have.
+
+function renderFitScore(profile) {
+  const root = $('#fit-score');
+  if (!root) return;
+  root.innerHTML = '';
+  root.classList.remove('hidden');
+
+  if (!hasPlusFeatures(currentPlan)) {
+    // Free/Pro users see a single locked chip nudging upgrade.
+    const lock = document.createElement('button');
+    lock.type = 'button';
+    lock.className = 'fit-score-locked';
+    lock.innerHTML = '<span class="lock-icon">🔒</span> Score this profile against your job specs — Plus';
+    lock.title = 'Active Profile Assist is a Plus feature. Click to upgrade.';
+    lock.addEventListener('click', async () => {
+      const { riff_backend_url } = await getStorage(['riff_backend_url']);
+      const base = riff_backend_url || DEFAULT_BACKEND_URL;
+      chrome.tabs.create({ url: `${base}/dashboard?upgrade=plus` });
+    });
+    root.appendChild(lock);
+    return;
+  }
+
+  // Plus user — fetch score.
+  const loading = document.createElement('div');
+  loading.className = 'fit-score-loading';
+  loading.textContent = 'Scoring against your job specs…';
+  root.appendChild(loading);
+
+  chrome.runtime.sendMessage(
+    { type: 'RIFF_SCORE', payload: { profile } },
+    (resp) => {
+      root.innerHTML = '';
+
+      // Empty-spec state — handled BEFORE the !resp.ok branch because the
+      // backend returns ok:true with activeSpecsCount:0 when the user has
+      // no specs yet (it's a successful "you have nothing to score against"
+      // response, not an error). Render the inline composer prompt.
+      if (resp && resp.activeSpecsCount === 0) {
+        const empty = document.createElement('button');
+        empty.type = 'button';
+        empty.className = 'fit-score-empty';
+        empty.innerHTML = '<span class="lock-icon">＋</span> Add a job spec to start scoring';
+        empty.addEventListener('click', openSpecsManager);
+        root.appendChild(empty);
+        return;
+      }
+
+      if (!resp || !resp.ok) {
+        const err = document.createElement('div');
+        err.className = 'fit-score-error';
+        err.textContent = (resp && resp.error) || 'Could not score this profile.';
+        root.appendChild(err);
+        return;
+      }
+
+      // Render the best-match badge + reasoning.
+      const best = resp.best;
+      if (!best) {
+        // Defensive — shouldn't happen since activeSpecsCount === 0 was
+        // handled above, but if the model failed for every spec we
+        // surface a clean error instead of a silent no-op.
+        const err = document.createElement('div');
+        err.className = 'fit-score-error';
+        err.textContent = 'Scoring failed for all your job specs. Try again.';
+        root.appendChild(err);
+        return;
+      }
+      const card = document.createElement('div');
+      card.className = `fit-score-card score-${scoreBucket(best.result.score)}`;
+      const head = document.createElement('div');
+      head.className = 'fit-score-head';
+      head.innerHTML = `
+        <div class="fit-score-num">${best.result.score}</div>
+        <div class="fit-score-meta">
+          <div class="fit-score-spec">${escapeHtml(best.jobSpecName)}</div>
+          <div class="fit-score-reason">${escapeHtml(best.result.reasoning)}</div>
+        </div>
+      `;
+      card.appendChild(head);
+
+      // Matched + missing as compact chip rows.
+      if (Array.isArray(best.result.matched) && best.result.matched.length > 0) {
+        const m = document.createElement('div');
+        m.className = 'fit-score-row';
+        m.innerHTML = '<span class="fit-score-row-label">Matches</span>' +
+          best.result.matched.map(x => `<span class="fit-pill fit-pill-match">${escapeHtml(x)}</span>`).join('');
+        card.appendChild(m);
+      }
+      if (Array.isArray(best.result.missing) && best.result.missing.length > 0) {
+        const m = document.createElement('div');
+        m.className = 'fit-score-row';
+        m.innerHTML = '<span class="fit-score-row-label">Gaps</span>' +
+          best.result.missing.map(x => `<span class="fit-pill fit-pill-miss">${escapeHtml(x)}</span>`).join('');
+        card.appendChild(m);
+      }
+
+      // If they have multiple specs, show "n more" toggle.
+      if (Array.isArray(resp.all) && resp.all.length > 1) {
+        const more = document.createElement('details');
+        more.className = 'fit-score-more';
+        const summary = document.createElement('summary');
+        summary.textContent = `${resp.all.length - 1} other spec${resp.all.length - 1 === 1 ? '' : 's'} scored`;
+        more.appendChild(summary);
+        for (let i = 1; i < resp.all.length; i++) {
+          const row = resp.all[i];
+          const r = document.createElement('div');
+          r.className = `fit-score-other score-${scoreBucket(row.result.score)}`;
+          r.innerHTML = `<span class="fit-score-num-sm">${row.result.score}</span> <strong>${escapeHtml(row.jobSpecName)}</strong> — ${escapeHtml(row.result.reasoning)}`;
+          more.appendChild(r);
+        }
+        card.appendChild(more);
+      }
+
+      // "Manage specs" footer link.
+      const footer = document.createElement('a');
+      footer.href = '#';
+      footer.className = 'fit-score-footer';
+      footer.textContent = `Manage job specs (${resp.activeSpecsCount}/${resp.maxActiveSpecs})`;
+      footer.addEventListener('click', (e) => { e.preventDefault(); openSpecsManager(); });
+      card.appendChild(footer);
+
+      root.appendChild(card);
+    }
+  );
+}
+
+function scoreBucket(score) {
+  if (score >= 75) return 'high';
+  if (score >= 60) return 'mid';
+  if (score >= 40) return 'low';
+  return 'none';
+}
+
+// Inline composer to add a job spec without leaving the popup. Phase 1
+// keeps spec management here; a richer dashboard view ships in phase 2.
+function openSpecsManager() {
+  const root = $('#fit-score');
+  if (!root) return;
+  // If a composer is already open, just focus it.
+  const existing = root.querySelector('.spec-composer');
+  if (existing) {
+    const input = existing.querySelector('input');
+    if (input) input.focus();
+    return;
+  }
+  root.innerHTML = '';
+
+  const composer = document.createElement('div');
+  composer.className = 'spec-composer';
+
+  const title = document.createElement('div');
+  title.className = 'spec-composer-title';
+  title.textContent = 'New job spec';
+  composer.appendChild(title);
+
+  const nameInput = document.createElement('input');
+  nameInput.type = 'text';
+  nameInput.placeholder = 'Spec name (e.g. "Staff backend, payments")';
+  nameInput.maxLength = 80;
+  nameInput.className = 'spec-composer-name';
+  composer.appendChild(nameInput);
+
+  const descInput = document.createElement('textarea');
+  descInput.placeholder = 'What you\'re hiring for. Stack, seniority, comp band, location, must-haves, nice-to-haves. Plain language is fine.';
+  descInput.maxLength = 5000;
+  descInput.rows = 4;
+  descInput.className = 'spec-composer-desc';
+  composer.appendChild(descInput);
+
+  const btnRow = document.createElement('div');
+  btnRow.className = 'spec-composer-actions';
+
+  const cancel = document.createElement('button');
+  cancel.type = 'button';
+  cancel.className = 'spec-composer-cancel';
+  cancel.textContent = 'Cancel';
+  cancel.addEventListener('click', () => {
+    if (currentProfile) renderFitScore(currentProfile);
+    else root.classList.add('hidden');
+  });
+
+  const save = document.createElement('button');
+  save.type = 'button';
+  save.className = 'spec-composer-save';
+  save.textContent = 'Save & score';
+  save.addEventListener('click', async () => {
+    const name = nameInput.value.trim();
+    const description = descInput.value.trim();
+    if (!name || !description) {
+      showToast('Both name and description are required.', 'error');
+      return;
+    }
+    save.disabled = true;
+    save.textContent = 'Saving…';
+    chrome.runtime.sendMessage(
+      { type: 'RIFF_JOB_SPECS_CREATE', payload: { name, description } },
+      (resp) => {
+        if (!resp || !resp.ok) {
+          save.disabled = false;
+          save.textContent = 'Save & score';
+          showToast(resp && resp.error ? resp.error : 'Could not save spec.', 'error');
+          return;
+        }
+        // Re-render the fit-score with the new spec applied.
+        if (currentProfile) renderFitScore(currentProfile);
+      }
+    );
+  });
+
+  btnRow.appendChild(cancel);
+  btnRow.appendChild(save);
+  composer.appendChild(btnRow);
+
+  root.appendChild(composer);
+  setTimeout(() => nameInput.focus(), 30);
 }
 
 // ---------- prior-thread detection (Day 1 follow-up loop) ----------
