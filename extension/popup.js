@@ -179,10 +179,14 @@ $('#signout-link').addEventListener('click', async (e) => {
   await refreshAuthUI();
 });
 
+// Production backend URL. Override only for local dev:
+//   chrome.storage.local.set({ riff_backend_url: 'http://localhost:3000' })
+const DEFAULT_BACKEND_URL = 'https://riff-sandy.vercel.app';
+
 $('#signup-link').addEventListener('click', async (e) => {
   e.preventDefault();
   const { riff_backend_url } = await getStorage(['riff_backend_url']);
-  const base = riff_backend_url || 'https://riff.app';
+  const base = riff_backend_url || DEFAULT_BACKEND_URL;
   chrome.tabs.create({ url: `${base}/signup` });
 });
 

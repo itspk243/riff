@@ -338,7 +338,7 @@
         <a href="#how">How it works</a>
         <a href="#pricing">Pricing</a>
         <a href="#faq">FAQ</a>
-        <a href="/signup" class="btn btn-ghost" style="padding: 8px 14px;">Sign in</a>
+        <a href="/signup" id="auth-cta" class="btn btn-ghost" style="padding: 8px 14px;">Sign in</a>
       </div>
     </nav>
   </div>
@@ -581,6 +581,23 @@ Worth a 20-min trade of notes this week, even if just to compare scars?</div>
     </div>
   </div>
 </footer>
+
+<script>
+  // If the visitor is already signed in (token in localStorage),
+  // swap the "Sign in" CTA in the nav for a "Dashboard" link.
+  // Pure progressive enhancement — no impact on signed-out visitors.
+  (function () {
+    try {
+      var token = window.localStorage.getItem('riff_token');
+      if (!token) return;
+      var cta = document.getElementById('auth-cta');
+      if (cta) {
+        cta.textContent = 'Dashboard';
+        cta.setAttribute('href', '/dashboard');
+      }
+    } catch (e) { /* private mode, etc. — silent */ }
+  })();
+</script>
 
 </body>
 </html>

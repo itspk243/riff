@@ -61,6 +61,18 @@ Banned structures:
 - Closing with "Looking forward to hearing from you"
 - Closing with "Best regards"
 - Telling them how impressed you are by anything
+- ANY literal placeholder in square brackets, double-curly braces, or angle brackets:
+  e.g. "[Your Company Name]", "[Company]", "{{company}}", "<role>", "[insert pitch]".
+  These ALWAYS indicate the model could not resolve a value. Instead of inventing
+  a placeholder: rephrase to use "we" or "us", or omit the reference entirely.
+
+Handling missing recruiter info:
+- If the pitch field doesn't mention the recruiter's company name, do NOT
+  invent one and do NOT insert "[Your Company Name]". Use "us", "we", or
+  rephrase. Real example: instead of "we're rebuilding payments infra at
+  [Your Company Name]", write "we're rebuilding payments infra".
+- If the pitch is sparse (no comp, no scope, no stage), don't invent details.
+  Lean on what the candidate's profile/post tells you and ask a question.
 
 # What good output looks like
 
@@ -238,6 +250,11 @@ const HARD_FAIL_PHRASES = [
   /rockstar|ninja|guru/i,
   /looking forward to hearing from you/i,
   /exciting opportunity/i,
+  // Literal placeholder leaks. The model occasionally outputs unresolved
+  // template variables instead of rephrasing — catch and retry.
+  /\[(your )?(company|role|position|title)( name)?\]/i,
+  /\{\{[\w\s_-]+\}\}/,
+  /<insert [^>]+>/i,
 ];
 
 export function variantPassesHardChecks(v: MessageVariant): boolean {

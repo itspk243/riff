@@ -8,9 +8,13 @@
 // To set them quickly during dev, paste this into the extension's service worker console:
 //   chrome.storage.local.set({ riff_backend_url: 'http://localhost:3000' })
 
+// Production backend. Override only for local dev:
+//   chrome.storage.local.set({ riff_backend_url: 'http://localhost:3000' })
+const DEFAULT_BACKEND_URL = 'https://riff-sandy.vercel.app';
+
 async function getBackendBase() {
   const { riff_backend_url } = await chrome.storage.local.get('riff_backend_url');
-  return riff_backend_url || 'https://riff-backend.example.com';
+  return riff_backend_url || DEFAULT_BACKEND_URL;
 }
 
 async function getAuthToken() {
