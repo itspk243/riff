@@ -1,875 +1,1365 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="description" content="A Chrome extension that drafts personalized LinkedIn outreach grounded in the candidate's actual recent activity.">
-<meta property="og:title" content="Riffly">
-<meta property="og:description" content="A Chrome extension that drafts personalized LinkedIn outreach grounded in the candidate's actual recent activity.">
-<title>Riffly</title>
-<style>
-  :root {
-    --bg: #faf9f6;
-    --surface: #ffffff;
-    --ink: #111110;
-    --ink-2: #2a2a28;
-    --muted: #6b6a65;
-    --line: #e7e4dc;
-    --line-2: #d6d2c7;
-    --warm: #f3f0e8;
-    --accent: #b14a1a;
-  }
-  * { box-sizing: border-box; }
-  html, body { margin: 0; padding: 0; }
-  body {
-    font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-    background: var(--bg);
-    color: var(--ink);
-    font-size: 16px;
-    line-height: 1.55;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-    text-rendering: optimizeLegibility;
-    font-feature-settings: "ss01", "cv11";
-  }
-  ::selection { background: #1110100f; }
-  a { color: inherit; text-decoration: none; }
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="A Chrome extension that drafts personalized LinkedIn outreach grounded in the candidate's actual recent activity.">
+  <meta property="og:title" content="Riffly">
+  <meta property="og:description" content="A Chrome extension that drafts personalized LinkedIn outreach grounded in the candidate's actual recent activity.">
+  <title>Riffly</title>
+  <style>
+    :root {
+      --bg: #faf9f6;
+      --surface: #ffffff;
+      --ink: #111110;
+      --ink-2: #2a2a28;
+      --muted: #6b6a65;
+      --line: #e7e4dc;
+      --line-2: #d6d2c7;
+      --warm: #f3f0e8;
+      --accent: #b14a1a;
+      --chrome-blue: #4285f4;
+    }
 
-  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 28px; }
+    * {
+      box-sizing: border-box;
+    }
 
-  /* nav */
-  nav {
-    display: flex; justify-content: space-between; align-items: center;
-    padding: 26px 0;
-  }
-  .logo {
-    display: inline-flex; align-items: center; gap: 9px;
-    font-weight: 600; font-size: 18px; letter-spacing: -0.02em;
-  }
-  .logo-mark {
-    display: inline-block; width: 22px; height: 22px;
-    background: var(--ink); border-radius: 5px;
-    position: relative;
-  }
-  .logo-mark::after {
-    content: ""; position: absolute; top: 50%; left: 50%;
-    transform: translate(-50%, -50%);
-    width: 8px; height: 8px; background: var(--bg); border-radius: 1.5px;
-  }
-  .nav-links { display: flex; gap: 32px; align-items: center; font-size: 14px; }
-  .nav-links a { color: var(--muted); }
-  .nav-links a:hover { color: var(--ink); }
+    html, body {
+      margin: 0;
+      padding: 0;
+    }
 
-  /* buttons */
-  .btn {
-    display: inline-flex; align-items: center; justify-content: center;
-    gap: 6px;
-    padding: 11px 18px;
-    background: var(--ink); color: #fff;
-    border-radius: 8px;
-    font-weight: 500; font-size: 14px;
-    border: 1px solid var(--ink);
-    cursor: pointer;
-    transition: transform 0.08s ease, background 0.15s ease;
-  }
-  .btn:hover { background: #1f1f1d; }
-  .btn:active { transform: translateY(1px); }
-  .btn-ghost {
-    background: transparent; color: var(--ink); border-color: var(--line-2);
-  }
-  .btn-ghost:hover { background: var(--warm); border-color: var(--ink); }
-  .btn-lg { padding: 13px 22px; font-size: 14.5px; }
-  .btn .arrow {
-    display: inline-block; transform: translateX(0); transition: transform 0.15s ease;
-  }
-  .btn:hover .arrow { transform: translateX(2px); }
+    body {
+      font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+      font-size: clamp(14px, 2vw, 16px);
+      line-height: 1.55;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      text-rendering: optimizeLegibility;
+      font-feature-settings: "ss01", "cv11";
+    }
 
-  /* hero */
-  .hero { padding: 80px 0 32px; }
-  .eyebrow {
-    display: inline-block;
-    font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase;
-    color: var(--muted); margin-bottom: 28px; font-weight: 500;
-  }
-  .eyebrow::before {
-    content: "·"; margin-right: 10px; color: var(--accent);
-  }
-  .hero h1 {
-    font-size: 62px; line-height: 1.02;
-    letter-spacing: -0.04em;
-    font-weight: 600;
-    max-width: 760px;
-    margin: 0 0 24px;
-  }
-  .hero .lede {
-    font-size: 19px; max-width: 580px; color: var(--muted);
-    margin: 0 0 32px; line-height: 1.5;
-  }
-  .hero-cta { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
-  .hero-meta {
-    margin-top: 20px;
-    font-size: 13px; color: var(--muted);
-  }
-  .hero-meta-dot {
-    display: inline-block; width: 5px; height: 5px;
-    background: var(--accent); border-radius: 50%;
-    vertical-align: middle; margin: 0 8px 2px;
-  }
+    ::selection {
+      background: #1110100f;
+    }
 
-  /* product window */
-  .window {
-    margin: 56px auto 0;
-    max-width: 920px;
-    background: var(--surface);
-    border: 1px solid var(--line-2);
-    border-radius: 12px;
-    box-shadow: 0 30px 80px -30px rgba(20, 18, 12, 0.14), 0 8px 20px -8px rgba(20, 18, 12, 0.06);
-    overflow: hidden;
-  }
-  .window-chrome {
-    display: flex; align-items: center; gap: 8px;
-    padding: 10px 14px;
-    border-bottom: 1px solid var(--line);
-    background: linear-gradient(180deg, #fafaf7 0%, #f5f3ed 100%);
-  }
-  .window-dot {
-    display: inline-block; width: 11px; height: 11px; border-radius: 50%;
-  }
-  .window-dot.r { background: #ed6a5e; }
-  .window-dot.y { background: #f5bf4f; }
-  .window-dot.g { background: #62c454; }
-  .window-url {
-    margin-left: 14px;
-    font-size: 12px; color: var(--muted);
-    background: var(--bg); border: 1px solid var(--line);
-    padding: 4px 12px; border-radius: 5px;
-    flex-shrink: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-    flex-grow: 1; max-width: 360px;
-  }
-  .window-url::before {
-    content: "🔒  "; opacity: 0.4; font-size: 10px;
-  }
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
 
-  .window-body { display: grid; grid-template-columns: 1fr 1fr; }
-  @media (max-width: 760px) { .window-body { grid-template-columns: 1fr; } }
+    .wrap {
+      max-width: 1080px;
+      margin: 0 auto;
+      padding: 0 clamp(16px, 4vw, 64px);
+    }
 
-  .window-left {
-    padding: 22px 24px;
-    border-right: 1px solid var(--line);
-    background: var(--bg);
-  }
-  @media (max-width: 760px) { .window-left { border-right: none; border-bottom: 1px solid var(--line); } }
+    /* nav */
+    nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 26px 0;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
 
-  .window-right { padding: 22px 24px; }
+    .logo {
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      font-weight: 600;
+      font-size: 18px;
+      letter-spacing: -0.02em;
+    }
 
-  .window-section-label {
-    font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.1em;
-    color: var(--muted); font-weight: 600; margin-bottom: 14px;
-  }
+    .logo-mark {
+      display: inline-block;
+      width: 22px;
+      height: 22px;
+      background: var(--ink);
+      border-radius: 5px;
+      position: relative;
+    }
 
-  .field { margin-bottom: 14px; }
-  .field-label {
-    font-size: 11px; color: var(--muted);
-    text-transform: uppercase; letter-spacing: 0.06em;
-    margin-bottom: 4px; font-weight: 500;
-  }
-  .field-val {
-    font-size: 13.5px; color: var(--ink-2); line-height: 1.5;
-  }
-  .field-val .pill {
-    display: inline-block;
-    background: var(--surface); border: 1px solid var(--line);
-    padding: 2px 10px; border-radius: 4px;
-    font-size: 12px; color: var(--ink-2);
-    margin-right: 4px;
-  }
+    .logo-mark::after {
+      content: "";
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 8px;
+      height: 8px;
+      background: var(--bg);
+      border-radius: 1.5px;
+    }
 
-  .draft-card {
-    background: var(--surface);
-    border: 1px solid var(--line);
-    border-radius: 8px;
-    padding: 16px 18px;
-  }
-  .draft-tag {
-    font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em;
-    color: var(--muted); font-weight: 600; margin-bottom: 10px;
-  }
-  .draft-text {
-    font-size: 14px; line-height: 1.6; color: var(--ink-2);
-    white-space: pre-wrap;
-  }
-  .draft-text strong { font-weight: 500; color: var(--ink); }
+    .nav-links {
+      display: flex;
+      gap: 32px;
+      align-items: center;
+      font-size: 14px;
+      flex-wrap: wrap;
+    }
 
-  /* Typewriter — replays once on page load, then settles. The blinking
-     cursor signals "live generation" without faking model latency.
-     Animation runs only when the .typewriter element is in the viewport
-     (intersection observer in the inline script below adds .play). */
-  .typewriter {
-    overflow: hidden;
-    border-right: 2px solid transparent;
-  }
-  .typewriter.play {
-    animation: typewriter-reveal 4.2s steps(60, end) 0.6s forwards,
-               typewriter-cursor 0.7s step-end 0.6s 7;
-    width: 0;
-    max-width: 100%;
-    white-space: pre-wrap;
-    border-right-color: var(--ink);
-  }
-  @keyframes typewriter-reveal {
-    from { width: 0; }
-    to   { width: 100%; }
-  }
-  @keyframes typewriter-cursor {
-    50% { border-right-color: transparent; }
-  }
-  /* Honor the user's reduce-motion preference. */
-  @media (prefers-reduced-motion: reduce) {
-    .typewriter.play { animation: none; width: auto; border-right-color: transparent; }
-  }
+    .nav-links a {
+      color: var(--muted);
+    }
 
-  /* Before / After contrast block. Two columns side-by-side showing what
-     templated outreach looks like vs what Riffly drafts. The visual gap
-     does more persuasion than any copy could. */
-  .contrast-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 24px;
-    margin-top: 28px;
-    max-width: 980px;
-  }
-  @media (max-width: 760px) {
-    .contrast-grid { grid-template-columns: 1fr; }
-  }
-  .contrast-col {
-    padding: 24px;
-    border-radius: 12px;
-    border: 1px solid var(--line);
-    background: var(--bg);
-  }
-  .contrast-bad {
-    border-color: #e8d6cf;
-    background: #fdf6f3;
-  }
-  .contrast-good {
-    border-color: #cfe6d9;
-    background: #f3faf6;
-  }
-  .contrast-tag {
-    font-size: 10.5px;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    font-weight: 700;
-    color: var(--muted);
-    margin-bottom: 14px;
-  }
-  .contrast-bad .contrast-tag { color: #b8331a; }
-  .contrast-good .contrast-tag { color: #1a7a48; }
-  .contrast-msg {
-    font-size: 14.5px;
-    line-height: 1.6;
-    color: var(--ink-2);
-    margin-bottom: 16px;
-  }
-  .contrast-bad .contrast-msg { color: #8b6f66; }
-  .contrast-meta {
-    font-size: 12.5px;
-    line-height: 1.5;
-    color: var(--muted);
-    border-top: 1px solid var(--line);
-    padding-top: 12px;
-    font-style: italic;
-  }
+    .nav-links a:hover {
+      color: var(--ink);
+    }
 
-  .cohort-note {
-    margin: -8px auto 28px;
-    padding: 12px 16px;
-    max-width: 720px;
-    font-size: 14px;
-    line-height: 1.55;
-    color: var(--ink);
-    background: var(--warm);
-    border: 1px solid var(--line);
-    border-radius: 6px;
-    text-align: center;
-  }
-  .cohort-note strong { color: var(--accent); font-weight: 700; }
-  .founder-card {
-    max-width: 720px;
-    margin: 0 auto;
-    padding: 28px 32px;
-    background: var(--surface);
-    border: 1px solid var(--line);
-    border-radius: 8px;
-    font-size: 15px;
-    line-height: 1.65;
-    color: var(--ink-2);
-  }
-  .founder-card .who {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin-bottom: 14px;
-  }
-  .founder-card .who-name {
-    font-size: 13px;
-    font-weight: 700;
-    color: var(--ink);
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-  }
-  .founder-card .who-dot {
-    width: 8px; height: 8px; border-radius: 50%;
-    background: #18a957;
-    box-shadow: 0 0 0 3px rgba(24, 169, 87, 0.18);
-  }
-  .founder-card p { margin: 0 0 12px; }
-  .founder-card p:last-child { margin-bottom: 0; }
-  .founder-card a { color: var(--ink); border-bottom: 1px solid var(--line-2); }
-  .founder-card a:hover { border-bottom-color: var(--ink); }
+    @media (max-width: 640px) {
+      .nav-links {
+        gap: 16px;
+        font-size: 13px;
+      }
+    }
 
-  /* Pulsing green dot next to "Drafting live" — small status signal that
-     the demo isn't a static screenshot. */
-  .live-dot {
-    display: inline-block;
-    width: 7px; height: 7px;
-    background: #1a7a48;
-    border-radius: 50%;
-    margin-right: 6px;
-    vertical-align: middle;
-    box-shadow: 0 0 0 0 rgba(26, 122, 72, 0.5);
-    animation: live-pulse 1.6s ease-in-out infinite;
-  }
-  @keyframes live-pulse {
-    0%, 100% { box-shadow: 0 0 0 0 rgba(26, 122, 72, 0.45); }
-    50%      { box-shadow: 0 0 0 6px rgba(26, 122, 72, 0); }
-  }
+    /* buttons */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 11px 18px;
+      background: var(--ink);
+      color: #fff;
+      border-radius: 8px;
+      font-weight: 500;
+      font-size: 14px;
+      border: 1px solid var(--ink);
+      cursor: pointer;
+      transition: transform 0.08s ease, background 0.15s ease;
+      min-height: 44px;
+    }
 
-  /* sections */
-  section { padding: 88px 0; }
-  section h2 {
-    font-size: 38px; line-height: 1.1; letter-spacing: -0.03em;
-    font-weight: 600; margin: 0 0 16px; max-width: 680px;
-  }
-  section .sub {
-    font-size: 17px; color: var(--muted); max-width: 580px; margin: 0 0 48px;
-    line-height: 1.5;
-  }
+    .btn:hover {
+      background: #1f1f1d;
+    }
 
-  /* steps with custom marks */
-  .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 36px; }
-  @media (max-width: 720px) { .steps { grid-template-columns: 1fr; gap: 28px; } }
-  .step h3 {
-    margin: 0 0 8px; font-size: 17px; font-weight: 600;
-    letter-spacing: -0.01em;
-  }
-  .step p { margin: 0; color: var(--muted); font-size: 14.5px; line-height: 1.6; }
-  .step-mark {
-    width: 28px; height: 28px; margin-bottom: 18px;
-    color: var(--ink);
-  }
+    .btn:active {
+      transform: translateY(1px);
+    }
 
-  /* principles */
-  .principles {
-    display: grid; grid-template-columns: 1fr 1fr;
-    gap: 0;
-    border-top: 1px solid var(--line);
-    border-left: 1px solid var(--line);
-  }
-  @media (max-width: 720px) { .principles { grid-template-columns: 1fr; } }
-  .principle {
-    padding: 32px;
-    border-right: 1px solid var(--line);
-    border-bottom: 1px solid var(--line);
-    background: var(--surface);
-  }
-  .principle h3 {
-    margin: 0 0 8px; font-size: 16.5px; font-weight: 600;
-    letter-spacing: -0.01em;
-  }
-  .principle p { margin: 0; color: var(--muted); font-size: 14.5px; line-height: 1.6; }
-  .principle-mark {
-    width: 22px; height: 22px; margin-bottom: 16px; color: var(--ink);
-  }
+    .btn-ghost {
+      background: transparent;
+      color: var(--ink);
+      border-color: var(--line-2);
+    }
 
-  /* pricing */
-  .pricing {
-    display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;
-  }
-  @media (max-width: 720px) { .pricing { grid-template-columns: 1fr; } }
-  .price-card {
-    background: var(--surface);
-    border: 1px solid var(--line);
-    border-radius: 10px;
-    padding: 28px;
-  }
-  .price-card.featured { border-color: var(--ink); }
-  .price-name {
-    font-size: 13px; color: var(--muted);
-    text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600;
-    margin-bottom: 6px;
-  }
-  .price-num {
-    font-size: 32px; font-weight: 600; letter-spacing: -0.02em;
-    line-height: 1;
-  }
-  .price-num small {
-    font-size: 14px; font-weight: 400; color: var(--muted);
-    margin-left: 2px;
-  }
-  .price-feats { list-style: none; padding: 0; margin: 18px 0 22px; }
-  .price-feats li {
-    padding: 4px 0; font-size: 14px; color: var(--ink-2);
-    display: flex; align-items: flex-start; gap: 8px;
-    line-height: 1.4;
-  }
-  .price-check {
-    flex-shrink: 0; margin-top: 4px;
-    width: 12px; height: 12px; color: var(--muted);
-  }
-  /* Coming-soon and beta pills used on the Plus tier card. Calm, low-stakes
-     amber so it reads as honest disclosure rather than alarm. */
-  .coming-soon {
-    display: inline-block;
-    font-size: 9px; font-weight: 700;
-    letter-spacing: 0.04em; text-transform: uppercase;
-    color: #6b4a14; background: #fff8eb;
-    border: 1px solid #f3d99a;
-    padding: 1px 6px; border-radius: 100px;
-    margin-left: 4px; vertical-align: middle;
-    white-space: nowrap;
-  }
-  .price-beta {
-    display: inline-block;
-    font-size: 10px; font-weight: 700;
-    letter-spacing: 0.06em; text-transform: uppercase;
-    color: #6b4a14; background: #fff8eb;
-    border: 1px solid #f3d99a;
-    padding: 2px 7px; border-radius: 100px;
-    margin-left: 6px; vertical-align: middle;
-  }
-  .plus-beta-note {
-    margin: -6px 0 14px;
-    padding: 8px 10px;
-    background: #fff8eb;
-    border: 1px solid #f3d99a;
-    border-radius: 8px;
-    font-size: 12px; color: #6b4a14;
-    line-height: 1.45;
-  }
+    .btn-ghost:hover {
+      background: var(--warm);
+      border-color: var(--ink);
+    }
 
-  /* faq */
-  .faq { max-width: 680px; }
-  .faq details {
-    border-bottom: 1px solid var(--line);
-    padding: 18px 0;
-    cursor: pointer;
-  }
-  .faq summary {
-    font-weight: 500; font-size: 15.5px;
-    list-style: none; outline: none;
-    display: flex; justify-content: space-between; align-items: center;
-    letter-spacing: -0.005em;
-  }
-  .faq summary::-webkit-details-marker { display: none; }
-  .faq summary::after {
-    content: ""; width: 14px; height: 14px;
-    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 14' fill='none' stroke='%236b6a65' stroke-width='1.5' stroke-linecap='round'><line x1='3' y1='7' x2='11' y2='7'/><line x1='7' y1='3' x2='7' y2='11'/></svg>");
-    background-size: contain; background-repeat: no-repeat; background-position: center;
-    flex-shrink: 0; margin-left: 16px;
-    transition: transform 0.2s ease;
-  }
-  .faq details[open] summary::after {
-    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 14' fill='none' stroke='%236b6a65' stroke-width='1.5' stroke-linecap='round'><line x1='3' y1='7' x2='11' y2='7'/></svg>");
-  }
-  .faq details p {
-    margin: 14px 0 0;
-    color: var(--muted); font-size: 14.5px; line-height: 1.7;
-    padding-right: 36px;
-  }
+    .btn-lg {
+      padding: 13px 22px;
+      font-size: 14.5px;
+    }
 
-  footer {
-    padding: 32px 0 56px;
-    border-top: 1px solid var(--line);
-    color: var(--muted); font-size: 13px;
-  }
-  footer .row {
-    display: flex; justify-content: space-between; flex-wrap: wrap; gap: 16px;
-    align-items: center;
-  }
-  footer .links { display: flex; gap: 28px; }
-  footer a:hover { color: var(--ink); }
-</style>
+    .btn .arrow {
+      display: inline-block;
+      transform: translateX(0);
+      transition: transform 0.15s ease;
+    }
+
+    .btn:hover .arrow {
+      transform: translateX(2px);
+    }
+
+    .btn-chrome {
+      background: linear-gradient(135deg, #4285f4 0%, #1f2937 100%);
+      border-color: #4285f4;
+      color: #fff;
+      font-weight: 600;
+    }
+
+    .btn-chrome:hover {
+      background: linear-gradient(135deg, #3367d6 0%, #111827 100%);
+    }
+
+    .chrome-badge {
+      display: inline-block;
+      background: rgba(66, 133, 244, 0.1);
+      border: 1px solid rgba(66, 133, 244, 0.3);
+      color: #4285f4;
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      margin-bottom: 16px;
+    }
+
+    .chrome-logo-inline {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      margin-right: 4px;
+      vertical-align: middle;
+    }
+
+    /* hero */
+    .hero {
+      padding: clamp(40px, 10vw, 80px) 0 clamp(24px, 5vw, 32px);
+    }
+
+    .hero-container {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 48px;
+      align-items: start;
+    }
+
+    @media (max-width: 768px) {
+      .hero-container {
+        grid-template-columns: 1fr;
+        gap: 32px;
+      }
+    }
+
+    .hero-content {
+      flex: 1;
+    }
+
+    .eyebrow {
+      display: inline-block;
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 28px;
+      font-weight: 500;
+    }
+
+    .eyebrow::before {
+      content: "·";
+      margin-right: 10px;
+      color: var(--accent);
+    }
+
+    .hero h1 {
+      font-size: clamp(32px, 8vw, 62px);
+      line-height: 1.02;
+      letter-spacing: -0.04em;
+      font-weight: 600;
+      max-width: 760px;
+      margin: 0 0 24px;
+    }
+
+    .hero .lede {
+      font-size: clamp(16px, 3vw, 19px);
+      max-width: 580px;
+      color: var(--muted);
+      margin: 0 0 32px;
+      line-height: 1.5;
+    }
+
+    .hero-cta {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    @media (max-width: 640px) {
+      .hero-cta {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+      }
+
+      .hero-cta a {
+        width: 100%;
+      }
+    }
+
+    .hero-meta {
+      margin-top: 20px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .hero-meta-dot {
+      display: inline-block;
+      width: 5px;
+      height: 5px;
+      background: var(--accent);
+      border-radius: 50%;
+      vertical-align: middle;
+      margin: 0 8px 2px;
+    }
+
+    /* product window */
+    .window {
+      margin: clamp(32px, 8vw, 56px) auto 0;
+      max-width: 100%;
+      background: var(--surface);
+      border: 1px solid var(--line-2);
+      border-radius: 12px;
+      box-shadow: 0 30px 80px -30px rgba(20, 18, 12, 0.14), 0 8px 20px -8px rgba(20, 18, 12, 0.06);
+      overflow: hidden;
+    }
+
+    @media (max-width: 768px) {
+      .window {
+        margin: clamp(24px, 6vw, 40px) auto 0;
+      }
+    }
+
+    .window-chrome {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--line);
+      background: linear-gradient(180deg, #fafaf7 0%, #f5f3ed 100%);
+    }
+
+    .window-dot {
+      display: inline-block;
+      width: 11px;
+      height: 11px;
+      border-radius: 50%;
+    }
+
+    .window-dot.r {
+      background: #ed6a5e;
+    }
+
+    .window-dot.y {
+      background: #f5bf4f;
+    }
+
+    .window-dot.g {
+      background: #62c454;
+    }
+
+    .window-url {
+      margin-left: 14px;
+      font-size: 12px;
+      color: var(--muted);
+      background: var(--bg);
+      border: 1px solid var(--line);
+      padding: 4px 12px;
+      border-radius: 5px;
+      flex-shrink: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      flex-grow: 1;
+      max-width: 360px;
+    }
+
+    .window-url::before {
+      content: "🔒 ";
+      opacity: 0.4;
+      font-size: 10px;
+    }
+
+    .window-body {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+    }
+
+    @media (max-width: 760px) {
+      .window-body {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .window-left {
+      padding: 24px;
+      border-right: 1px solid var(--line);
+      background: var(--bg);
+    }
+
+    @media (max-width: 760px) {
+      .window-left {
+        border-right: none;
+        border-bottom: 1px solid var(--line);
+      }
+    }
+
+    .window-right {
+      padding: 24px;
+    }
+
+    .window-section-label {
+      font-size: 10.5px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--muted);
+      font-weight: 600;
+      margin-bottom: 18px;
+    }
+
+    .field {
+      margin-bottom: 18px;
+    }
+
+    .field-label {
+      font-size: 11px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 6px;
+      font-weight: 500;
+    }
+
+    .field-val {
+      font-size: 13.5px;
+      color: var(--ink-2);
+      line-height: 1.5;
+    }
+
+    .field-val .pill {
+      display: inline-block;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      padding: 2px 10px;
+      border-radius: 4px;
+      font-size: 12px;
+      color: var(--ink-2);
+      margin-right: 4px;
+    }
+
+    .draft-card {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 20px;
+    }
+
+    .draft-tag {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      font-weight: 600;
+      margin-bottom: 12px;
+    }
+
+    .draft-text {
+      font-size: 14px;
+      line-height: 1.6;
+      color: var(--ink-2);
+      white-space: pre-wrap;
+    }
+
+    .draft-text strong {
+      font-weight: 500;
+      color: var(--ink);
+    }
+
+    /* Typewriter — replays once on page load, then settles. The blinking cursor signals "live generation" without faking model latency. Animation runs only when the .typewriter element is in the viewport (intersection observer in the inline script below adds .play). */
+    .typewriter {
+      overflow: hidden;
+      border-right: 2px solid transparent;
+    }
+
+    .typewriter.play {
+      animation: typewriter-reveal 4.2s steps(60, end) 0.6s forwards, typewriter-cursor 0.7s step-end 0.6s 7;
+      width: 0;
+      max-width: 100%;
+      white-space: pre-wrap;
+      border-right-color: var(--ink);
+    }
+
+    @keyframes typewriter-reveal {
+      from {
+        width: 0;
+      }
+      to {
+        width: 100%;
+      }
+    }
+
+    @keyframes typewriter-cursor {
+      50% {
+        border-right-color: transparent;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .typewriter.play {
+        animation: none;
+        width: auto;
+        border-right-color: transparent;
+      }
+    }
+
+    /* Before / After contrast block. Two columns side-by-side showing what templated outreach looks like vs what Riffly drafts. The visual gap does more persuasion than any copy could. */
+    .contrast-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      margin-top: 28px;
+      max-width: 980px;
+    }
+
+    @media (max-width: 760px) {
+      .contrast-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .contrast-col {
+      padding: 24px;
+      border-radius: 12px;
+      border: 1px solid var(--line);
+      background: var(--bg);
+    }
+
+    .contrast-bad {
+      border-color: #e8d6cf;
+      background: #fdf6f3;
+    }
+
+    .contrast-good {
+      border-color: #cfe6d9;
+      background: #f3faf6;
+    }
+
+    .contrast-tag {
+      font-size: 10.5px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      font-weight: 700;
+      color: var(--muted);
+      margin-bottom: 14px;
+    }
+
+    .contrast-bad .contrast-tag {
+      color: #b8331a;
+    }
+
+    .contrast-good .contrast-tag {
+      color: #1a7a48;
+    }
+
+    .contrast-msg {
+      font-size: 14.5px;
+      line-height: 1.6;
+      color: var(--ink-2);
+      margin-bottom: 16px;
+    }
+
+    .contrast-bad .contrast-msg {
+      color: #8b6f66;
+    }
+
+    .contrast-meta {
+      font-size: 12.5px;
+      line-height: 1.5;
+      color: var(--muted);
+      border-top: 1px solid var(--line);
+      padding-top: 12px;
+      font-style: italic;
+    }
+
+    .cohort-note {
+      margin: -8px auto 28px;
+      padding: 12px 16px;
+      max-width: 720px;
+      font-size: 14px;
+      line-height: 1.55;
+      color: var(--ink);
+      background: var(--warm);
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      text-align: center;
+    }
+
+    .cohort-note strong {
+      color: var(--accent);
+      font-weight: 700;
+    }
+
+    .founder-card {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 28px 32px;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      font-size: 15px;
+      line-height: 1.65;
+      color: var(--ink-2);
+    }
+
+    .founder-card .who {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .founder-card .who-name {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--ink);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .founder-card .who-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #18a957;
+      box-shadow: 0 0 0 3px rgba(24, 169, 87, 0.18);
+    }
+
+    .founder-card p {
+      margin: 0 0 12px;
+    }
+
+    .founder-card p:last-child {
+      margin-bottom: 0;
+    }
+
+    .founder-card a {
+      color: var(--ink);
+      border-bottom: 1px solid var(--line-2);
+    }
+
+    .founder-card a:hover {
+      border-bottom-color: var(--ink);
+    }
+
+    /* Pulsing green dot next to "Drafting live" — small status signal that the demo isn't a static screenshot. */
+    .live-dot {
+      display: inline-block;
+      width: 7px;
+      height: 7px;
+      background: #1a7a48;
+      border-radius: 50%;
+      margin-right: 6px;
+      vertical-align: middle;
+      box-shadow: 0 0 0 0 rgba(26, 122, 72, 0.5);
+      animation: live-pulse 1.6s ease-in-out infinite;
+    }
+
+    @keyframes live-pulse {
+      0%, 100% {
+        box-shadow: 0 0 0 0 rgba(26, 122, 72, 0.45);
+      }
+      50% {
+        box-shadow: 0 0 0 6px rgba(26, 122, 72, 0);
+      }
+    }
+
+    /* sections */
+    section {
+      padding: clamp(56px, 12vw, 88px) 0;
+    }
+
+    section h2 {
+      font-size: clamp(28px, 6vw, 38px);
+      line-height: 1.1;
+      letter-spacing: -0.03em;
+      font-weight: 600;
+      margin: 0 0 16px;
+      max-width: 680px;
+    }
+
+    section .sub {
+      font-size: clamp(15px, 2.5vw, 17px);
+      color: var(--muted);
+      max-width: 580px;
+      margin: 0 0 48px;
+      line-height: 1.5;
+    }
+
+    /* steps with custom marks */
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 36px;
+    }
+
+    @media (max-width: 720px) {
+      .steps {
+        grid-template-columns: 1fr;
+        gap: 28px;
+      }
+    }
+
+    .step h3 {
+      margin: 0 0 8px;
+      font-size: 17px;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+    }
+
+    .step p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 14.5px;
+      line-height: 1.6;
+    }
+
+    .step-mark {
+      width: 28px;
+      height: 28px;
+      margin-bottom: 18px;
+      color: var(--ink);
+    }
+
+    /* principles */
+    .principles {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0;
+      border-top: 1px solid var(--line);
+      border-left: 1px solid var(--line);
+    }
+
+    @media (max-width: 720px) {
+      .principles {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .principle {
+      padding: 32px;
+      border-right: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+      background: var(--surface);
+    }
+
+    .principle h3 {
+      margin: 0 0 8px;
+      font-size: 16.5px;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+    }
+
+    .principle p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 14.5px;
+      line-height: 1.6;
+    }
+
+    .principle-mark {
+      width: 22px;
+      height: 22px;
+      margin-bottom: 16px;
+      color: var(--ink);
+    }
+
+    /* pricing */
+    .pricing {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+    }
+
+    @media (max-width: 720px) {
+      .pricing {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .price-card {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 28px;
+    }
+
+    .price-card.featured {
+      border-color: var(--ink);
+    }
+
+    .price-name {
+      font-size: 13px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+
+    .price-num {
+      font-size: 32px;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      line-height: 1;
+    }
+
+    .price-num small {
+      font-size: 14px;
+      font-weight: 400;
+      color: var(--muted);
+      margin-left: 2px;
+    }
+
+    .price-feats {
+      list-style: none;
+      padding: 0;
+      margin: 18px 0 22px;
+    }
+
+    .price-feats li {
+      padding: 4px 0;
+      font-size: 14px;
+      color: var(--ink-2);
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      line-height: 1.4;
+    }
+
+    .price-check {
+      flex-shrink: 0;
+      margin-top: 4px;
+      width: 12px;
+      height: 12px;
+      color: var(--muted);
+    }
+
+    /* Coming-soon and beta pills used on the Plus tier card. Calm, low-stakes amber so it reads as honest disclosure rather than alarm. */
+    .coming-soon {
+      display: inline-block;
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: #6b4a14;
+      background: #fff8eb;
+      border: 1px solid #f3d99a;
+      padding: 1px 6px;
+      border-radius: 100px;
+      margin-left: 4px;
+      vertical-align: middle;
+      white-space: nowrap;
+    }
+
+    .price-beta {
+      display: inline-block;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: #6b4a14;
+      background: #fff8eb;
+      border: 1px solid #f3d99a;
+      padding: 2px 7px;
+      border-radius: 100px;
+      margin-left: 6px;
+      vertical-align: middle;
+    }
+
+    .plus-beta-note {
+      margin: -6px 0 14px;
+      padding: 8px 10px;
+      background: #fff8eb;
+      border: 1px solid #f3d99a;
+      border-radius: 8px;
+      font-size: 12px;
+      color: #6b4a14;
+      line-height: 1.45;
+    }
+
+    /* faq */
+    .faq {
+      max-width: 680px;
+    }
+
+    .faq details {
+      border-bottom: 1px solid var(--line);
+      padding: 18px 0;
+      cursor: pointer;
+    }
+
+    .faq summary {
+      font-weight: 500;
+      font-size: 15.5px;
+      list-style: none;
+      outline: none;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      letter-spacing: -0.005em;
+    }
+
+    .faq summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .faq summary::after {
+      content: "";
+      width: 14px;
+      height: 14px;
+      background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 14' fill='none' stroke='%236b6a65' stroke-width='1.5' stroke-linecap='round'><line x1='3' y1='7' x2='11' y2='7'/><line x1='7' y1='3' x2='7' y2='11'/></svg>");
+      background-size: contain;
+      background-repeat: no-repeat;
+      background-position: center;
+      flex-shrink: 0;
+      margin-left: 16px;
+      transition: transform 0.2s ease;
+    }
+
+    .faq details[open] summary::after {
+      background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 14' fill='none' stroke='%236b6a65' stroke-width='1.5' stroke-linecap='round'><line x1='3' y1='7' x2='11' y2='7'/></svg>");
+    }
+
+    .faq details p {
+      margin: 14px 0 0;
+      color: var(--muted);
+      font-size: 14.5px;
+      line-height: 1.7;
+      padding-right: 36px;
+    }
+
+    footer {
+      padding: 32px 0 56px;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    footer .row {
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 16px;
+      align-items: center;
+    }
+
+    footer .links {
+      display: flex;
+      gap: 28px;
+      flex-wrap: wrap;
+    }
+
+    footer a:hover {
+      color: var(--ink);
+    }
+
+    @media (max-width: 640px) {
+      footer .row {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      footer .links {
+        gap: 16px;
+      }
+    }
+  </style>
 </head>
 <body>
-
-<header>
-  <div class="wrap">
-    <nav>
-      <a href="#" class="logo">
-        <span class="logo-mark"></span>Riffly
-      </a>
-      <div class="nav-links">
-        <a href="#how">How it works</a>
-        <a href="#pricing">Pricing</a>
-        <a href="#faq">FAQ</a>
-        <a href="/signup" id="auth-cta" class="btn btn-ghost" style="padding: 8px 14px;">Sign in</a>
-      </div>
-    </nav>
-  </div>
-</header>
-
-<section class="hero">
-  <div class="wrap">
-    <div class="eyebrow">For recruiters, founders, and operators who refuse to send templates</div>
-    <h1>Cold messages that don't get deleted.</h1>
-    <p class="lede">Riffly reads what they posted this week, the repos they pinned, the work in their About — and drafts an opener in <em>their</em> dialect, not yours. Fifteen seconds. Three variants. Manual send only — zero LinkedIn ban risk.</p>
-    <div class="hero-cta">
-      <a href="/signup" id="hero-cta" class="btn btn-lg">Start drafting <span class="arrow">→</span></a>
-      <a href="#how" class="btn btn-ghost btn-lg">Watch it work</a>
+  <header>
+    <div class="wrap">
+      <nav>
+        <a href="#" class="logo">
+          <span class="logo-mark"></span>Riffly
+        </a>
+        <div class="nav-links">
+          <a href="#how">How it works</a>
+          <a href="#pricing">Pricing</a>
+          <a href="#faq">FAQ</a>
+          <a href="/signup" id="auth-cta" class="btn btn-ghost" style="padding: 8px 14px;">Sign in</a>
+        </div>
+      </nav>
     </div>
-    <div class="hero-meta">
-      No card<span class="hero-meta-dot"></span>5 drafts a week, free<span class="hero-meta-dot"></span>Built on Claude Sonnet 4.6
-    </div>
+  </header>
 
-    <div class="window">
-      <div class="window-chrome">
-        <span class="window-dot r"></span>
-        <span class="window-dot y"></span>
-        <span class="window-dot g"></span>
-        <div class="window-url">linkedin.com/in/alex-chen — Riffly popup</div>
+  <section class="hero">
+    <div class="wrap">
+      <div class="chrome-badge">
+        <svg class="chrome-logo-inline" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/>
+          <circle cx="12" cy="12" r="3" fill="currentColor"/>
+          <path d="M12 2 L18 8 L12 14" fill="currentColor" opacity="0.6"/>
+        </svg>
+        Free Chrome Extension
       </div>
-      <div class="window-body">
-        <div class="window-left">
-          <div class="window-section-label">What Riffly sees</div>
-          <div class="field">
-            <div class="field-label">Profile (auto-detected)</div>
-            <div class="field-val">Alex Chen<br><span style="color: var(--muted); font-size: 13px;">Staff Engineer · Distributed Systems · Currently keeping FinTech APIs from falling over</span></div>
+      <div class="hero-container">
+        <div class="hero-content">
+          <div class="eyebrow">For recruiters, founders, and operators who refuse to send templates</div>
+          <h1>Cold messages that don't get deleted.</h1>
+          <p class="lede">Riffly reads what they posted this week, the repos they pinned, the work in their About — and drafts an opener in <em>their</em> dialect, not yours. Fifteen seconds. Three variants. Manual send only — zero LinkedIn ban risk.</p>
+          <div class="hero-cta">
+            <a href="#install" id="hero-cta" class="btn btn-lg btn-chrome">
+              <svg class="chrome-logo-inline" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" style="width: 16px; height: 16px;">
+                <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/>
+                <circle cx="12" cy="12" r="3" fill="currentColor"/>
+                <path d="M12 2 L18 8 L12 14" fill="currentColor" opacity="0.8"/>
+              </svg>
+              Add to Chrome — Free <span class="arrow">→</span>
+            </a>
+            <a href="#how" class="btn btn-ghost btn-lg">Watch it work</a>
           </div>
-          <div class="field">
-            <div class="field-label">Recent post (pasted)</div>
-            <div class="field-val" style="font-size: 13px; font-style: italic;">"Most teams overspend on K8s reserved capacity because nobody owns the cost line item."</div>
+          <div class="hero-meta">
+            No card<span class="hero-meta-dot"></span>5 drafts a week, free<span class="hero-meta-dot"></span>Built on Claude Sonnet 4.6
           </div>
-          <div class="field">
-            <div class="field-label">Your pitch</div>
-            <div class="field-val" style="font-size: 13px;">Hiring a Staff Engineer for our payments infra team. Rebuilding cross-region replay. Series B, remote, $250–300K + equity.</div>
+        </div>
+
+        <div class="window">
+          <div class="window-chrome">
+            <span class="window-dot r"></span>
+            <span class="window-dot y"></span>
+            <span class="window-dot g"></span>
+            <div class="window-url">linkedin.com/in/alex-chen — Riffly popup</div>
           </div>
-          <div class="field" style="margin-bottom: 0;">
-            <div class="field-label">Tone &amp; length</div>
-            <div class="field-val">
-              <span class="pill">Direct</span>
-              <span class="pill">Medium</span>
+          <div class="window-body">
+            <div class="window-left">
+              <div class="window-section-label">What Riffly sees</div>
+              <div class="field">
+                <div class="field-label">Profile (auto-detected)</div>
+                <div class="field-val">Alex Chen<br><span style="color: var(--muted); font-size: 13px;">Staff Engineer · Distributed Systems · Currently keeping FinTech APIs from falling over</span></div>
+              </div>
+              <div class="field">
+                <div class="field-label">Recent post (pasted)</div>
+                <div class="field-val" style="font-size: 13px; font-style: italic;">"Most teams overspend on K8s reserved capacity because nobody owns the cost line item."</div>
+              </div>
+              <div class="field">
+                <div class="field-label">Your pitch</div>
+                <div class="field-val" style="font-size: 13px;">Hiring a Staff Engineer for our payments infra team. Rebuilding cross-region replay. Series B, remote, $250–300K + equity.</div>
+              </div>
+              <div class="field" style="margin-bottom: 0;">
+                <div class="field-label">Tone &amp; length</div>
+                <div class="field-val">
+                  <span class="pill">Direct</span>
+                  <span class="pill">Medium</span>
+                </div>
+              </div>
+            </div>
+            <div class="window-right">
+              <div class="window-section-label"><span class="live-dot"></span> Drafting live · cold opener</div>
+              <div class="draft-card">
+                <div class="draft-tag">Cold opener</div>
+                <div class="draft-text typewriter">Alex — your post this week on K8s reserved capacity is the exact fight we're picking at Loop. <strong>We're rebuilding cross-region replay for our payments infra and "who owns the cost line item" is the question that keeps stalling the design review.</strong> Worth a 20-min trade of notes this week, even if just to compare scars?</div>
+              </div>
             </div>
           </div>
         </div>
+      </div>
+    </div>
+  </section>
 
-        <div class="window-right">
-          <div class="window-section-label"><span class="live-dot"></span> Drafting live · cold opener</div>
-          <div class="draft-card">
-            <div class="draft-tag">Cold opener</div>
-            <div class="draft-text typewriter">Alex — your post this week on K8s reserved capacity is the exact fight we're picking at Loop. <strong>We're rebuilding cross-region replay for our payments infra and "who owns the cost line item" is the question that keeps stalling the design review.</strong>
-
-Worth a 20-min trade of notes this week, even if just to compare scars?</div>
-          </div>
+  <section id="contrast" style="background: var(--surface); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);">
+    <div class="wrap">
+      <h2>The kind of message that gets a reply.</h2>
+      <p class="sub">Not a feature claim. Just look.</p>
+      <div class="contrast-grid">
+        <div class="contrast-col contrast-bad">
+          <div class="contrast-tag">What everyone else sends</div>
+          <div class="contrast-msg">Hi Alex, I came across your profile and was impressed by your background in distributed systems. I think you'd be a great fit for an exciting opportunity at our company. We're scaling rapidly and looking for top talent passionate about building reliable infrastructure. Would you be open to a quick chat?</div>
+          <div class="contrast-meta">Generic · "great fit" · "scaling" · "top talent" · skips to a deleted folder</div>
+        </div>
+        <div class="contrast-col contrast-good">
+          <div class="contrast-tag">What Riffly drafts</div>
+          <div class="contrast-msg">Alex — your post this week on K8s reserved capacity is the exact fight we're picking at Loop. We're rebuilding cross-region replay for our payments infra and "who owns the cost line item" is the question that keeps stalling the design review. Worth a 20-min trade of notes this week, even if just to compare scars?</div>
+          <div class="contrast-meta">References a post they wrote · names a real problem they have · gives them a reason to reply</div>
         </div>
       </div>
     </div>
-  </div>
-</section>
+  </section>
 
-<section id="contrast" style="background: var(--surface); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);">
-  <div class="wrap">
-    <h2>The kind of message that gets a reply.</h2>
-    <p class="sub">Not a feature claim. Just look.</p>
-
-    <div class="contrast-grid">
-      <div class="contrast-col contrast-bad">
-        <div class="contrast-tag">What everyone else sends</div>
-        <div class="contrast-msg">Hi Alex, I came across your profile and was impressed by your background in distributed systems. I think you'd be a great fit for an exciting opportunity at our company. We're scaling rapidly and looking for top talent passionate about building reliable infrastructure. Would you be open to a quick chat?</div>
-        <div class="contrast-meta">Generic · "great fit" · "scaling" · "top talent" · skips to a deleted folder</div>
-      </div>
-      <div class="contrast-col contrast-good">
-        <div class="contrast-tag">What Riffly drafts</div>
-        <div class="contrast-msg">Alex — your post this week on K8s reserved capacity is the exact fight we're picking at Loop. We're rebuilding cross-region replay for our payments infra and "who owns the cost line item" is the question that keeps stalling the design review. Worth a 20-min trade of notes this week, even if just to compare scars?</div>
-        <div class="contrast-meta">References a post they wrote · names a real problem they have · gives them a reason to reply</div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<section id="how">
-  <div class="wrap">
-    <h2>Profile in front of you. Sequence ready to send.</h2>
-    <p class="sub">No CRM. No CSV imports. No API keys. Three steps. Fifteen seconds.</p>
-
-    <div class="steps">
-      <div class="step">
-        <svg class="step-mark" viewBox="0 0 28 28" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-          <rect x="3" y="5" width="22" height="18" rx="2"/>
-          <line x1="3" y1="10" x2="25" y2="10"/>
-          <circle cx="6.5" cy="7.5" r="0.6" fill="currentColor"/>
-          <circle cx="9" cy="7.5" r="0.6" fill="currentColor"/>
-          <circle cx="11.5" cy="7.5" r="0.6" fill="currentColor"/>
-        </svg>
-        <h3>Open a profile</h3>
-        <p>Works on linkedin.com, Sales Navigator, and LinkedIn Recruiter. Click the Riffly icon. The profile is auto-detected.</p>
-      </div>
-
-      <div class="step">
-        <svg class="step-mark" viewBox="0 0 28 28" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M5 14h12M5 9h18M5 19h8"/>
-          <circle cx="22" cy="19" r="3"/>
-        </svg>
-        <h3>Write one sentence</h3>
-        <p>Describe what you're hiring for. Pick a tone — warm, direct, or cheeky. Optionally paste a recent post they wrote.</p>
-      </div>
-
-      <div class="step">
-        <svg class="step-mark" viewBox="0 0 28 28" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-          <rect x="4" y="4" width="14" height="18" rx="2"/>
-          <rect x="10" y="8" width="14" height="18" rx="2" fill="var(--bg)"/>
-          <path d="M14 14h6M14 18h4" stroke="currentColor"/>
-        </svg>
-        <h3>Three drafts, your call</h3>
-        <p>Cold opener, follow-up, breakup. Edit, copy, send manually. Mark replies as they come in to track which tones are working.</p>
+  <section id="how">
+    <div class="wrap">
+      <h2>Profile in front of you. Sequence ready to send.</h2>
+      <p class="sub">No CRM. No CSV imports. No API keys. Three steps. Fifteen seconds.</p>
+      <div class="steps">
+        <div class="step">
+          <svg class="step-mark" viewBox="0 0 28 28" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="5" width="22" height="18" rx="2"/>
+            <line x1="3" y1="10" x2="25" y2="10"/>
+            <circle cx="6.5" cy="7.5" r="0.6" fill="currentColor"/>
+            <circle cx="9" cy="7.5" r="0.6" fill="currentColor"/>
+            <circle cx="11.5" cy="7.5" r="0.6" fill="currentColor"/>
+          </svg>
+          <h3>Open a profile</h3>
+          <p>Works on linkedin.com, Sales Navigator, and LinkedIn Recruiter. Click the Riffly icon. The profile is auto-detected.</p>
+        </div>
+        <div class="step">
+          <svg class="step-mark" viewBox="0 0 28 28" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M5 14h12M5 9h18M5 19h8"/>
+            <circle cx="22" cy="19" r="3"/>
+          </svg>
+          <h3>Write one sentence</h3>
+          <p>Describe what you're hiring for. Pick a tone — warm, direct, or cheeky. Optionally paste a recent post they wrote.</p>
+        </div>
+        <div class="step">
+          <svg class="step-mark" viewBox="0 0 28 28" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="4" y="4" width="14" height="18" rx="2"/>
+            <rect x="10" y="8" width="14" height="18" rx="2" fill="var(--bg)"/>
+            <path d="M14 14h6M14 18h4" stroke="currentColor"/>
+          </svg>
+          <h3>Three drafts, your call</h3>
+          <p>Cold opener, follow-up, breakup. Edit, copy, send manually. Mark replies as they come in to track which tones are working.</p>
+        </div>
       </div>
     </div>
-  </div>
-</section>
+  </section>
 
-<section id="why" style="background: var(--warm); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);">
-  <div class="wrap">
-    <h2>Why the drafts read like you wrote them.</h2>
-    <p class="sub">Four constraints, baked into every generation. The reason replies happen.</p>
-
-    <div class="principles">
-      <div class="principle">
-        <svg class="principle-mark" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M3 6c4-3 12-3 16 0v10c-4-3-12-3-16 0V6zM11 5v12"/>
-        </svg>
-        <h3>It reads what they wrote</h3>
-        <p>Headline, current role, About — pulled from the profile in front of you. A pasted recent post lifts output more than any other input. The model has substance to reference, not just job titles.</p>
-      </div>
-
-      <div class="principle">
-        <svg class="principle-mark" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="11" cy="11" r="8"/>
-          <line x1="5" y1="5" x2="17" y2="17"/>
-        </svg>
-        <h3>A blacklist of dead phrases</h3>
-        <p>"I came across your", "great fit", "passion for", "scaling challenges" — the corporate template language a model is otherwise prone to. Banned at the prompt layer, sanitized in the output.</p>
-      </div>
-
-      <div class="principle">
-        <svg class="principle-mark" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M4 9c0-2 1-4 4-4h6c4 0 4 4 4 4v3c0 2-1 4-4 4H8l-4 3v-3c0-1-.001-2-.001-3-.001-1 0-2 0-4z"/>
-          <circle cx="9" cy="11" r="0.5" fill="currentColor"/>
-          <circle cx="11" cy="11" r="0.5" fill="currentColor"/>
-          <circle cx="13" cy="11" r="0.5" fill="currentColor"/>
-        </svg>
-        <h3>Conversation-starter framing</h3>
-        <p>One specific observation. One concrete reason it might matter to them. One question that isn't a yes/no trap. The opener doesn't pitch — it starts a conversation that earns the pitch.</p>
-      </div>
-
-      <div class="principle">
-        <svg class="principle-mark" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M11 3l7 3v5c0 5-3 8-7 8s-7-3-7-8V6l7-3z"/>
-          <path d="M8 11l2 2 4-4"/>
-        </svg>
-        <h3>No automation, ever</h3>
-        <p>Riffly reads what's on screen and produces text. It never types into LinkedIn, never clicks send, never crawls in the background. You manually copy and send. That's the whole product.</p>
+  <section id="why" style="background: var(--warm); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);">
+    <div class="wrap">
+      <h2>Why the drafts read like you wrote them.</h2>
+      <p class="sub">Four constraints, baked into every generation. The reason replies happen.</p>
+      <div class="principles">
+        <div class="principle">
+          <svg class="principle-mark" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 6c4-3 12-3 16 0v10c-4-3-12-3-16 0V6zM11 5v12"/>
+          </svg>
+          <h3>It reads what they wrote</h3>
+          <p>Headline, current role, About — pulled from the profile in front of you. A pasted recent post lifts output more than any other input. The model has substance to reference, not just job titles.</p>
+        </div>
+        <div class="principle">
+          <svg class="principle-mark" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"/>
+            <line x1="5" y1="5" x2="17" y2="17"/>
+          </svg>
+          <h3>A blacklist of dead phrases</h3>
+          <p>"I came across your", "great fit", "passion for", "scaling challenges" — the corporate template language a model is otherwise prone to. Banned at the prompt layer, sanitized in the output.</p>
+        </div>
+        <div class="principle">
+          <svg class="principle-mark" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 9c0-2 1-4 4-4h6c4 0 4 4 4 4v3c0 2-1 4-4 4H8l-4 3v-3c0-1-.001-2-.001-3-.001-1 0-2 0-4z"/>
+            <circle cx="9" cy="11" r="0.5" fill="currentColor"/>
+            <circle cx="11" cy="11" r="0.5" fill="currentColor"/>
+            <circle cx="13" cy="11" r="0.5" fill="currentColor"/>
+          </svg>
+          <h3>Conversation-starter framing</h3>
+          <p>One specific observation. One concrete reason it might matter to them. One question that isn't a yes/no trap. The opener doesn't pitch — it starts a conversation that earns the pitch.</p>
+        </div>
+        <div class="principle">
+          <svg class="principle-mark" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M11 3l7 3v5c0 5-3 8-7 8s-7-3-7-8V6l7-3z"/>
+            <path d="M8 11l2 2 4-4"/>
+          </svg>
+          <h3>No automation, ever</h3>
+          <p>Riffly reads what's on screen and produces text. It never types into LinkedIn, never clicks send, never crawls in the background. You manually copy and send. That's the whole product.</p>
+        </div>
       </div>
     </div>
-  </div>
-</section>
+  </section>
 
-<section id="pricing">
-  <div class="wrap">
-    <h2>Pricing.</h2>
-    <p class="sub">Free is a real test, not a teaser. Pro is for the people who already know they want to use this every day. Plus is for the operator turning cold outreach into a process.</p>
-    <p class="cohort-note"><strong>Founding-cohort lock-in:</strong> the first 50 paid users keep their price for as long as their subscription stays active — even if we raise prices for everyone else.</p>
-
-    <div class="pricing">
-      <div class="price-card">
-        <div class="price-name">Free</div>
-        <div class="price-num">$0</div>
-        <ul class="price-feats">
-          <li><svg class="price-check" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,6 5,9 10,3"/></svg>5 drafts a week</li>
-          <li><svg class="price-check" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,6 5,9 10,3"/></svg>Cold opener variant only</li>
-          <li><svg class="price-check" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,6 5,9 10,3"/></svg>All tones, all sources</li>
-          <li><svg class="price-check" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,6 5,9 10,3"/></svg>No card required</li>
-        </ul>
-        <a href="/signup" data-plan="free" class="btn btn-ghost plan-cta" style="width: 100%;">Start free</a>
-      </div>
-
-      <div class="price-card featured">
-        <div class="price-name">Pro</div>
-        <div class="price-num">$14.99<small>/month</small></div>
-        <ul class="price-feats">
-          <li><svg class="price-check" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,6 5,9 10,3"/></svg>Unlimited drafts</li>
-          <li><svg class="price-check" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,6 5,9 10,3"/></svg>All 3 variants (opener, follow-up, breakup)</li>
-          <li><svg class="price-check" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,6 5,9 10,3"/></svg>Saved pitch templates, synced</li>
-          <li><svg class="price-check" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,6 5,9 10,3"/></svg>Auto follow-up loop</li>
-          <li><svg class="price-check" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,6 5,9 10,3"/></svg>7 languages</li>
-          <li><svg class="price-check" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,6 5,9 10,3"/></svg>Cross-machine reply analytics</li>
-        </ul>
-        <a href="/signup?plan=pro" data-plan="pro" class="btn plan-cta" style="width: 100%;">Get Pro</a>
-      </div>
-
-      <div class="price-card">
-        <div class="price-name">Plus <span class="price-beta">Beta</span></div>
-        <div class="price-num">$19.99<small>/month</small></div>
-        <ul class="price-feats">
-          <li><svg class="price-check" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,6 5,9 10,3"/></svg>Everything in Pro</li>
-          <li><svg class="price-check" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,6 5,9 10,3"/></svg><strong>Active Profile Assist</strong> — live fit-scoring as you browse</li>
-          <li><svg class="price-check" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,6 5,9 10,3"/></svg>Up to 5 active job specs</li>
-          <li><svg class="price-check" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,6 5,9 10,3"/></svg><strong>Saved-Search Daily Digest</strong> <span class="coming-soon">Coming soon</span> — auto-rank profiles</li>
-          <li><svg class="price-check" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,6 5,9 10,3"/></svg>Up to 10 saved searches <span class="coming-soon">Coming soon</span></li>
-        </ul>
-        <p class="plus-beta-note">Plus is in beta. Active Profile Assist is live; Saved-Search Daily Digest ships in the next wave. Subscribe now and lock in $19.99/mo for life.</p>
-        <a href="/signup?plan=plus" data-plan="plus" class="btn btn-ghost plan-cta" style="width: 100%;">Get Plus</a>
+  <section id="pricing">
+    <div class="wrap">
+      <h2>Pricing.</h2>
+      <p class="sub">Free is a real test, not a teaser. Pro is for the people who already know they want to use this every day. Plus is for the operator turning cold outreach into a process.</p>
+      <p class="cohort-note"><strong>Founding-cohort lock-in:</strong> the first 50 paid users keep their price for as long as their subscription stays active — even if we raise prices for everyone else.</p>
+      <div class="pricing">
+        <div class="price-card">
+          <div class="price-name">Free</div>
+          <div class="price-num">$0</div>
+          <ul class="price-feats">
+            <li><svg class="price-check" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,6 5,9 10,3"/></svg>5 drafts a week</li>
+            <li><svg class="price-check" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,6 5,9 10,3"/></svg>Cold opener variant only</li>
+            <li><svg class="price-check" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,6 5,9 10,3"/></svg>All tones, all sources</li>
+            <li><svg class="price-check" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,6 5,9 10,3"/></svg>No card required</li>
+          </ul>
+          <a href="/signup" data-plan="free" class="btn btn-ghost plan-cta" style="width: 100%;">Start free</a>
+        </div>
+        <div class="price-card featured">
+          <div class="price-name">Pro</div>
+          <div class="price-num">$14.99<small>/month</small></div>
+          <ul class="price-feats">
+            <li><svg class="price-check" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,6 5,9 10,3"/></svg>Unlimited drafts</li>
+            <li><svg class="price-check" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,6 5,9 10,3"/></svg>All 3 variants (opener, follow-up, breakup)</li>
+            <li><svg class="price-check" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,6 5,9 10,3"/></svg>Saved pitch templates, synced</li>
+            <li><svg class="price-check" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,6 5,9 10,3"/></svg>Auto follow-up loop</li>
+            <li><svg class="price-check" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,6 5,9 10,3"/></svg>7 languages</li>
+            <li><svg class="price-check" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,6 5,9 10,3"/></svg>Cross-machine reply analytics</li>
+          </ul>
+          <a href="/signup?plan=pro" data-plan="pro" class="btn plan-cta" style="width: 100%;">Get Pro</a>
+        </div>
+        <div class="price-card">
+          <div class="price-name">Plus <span class="price-beta">Beta</span></div>
+          <div class="price-num">$19.99<small>/month</small></div>
+          <ul class="price-feats">
+            <li><svg class="price-check" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,6 5,9 10,3"/></svg>Everything in Pro</li>
+            <li><svg class="price-check" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,6 5,9 10,3"/></svg><strong>Active Profile Assist</strong> — live fit-scoring as you browse</li>
+            <li><svg class="price-check" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,6 5,9 10,3"/></svg>Up to 5 active job specs</li>
+            <li><svg class="price-check" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,6 5,9 10,3"/></svg><strong>Saved-Search Daily Digest</strong> <span class="coming-soon">Coming soon</span> — auto-rank profiles</li>
+            <li><svg class="price-check" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,6 5,9 10,3"/></svg>Up to 10 saved searches <span class="coming-soon">Coming soon</span></li>
+          </ul>
+          <p class="plus-beta-note">Plus is in beta. Active Profile Assist is live; Saved-Search Daily Digest ships in the next wave. Subscribe now and lock in $19.99/mo for life.</p>
+          <a href="/signup?plan=plus" data-plan="plus" class="btn btn-ghost plan-cta" style="width: 100%;">Get Plus</a>
+        </div>
       </div>
     </div>
-  </div>
-</section>
+  </section>
 
-<section id="faq">
-  <div class="wrap">
-    <h2>Questions.</h2>
-    <div class="faq">
-      <details open>
-        <summary>Will my LinkedIn account get flagged?</summary>
-        <p>No. This is the entire architectural choice. Outreach automation tools (Phantombuster, MeetAlfred, Linked Helper, Dux-Soup) script clicks and connection requests inside LinkedIn — that's exactly the behavior LinkedIn detects and bans for. Riffly reads the profile you're already viewing and outputs text. It never types into LinkedIn's message UI, never clicks send, never crawls connections or activity feeds in the background. You copy and paste manually. There's no automated behavior for LinkedIn to act on. We're in the same operating zone as Apollo, Crystal, and ContactOut — read-only on LinkedIn, drafting tool that lives next to it.</p>
-      </details>
-      <details>
-        <summary>How is this different from pasting a profile into ChatGPT?</summary>
-        <p>Three real differences. (1) Riffly parses the profile in front of you — recent posts, pinned repos, past roles, skills — without you copy-pasting any of it. ChatGPT only sees what you bother to paste. (2) The prompt bans 40+ corporate-template phrases ("I came across", "great fit", "passion for", "scaling challenges", "thought you'd be perfect") that ChatGPT's default output reaches for. (3) Three variants per call — opener, follow-up, breakup — so the full sequence is ready in one click instead of three sessions and three different drafts.</p>
-      </details>
-      <details>
-        <summary>Will the messages sound like AI wrote them?</summary>
-        <p>Most LLM outreach is recognizable because it pulls from the same template-y phrase pool. The prompt blacklist exists to break that. The other half is the input: when you paste a recent post they wrote and the model has something concrete to reference, the output stops sounding generic. That's why the popup nudges you for a recent post and why the difference in quality is dramatic when you do.</p>
-      </details>
-      <details>
-        <summary>What happens after my 5 free drafts this week?</summary>
-        <p>The popup tells you you're at the limit and offers Pro for $14.99/mo. Free isn't a teaser — five drafts is enough to send to five real candidates and decide if the replies you're getting are different enough to be worth paying for. If they're not, don't pay.</p>
-      </details>
-      <details>
-        <summary>What happens to the candidate's profile data?</summary>
-        <p>It's sent to our backend, used for that single generation, and not stored. We log only that a generation happened and your account ID for billing and quota. Profile content, candidate names, and the generated messages are never persisted.</p>
-      </details>
-      <details>
-        <summary>Does it work on Sales Navigator and LinkedIn Recruiter?</summary>
-        <p>Yes. The extension auto-detects which surface you're on and reads the right fields. If a field doesn't detect cleanly on a particular profile, ping us and we'll patch within a day.</p>
-      </details>
-      <details>
-        <summary>What if a draft is bad?</summary>
-        <p>Click Generate again — the marginal cost on our side is fractions of a cent. The most common fix: paste a recent post into the optional field. Output quality lifts noticeably when the model has substance to reference.</p>
-      </details>
-      <details>
-        <summary>Does this work for sales or fundraising outreach?</summary>
-        <p>Yes, same prompt approach holds — describe what you're pitching and pick a tone. v1's prompt is tuned for technical recruiting; a sales-tuned variant ships next quarter.</p>
-      </details>
-    </div>
-  </div>
-</section>
-
-<section id="founder" style="background: var(--warm); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);">
-  <div class="wrap">
-    <h2>Built by a team that cares about replies.</h2>
-    <div class="founder-card">
-      <div class="who">
-        <span class="who-dot"></span>
-        <span class="who-name">Riffly — beta</span>
-      </div>
-      <p>Riffly is in beta and we're tuning the prompt by hand. There are no fake testimonials on this page, no inflated user counts, no "trusted by" logos for companies that have never heard of us. We'd rather you try the five free drafts and decide than be talked into it.</p>
-      <p>If you hit something broken, mail <a href="mailto:pksruly@gmail.com?subject=Riffly%20feedback">our support inbox</a> and we'll see it within the hour. Feedback that lands in the prompt blacklist gets a thank-you reply — that's the loop.</p>
-    </div>
-  </div>
-</section>
-
-<footer>
-  <div class="wrap">
-    <div class="row">
-      <div style="display: flex; align-items: center; gap: 8px;">
-        <span class="logo-mark" style="width: 16px; height: 16px;"></span>
-        <span>Riffly</span>
-      </div>
-      <div class="links">
-        <a href="/privacy">Privacy</a>
-        <a href="/terms">Terms</a>
-        <a href="mailto:pksruly@gmail.com?subject=Riffly%20feedback">Tell us what's broken</a>
+  <section id="faq">
+    <div class="wrap">
+      <h2>Questions.</h2>
+      <div class="faq">
+        <details open>
+          <summary>Will my LinkedIn account get flagged?</summary>
+          <p>No. This is the entire architectural choice. Outreach automation tools (Phantombuster, MeetAlfred, Linked Helper, Dux-Soup) script clicks and connection requests inside LinkedIn — that's exactly the behavior LinkedIn detects and bans for. Riffly reads the profile you're already viewing and outputs text. It never types into LinkedIn's message UI, never clicks send, never crawls connections or activity feeds in the background. You copy and paste manually. There's no automated behavior for LinkedIn to act on. We're in the same operating zone as Apollo, Crystal, and ContactOut — read-only on LinkedIn, drafting tool that lives next to it.</p>
+        </details>
+        <details>
+          <summary>How is this different from pasting a profile into ChatGPT?</summary>
+          <p>Three real differences. (1) Riffly parses the profile in front of you — recent posts, pinned repos, past roles, skills — without you copy-pasting any of it. ChatGPT only sees what you bother to paste. (2) The prompt bans 40+ corporate-template phrases ("I came across", "great fit", "passion for", "scaling challenges", "thought you'd be perfect") that ChatGPT's default output reaches for. (3) Three variants per call — opener, follow-up, breakup — so the full sequence is ready in one click instead of three sessions and three different drafts.</p>
+        </details>
+        <details>
+          <summary>Will the messages sound like AI wrote them?</summary>
+          <p>Most LLM outreach is recognizable because it pulls from the same template-y phrase pool. The prompt blacklist exists to break that. The other half is the input: when you paste a recent post they wrote and the model has something concrete to reference, the output stops sounding generic. That's why the popup nudges you for a recent post and why the difference in quality is dramatic when you do.</p>
+        </details>
+        <details>
+          <summary>What happens after my 5 free drafts this week?</summary>
+          <p>The popup tells you you're at the limit and offers Pro for $14.99/mo. Free isn't a teaser — five drafts is enough to send to five real candidates and decide if the replies you're getting are different enough to be worth paying for. If they're not, don't pay.</p>
+        </details>
+        <details>
+          <summary>What happens to the candidate's profile data?</summary>
+          <p>It's sent to our backend, used for that single generation, and not stored. We log only that a generation happened and your account ID for billing and quota. Profile content, candidate names, and the generated messages are never persisted.</p>
+        </details>
+        <details>
+          <summary>Does it work on Sales Navigator and LinkedIn Recruiter?</summary>
+          <p>Yes. The extension auto-detects which surface you're on and reads the right fields. If a field doesn't detect cleanly on a particular profile, ping us and we'll patch within a day.</p>
+        </details>
+        <details>
+          <summary>What if a draft is bad?</summary>
+          <p>Click Generate again — the marginal cost on our side is fractions of a cent. The most common fix: paste a recent post into the optional field. Output quality lifts noticeably when the model has substance to reference.</p>
+        </details>
+        <details>
+          <summary>Does this work for sales or fundraising outreach?</summary>
+          <p>Yes, same prompt approach holds — describe what you're pitching and pick a tone. v1's prompt is tuned for technical recruiting; a sales-tuned variant ships next quarter.</p>
+        </details>
       </div>
     </div>
-  </div>
-</footer>
+  </section>
 
-<script>
-  // If the visitor is already signed in (token in localStorage), swap
-  // sign-up CTAs for dashboard-aware ones so they don't bounce through
-  // /signup just to come back. Pricing buttons go to /dashboard?upgrade=<plan>
-  // which auto-triggers checkout (or in-place plan swap, for existing subs).
-  // Pure progressive enhancement — no impact on signed-out visitors.
-  (function () {
-    try {
-      var token = window.localStorage.getItem('riff_token');
-      if (!token) return;
+  <section id="install" style="background: var(--surface); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);">
+    <div class="wrap">
+      <h2>Ready to send messages that get replies?</h2>
+      <p class="sub">Try Riffly free. Five drafts a week, no card required. Install the Chrome extension and start in 30 seconds.</p>
+      <div style="text-align: center;">
+        <a href="/signup" id="install-cta" class="btn btn-lg btn-chrome">
+          <svg class="chrome-logo-inline" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" style="width: 18px; height: 18px;">
+            <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/>
+            <circle cx="12" cy="12" r="3" fill="currentColor"/>
+            <path d="M12 2 L18 8 L12 14" fill="currentColor" opacity="0.8"/>
+          </svg>
+          Add to Chrome — Free
+        </a>
+      </div>
+    </div>
+  </section>
 
-      // Nav: "Sign in" → "Dashboard"
-      var cta = document.getElementById('auth-cta');
-      if (cta) {
-        cta.textContent = 'Dashboard';
-        cta.setAttribute('href', '/dashboard');
-      }
+  <section id="founder" style="background: var(--warm); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);">
+    <div class="wrap">
+      <h2>Built by a team that cares about replies.</h2>
+      <div class="founder-card">
+        <div class="who">
+          <span class="who-dot"></span>
+          <span class="who-name">Riffly — beta</span>
+        </div>
+        <p>Riffly is in beta and we're tuning the prompt by hand. There are no fake testimonials on this page, no inflated user counts, no "trusted by" logos for companies that have never heard of us. We'd rather you try the five free drafts and decide than be talked into it.</p>
+        <p>If you hit something broken, mail <a href="mailto:pksruly@gmail.com?subject=Riffly%20feedback">our support inbox</a> and we'll see it within the hour. Feedback that lands in the prompt blacklist gets a thank-you reply — that's the loop.</p>
+      </div>
+    </div>
+  </section>
 
-      // Hero "Try it free" → "Open dashboard"
-      var hero = document.getElementById('hero-cta');
-      if (hero) {
-        hero.innerHTML = 'Open dashboard <span class="arrow">→</span>';
-        hero.setAttribute('href', '/dashboard');
-      }
+  <footer>
+    <div class="wrap">
+      <div class="row">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span class="logo-mark" style="width: 16px; height: 16px;"></span>
+          <span>Riffly</span>
+        </div>
+        <div class="links">
+          <a href="/privacy">Privacy</a>
+          <a href="/terms">Terms</a>
+          <a href="mailto:pksruly@gmail.com?subject=Riffly%20feedback">Tell us what's broken</a>
+        </div>
+      </div>
+    </div>
+  </footer>
 
-      // Pricing tier CTAs — point at the dashboard with an `upgrade` intent
-      // that the dashboard reads on load and turns into a checkout call.
-      var planCtas = document.querySelectorAll('.plan-cta');
-      for (var i = 0; i < planCtas.length; i++) {
-        var btn = planCtas[i];
-        var plan = btn.getAttribute('data-plan');
-        if (plan === 'free') {
-          btn.textContent = 'Open dashboard';
-          btn.setAttribute('href', '/dashboard');
-        } else if (plan === 'pro' || plan === 'plus') {
-          btn.textContent = 'Get ' + (plan === 'pro' ? 'Pro' : 'Plus');
-          btn.setAttribute('href', '/dashboard?upgrade=' + plan);
+  <script>
+    // If the visitor is already signed in (token in localStorage), swap
+    // sign-up CTAs for dashboard-aware ones so they don't bounce through
+    // /signup just to come back. Pricing buttons go to /dashboard?upgrade=<plan>
+    // which auto-triggers checkout (or in-place plan swap, for existing subs).
+    // Pure progressive enhancement — no impact on signed-out visitors.
+    (function () {
+      try {
+        var token = window.localStorage.getItem('riff_token');
+        if (!token) return;
+
+        // Nav: "Sign in" → "Dashboard"
+        var cta = document.getElementById('auth-cta');
+        if (cta) {
+          cta.textContent = 'Dashboard';
+          cta.setAttribute('href', '/dashboard');
         }
-      }
-    } catch (e) { /* private mode, etc. — silent */ }
-  })();
 
-  // Typewriter activation: don't run the reveal until the demo is in view.
-  // Otherwise visitors who arrive and scroll past instantly never see it,
-  // and visitors landing fresh see a half-blank draft. We add .play on
-  // first intersection.
-  (function () {
-    try {
-      var el = document.querySelector('.typewriter');
-      if (!el) return;
-      // Older browsers without IO: just play immediately.
-      if (typeof IntersectionObserver === 'undefined') {
-        el.classList.add('play');
-        return;
-      }
-      var io = new IntersectionObserver(function (entries) {
-        entries.forEach(function (entry) {
-          if (entry.isIntersecting) {
-            el.classList.add('play');
-            io.disconnect();
+        // Hero "Add to Chrome" → "Open dashboard"
+        var hero = document.getElementById('hero-cta');
+        if (hero) {
+          hero.innerHTML = 'Open dashboard <span class="arrow">→</span>';
+          hero.setAttribute('href', '/dashboard');
+        }
+
+        // Install section CTA
+        var install = document.getElementById('install-cta');
+        if (install) {
+          install.innerHTML = 'Open dashboard <span class="arrow">→</span>';
+          install.setAttribute('href', '/dashboard');
+        }
+
+        // Pricing tier CTAs — point at the dashboard with an `upgrade` intent
+        // that the dashboard reads on load and turns into a checkout call.
+        var planCtas = document.querySelectorAll('.plan-cta');
+        for (var i = 0; i < planCtas.length; i++) {
+          var btn = planCtas[i];
+          var plan = btn.getAttribute('data-plan');
+          if (plan === 'free') {
+            btn.textContent = 'Open dashboard';
+            btn.setAttribute('href', '/dashboard');
+          } else if (plan === 'pro' || plan === 'plus') {
+            btn.textContent = 'Get ' + (plan === 'pro' ? 'Pro' : 'Plus');
+            btn.setAttribute('href', '/dashboard?upgrade=' + plan);
           }
-        });
-      }, { threshold: 0.4 });
-      io.observe(el);
-    } catch (e) { /* silent */ }
-  })();
-</script>
+        }
+      } catch (e) {
+        /* private mode, etc. — silent */
+      }
+    })();
 
+    // Typewriter activation: don't run the reveal until the demo is in view.
+    // Otherwise visitors who arrive and scroll past instantly never see it,
+    // and visitors landing fresh see a half-blank draft. We add .play on
+    // first intersection.
+    (function () {
+      try {
+        var el = document.querySelector('.typewriter');
+        if (!el) return;
+
+        // Older browsers without IO: just play immediately.
+        if (typeof IntersectionObserver === 'undefined') {
+          el.classList.add('play');
+          return;
+        }
+
+        var io = new IntersectionObserver(function (entries) {
+          entries.forEach(function (entry) {
+            if (entry.isIntersecting) {
+              el.classList.add('play');
+              io.disconnect();
+            }
+          });
+        }, { threshold: 0.4 });
+        io.observe(el);
+      } catch (e) {
+        /* silent */
+      }
+    })();
+  </script>
 </body>
 </html>
