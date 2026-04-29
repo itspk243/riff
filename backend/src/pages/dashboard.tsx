@@ -12,6 +12,10 @@ interface MeResponse {
   plan?: 'free' | 'pro' | 'plus' | 'team';
   remainingThisWeek?: number;
   hasSubscription?: boolean;
+  // True when the user clicked "Cancel" in the Stripe portal — they keep
+  // their plan until current_period_end, then drop to free.
+  cancel_at_period_end?: boolean;
+  subscription_status?: string | null;
   member_since?: string;
   current_period_end?: string | null;
   usage?: {
@@ -73,6 +77,10 @@ export default function Dashboard() {
   const [connectError, setConnectError] = useState<string | null>(null);
   const [showCanceledMsg, setShowCanceledMsg] = useState(false);
   const [showUpgradedMsg, setShowUpgradedMsg] = useState(false);
+  // True for users who signed in BEFORE the riff_session bundle was a thing.
+  // We can't auto-refresh their token (no refresh_token in localStorage), so
+  // we nudge them to sign out + sign back in once. After that, never again.
+  const [needsReauthForRefresh, setNeedsReauthForRefresh] = useState(false);
   const [devMode, setDevMode] = useState(false);
   const [errorToast, setErrorToast] = useState<string | null>(null);
 
@@ -85,7 +93,17 @@ export default function Dashboard() {
     if (typeof window === 'undefined') return;
     const params = new URLSearchParams(window.location.search);
     if (params.get('canceled') === '1') setShowCanceledMsg(true);
-    if (params.get('upgraded') === '1') setShowUpgradedMsg(true);
+    if (params.get('upgraded') === '1') {
+      setShowUpgradedMsg(true);
+      // Stripe webhooks usually land within ~1s but can lag. Retry-fetch the
+      // /me endpoint a couple of times so the UI flips to the new plan
+      // without the user needing to manually refresh.
+      [1500, 4000].forEach((delay) => {
+        setTimeout(() => {
+          refreshAndFetchMe();
+        }, delay);
+      });
+    }
     if (params.get('devmode') === '1') setDevMode(true);
 
     const t = window.localStorage.getItem('riff_token');
@@ -97,6 +115,7 @@ export default function Dashboard() {
 
     // If we have the full session, compute the bundle preview synchronously
     // so the displayed "tokenPreview" reflects what Copy actually copies.
+    let hasFullSession = false;
     try {
       const sessRaw = window.localStorage.getItem('riff_session');
       if (sessRaw) {
@@ -106,18 +125,21 @@ export default function Dashboard() {
             JSON.stringify({ a: sess.access_token, r: sess.refresh_token })
           );
           setBundleHint(`riff_v1.${b64}`);
+          hasFullSession = true;
         }
       }
     } catch {}
-    fetch('/api/me', { headers: { Authorization: `Bearer ${t}` } })
-      .then(r => r.json())
-      .then((data: MeResponse) => {
-        setMe(data);
-        setLoading(false);
-      })
-      .catch(() => {
-        setLoading(false);
-      });
+
+    // Pre-bundle migration: if the user signed in BEFORE we started storing
+    // refresh_tokens, they have only riff_token. Their session can't auto-
+    // renew. Nudge them to sign in again — one time only.
+    if (!hasFullSession) {
+      setNeedsReauthForRefresh(true);
+    }
+    // Use the auto-refreshing fetch helper so an expired access_token gets
+    // swapped for a fresh one before we hit /api/me. Fixes "I refreshed the
+    // dashboard after sitting idle and now nothing loads".
+    refreshAndFetchMe();
 
     // Listen for the extension's content script announcing itself. If we hear
     // it, the user can click "Connect extension" instead of paste.
@@ -221,10 +243,14 @@ export default function Dashboard() {
   }
 
   async function startCheckout(plan: 'pro' | 'plus' | 'team' | 'test') {
-    if (!token) return;
+    // Always refresh before billing endpoints. Stale JWT was the silent
+    // killer — users would click "Start Pro" with an expired token, see
+    // "Sign in first" and have no idea why.
+    const fresh = await getFreshToken();
+    if (!fresh) return;
     const res = await fetch('/api/billing/checkout', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${fresh}` },
       body: JSON.stringify({ plan }),
     });
     const data = await res.json();
@@ -233,14 +259,108 @@ export default function Dashboard() {
   }
 
   async function openBillingPortal() {
-    if (!token) return;
+    const fresh = await getFreshToken();
+    if (!fresh) return;
     const res = await fetch('/api/billing/portal', {
       method: 'POST',
-      headers: { Authorization: `Bearer ${token}` },
+      headers: { Authorization: `Bearer ${fresh}` },
     });
     const data = await res.json();
     if (data.ok && data.url) window.location.href = data.url;
     else showError(data.error || 'Could not open billing portal. Try again in a moment.');
+  }
+
+  // Returns a fresh, non-expired access token. If the cached one has <5min
+  // left, calls /api/auth/refresh to mint a new one and updates localStorage
+  // + React state so subsequent calls (startCheckout, openBillingPortal,
+  // connectExtension) all use the new token.
+  async function getFreshToken(): Promise<string | null> {
+    if (typeof window === 'undefined') return null;
+    const cachedAccess = window.localStorage.getItem('riff_token');
+    if (!cachedAccess) return null;
+
+    let needsRefresh = false;
+    try {
+      const payload = JSON.parse(
+        atob(cachedAccess.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))
+      );
+      const expMs = (payload.exp || 0) * 1000;
+      needsRefresh = expMs - Date.now() < 5 * 60 * 1000;
+    } catch {
+      // Couldn't parse — assume valid; backend will reject if not.
+    }
+
+    if (!needsRefresh) return cachedAccess;
+
+    // Need to refresh. Read the refresh_token from the session bundle.
+    let refreshToken: string | null = null;
+    try {
+      const sessRaw = window.localStorage.getItem('riff_session');
+      if (sessRaw) {
+        const sess = JSON.parse(sessRaw);
+        refreshToken = sess?.refresh_token || null;
+      }
+    } catch {}
+
+    if (!refreshToken) {
+      // Pre-bundle user. Their access token is about to expire and we have
+      // no way to renew it. Surface the migration nudge in renderMigrationNudge.
+      return cachedAccess;
+    }
+
+    try {
+      const r = await fetch('/api/auth/refresh', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refresh_token: refreshToken }),
+      });
+      const j = await r.json();
+      if (j.ok && j.access_token) {
+        window.localStorage.setItem('riff_token', j.access_token);
+        window.localStorage.setItem(
+          'riff_session',
+          JSON.stringify({
+            access_token: j.access_token,
+            refresh_token: j.refresh_token || refreshToken,
+            expires_at: j.expires_at || null,
+          })
+        );
+        // Keep React state in sync so future setState reads pick up the new
+        // token instead of holding the stale one in closure.
+        setToken(j.access_token);
+        return j.access_token;
+      }
+    } catch (e) {
+      // Network / refresh error — fall through with cached token.
+    }
+    return cachedAccess;
+  }
+
+  // /api/me with auto-refresh. Used on initial load and after upgrade webhook
+  // round-trip (?upgraded=1) so the user immediately sees their new plan.
+  async function refreshAndFetchMe() {
+    const fresh = await getFreshToken();
+    if (!fresh) {
+      window.location.href = '/signup';
+      return;
+    }
+    try {
+      const r = await fetch('/api/me', {
+        headers: { Authorization: `Bearer ${fresh}` },
+      });
+      if (r.status === 401) {
+        // Refresh failed and access expired. Send to signup to start fresh.
+        window.localStorage.removeItem('riff_token');
+        window.localStorage.removeItem('riff_session');
+        window.location.href = '/signup';
+        return;
+      }
+      const data = (await r.json()) as MeResponse;
+      setMe(data);
+      setLoading(false);
+    } catch {
+      setLoading(false);
+    }
   }
 
   function signOut() {
@@ -326,7 +446,10 @@ export default function Dashboard() {
     );
   }
 
-  const isPaid = me?.plan === 'pro' || me?.plan === 'team';
+  // BUG FIX: 'plus' was missing here. Plus subscribers were seeing the
+  // upgrade tier grid (free/pro/plus) instead of "Manage billing & cancel".
+  // They couldn't reach the Stripe portal to update their card or cancel.
+  const isPaid = me?.plan === 'pro' || me?.plan === 'plus' || me?.plan === 'team';
   const initials = (me?.full_name || me?.email || '?').split(/\s+|@/).filter(Boolean).map(s => s[0]?.toUpperCase()).slice(0, 2).join('');
   // Show bundle prefix in the preview (riff_v1.…) when available, else fall
   // back to raw JWT preview. The Copy button always copies the same thing.
@@ -373,9 +496,14 @@ export default function Dashboard() {
           </header>
 
           {/* Banners */}
+          {needsReauthForRefresh && (
+            <div style={bannerInfoStyle} className="riff-banner">
+              <strong>Sign in again — one last time.</strong> We added auto-refresh so the extension never logs you out. To activate it, click <strong>Sign out</strong> above and sign back in. After that, never again.
+            </div>
+          )}
           {showUpgradedMsg && (
             <div style={bannerOkStyle} className="riff-banner">
-              <strong>Welcome to Pro.</strong> Your subscription is active — happy drafting.
+              <strong>Welcome to {planLabel(me?.plan)}.</strong> Your subscription is active — happy drafting.
             </div>
           )}
           {showCanceledMsg && (
@@ -506,9 +634,13 @@ export default function Dashboard() {
               </div>
               {isPaid && me?.current_period_end && (
                 <div>
-                  <div style={kvKeyStyle}>Renews</div>
+                  <div style={kvKeyStyle}>{me?.cancel_at_period_end ? 'Cancels' : 'Renews'}</div>
                   <div style={kvValueStyle}>{formatDate(me.current_period_end)}</div>
-                  <div style={kvSubStyle}>Auto-renews unless canceled</div>
+                  <div style={kvSubStyle}>
+                    {me?.cancel_at_period_end
+                      ? 'Plan ends on this date. Reactivate any time.'
+                      : 'Auto-renews unless canceled'}
+                  </div>
                 </div>
               )}
             </div>

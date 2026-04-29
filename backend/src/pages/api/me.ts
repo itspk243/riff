@@ -4,6 +4,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { getUserFromBearer } from '../../lib/supabase';
 import { serviceClient } from '../../lib/supabase';
 import { getUsageThisWeek, FREE_WEEKLY_LIMIT } from '../../lib/quota';
+import { stripe } from '../../lib/stripe';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   // Extension calls this from chrome-extension:// origin — full CORS preflight.
@@ -48,6 +49,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     remainingThisWeek = Math.max(0, FREE_WEEKLY_LIMIT - (weekCount || 0));
   }
 
+  // Pull the live cancel-at-period-end flag from Stripe so the dashboard
+  // can label the period boundary correctly: "Renews on X" vs "Cancels on X".
+  // We only do this for paid users with a recorded subscription_id; one
+  // Stripe API call per dashboard load is acceptable.
+  let cancel_at_period_end = false;
+  let subscription_status: string | null = null;
+  if (user.stripe_subscription_id && user.plan !== 'free') {
+    try {
+      const sub = await stripe.subscriptions.retrieve(user.stripe_subscription_id);
+      cancel_at_period_end = !!sub.cancel_at_period_end;
+      subscription_status = sub.status;
+    } catch (e) {
+      // Sub may have been deleted on Stripe; default to renew-style.
+    }
+  }
+
   return res.status(200).json({
     ok: true,
     email: user.email,
@@ -59,6 +76,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // without hard-coding N. If we change the limit, popup picks it up.
     freeWeeklyLimit: FREE_WEEKLY_LIMIT,
     hasSubscription: !!user.stripe_subscription_id,
+    cancel_at_period_end,
+    subscription_status,
     member_since: user.created_at,
     current_period_end: user.current_period_end,
     usage: {
