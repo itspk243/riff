@@ -151,17 +151,87 @@ function refreshTemplates(purpose, category) {
   hintEl.textContent = category && category !== 'other' ? `· detected: ${category}` : '';
 }
 
-// ---------- auth ----------
+// ---------- auth + plan ----------
+//
+// We hold a single in-memory snapshot of the user's plan so every UI surface
+// (templates chip-row, reply-tracking buttons, quota label, plus-feature
+// hints) can check capabilities without re-fetching. This is refreshed on
+// popup open and after sign-in.
+
+let currentPlan = null;        // 'free' | 'pro' | 'plus' | 'team' | null (signed out)
+let currentEmail = null;
+let freeWeeklyLimit = 3;       // Server-supplied; cached from /api/me response.
+
+function isPaidPlan(plan) {
+  return plan === 'pro' || plan === 'plus' || plan === 'team';
+}
+function hasSavedTemplates(plan) { return isPaidPlan(plan); }
+function hasReplyAnalytics(plan) { return isPaidPlan(plan); }
+function hasFollowUpLoop(plan)   { return isPaidPlan(plan); }
+function hasPlusFeatures(plan)   { return plan === 'plus' || plan === 'team'; }
+
+function refreshPlanBadge() {
+  const badge = $('#plan-badge');
+  if (!badge) return;
+  if (!currentPlan) {
+    badge.classList.add('hidden');
+    return;
+  }
+  const labels = { free: 'Free', pro: 'Pro', plus: 'Plus', team: 'Team' };
+  badge.textContent = labels[currentPlan] || currentPlan;
+  badge.className = `plan-badge plan-${currentPlan}`;
+  badge.classList.remove('hidden');
+}
+
+async function fetchMe() {
+  // Fetch user plan + email + remaining quota. Returns null when signed out
+  // or backend unreachable. Best-effort — UI degrades to "free" defaults
+  // if this fails, and the next /api/generate call is the source of truth.
+  return new Promise(resolve => {
+    chrome.runtime.sendMessage({ type: 'RIFF_ME' }, (resp) => {
+      if (!resp || !resp.ok) return resolve(null);
+      resolve(resp);
+    });
+  });
+}
 
 async function refreshAuthUI() {
   const { riff_token } = await getStorage(['riff_token']);
   if (riff_token) {
     $('#auth-section').classList.add('hidden');
     $('#auth-status').classList.remove('hidden');
-    $('#auth-email').textContent = 'Signed in';
+    // Fetch plan + email. If the call fails (token expired, network), we
+    // still show the status row but leave the badge hidden until the next
+    // generation tells us the plan.
+    const me = await fetchMe();
+    if (me) {
+      currentPlan = me.plan || 'free';
+      currentEmail = me.email || null;
+      if (typeof me.freeWeeklyLimit === 'number') freeWeeklyLimit = me.freeWeeklyLimit;
+      $('#auth-email').textContent = currentEmail
+        ? `${currentEmail.split('@')[0]}`
+        : 'Signed in';
+      // Show remaining-this-week up front (without waiting for a generation)
+      // so free users see their limit before they spend a draft.
+      if (currentPlan === 'free' && typeof me.remainingThisWeek === 'number') {
+        const q = $('#quota');
+        q.textContent = `${me.remainingThisWeek} / ${freeWeeklyLimit} free this week`;
+        q.classList.toggle('urgent', me.remainingThisWeek <= 1);
+      } else {
+        $('#quota').textContent = '';
+      }
+    } else {
+      // Signed in locally but server disagrees — could be expired token.
+      $('#auth-email').textContent = 'Signed in';
+      currentPlan = null;
+    }
+    refreshPlanBadge();
   } else {
     $('#auth-section').classList.remove('hidden');
     $('#auth-status').classList.add('hidden');
+    currentPlan = null;
+    currentEmail = null;
+    refreshPlanBadge();
   }
 }
 
@@ -189,6 +259,18 @@ $('#signup-link').addEventListener('click', async (e) => {
   const base = riff_backend_url || DEFAULT_BACKEND_URL;
   chrome.tabs.create({ url: `${base}/signup` });
 });
+
+// Dashboard / billing link — central place to upgrade, manage subscription,
+// or copy a fresh token. Only wired when authed (the row is hidden otherwise).
+const dashboardLink = $('#dashboard-link');
+if (dashboardLink) {
+  dashboardLink.addEventListener('click', async (e) => {
+    e.preventDefault();
+    const { riff_backend_url } = await getStorage(['riff_backend_url']);
+    const base = riff_backend_url || DEFAULT_BACKEND_URL;
+    chrome.tabs.create({ url: `${base}/dashboard` });
+  });
+}
 
 // ---------- profile load ----------
 
@@ -244,6 +326,10 @@ async function loadProfile() {
 
 function checkPriorThread(candidateUrl) {
   if (!candidateUrl) return;
+  // Plan gate: cross-machine follow-up loop is paid-only. Free users still
+  // get LOCAL stats via chrome.storage.local — they just don't get the
+  // "you sent here X days ago" nudge.
+  if (!hasFollowUpLoop(currentPlan)) return;
   chrome.runtime.sendMessage(
     { type: 'RIFF_EVENTS_FOR_CANDIDATE', payload: { candidate: candidateUrl } },
     (resp) => {
@@ -358,11 +444,19 @@ function generate(profile) {
       showToast(resp && resp.error ? resp.error : 'Generation failed. Try again in a moment.', 'error');
       return;
     }
-    // Quota label — uses 3/wk now (free tier was tightened from 5).
+    // Quota label — only shown for free tier. Paid users get an empty quota
+    // pill since they have no soft cap. We use the server-supplied free limit
+    // (cached from /api/me) instead of hard-coding "/3" in case it changes.
     if (typeof resp.remainingThisWeek === 'number') {
       const q = $('#quota');
-      q.textContent = `${resp.remainingThisWeek} / 3 free this week`;
+      q.textContent = `${resp.remainingThisWeek} / ${freeWeeklyLimit} free this week`;
       q.classList.toggle('urgent', resp.remainingThisWeek <= 1);
+    }
+    // Plan may have changed since popup open (rare — upgrade-while-popup-open).
+    // Keep the badge synced so reply-tracking buttons re-enable correctly.
+    if (resp.plan && resp.plan !== currentPlan) {
+      currentPlan = resp.plan;
+      refreshPlanBadge();
     }
     renderVariants(resp.variants, { tone, length });
     if (resp.upgradeMessage) {
@@ -487,7 +581,11 @@ async function recordEvent(ev) {
 
 // Mirror sent / replied marks to the server so the follow-up loop and
 // cross-machine stats work. Best-effort — local stats are still authoritative.
+//
+// Plan gate: paid-only. Free users keep working locally (no error toast,
+// no console noise from a 402) — they just don't sync.
 function sendServerEvent(kind, variantType, ctx) {
+  if (!hasReplyAnalytics(currentPlan)) return;
   if (!currentProfile) return;
   const candidate_url = currentProfile.profileUrl || '';
   if (!candidate_url) return;
@@ -601,6 +699,23 @@ document.addEventListener('DOMContentLoaded', async () => {
     const bar = $('#templates-bar');
     if (!bar) return;
     bar.innerHTML = '';
+
+    // Plan gate: Saved pitches are paid-only. Free users see a single
+    // "lock chip" that opens /dashboard?upgrade=pro instead of the save UX.
+    if (!hasSavedTemplates(currentPlan)) {
+      const lock = document.createElement('button');
+      lock.type = 'button';
+      lock.className = 'tpl-chip-locked';
+      lock.innerHTML = '<span class="lock-icon">🔒</span> Save reusable pitches — Pro';
+      lock.title = 'Saved pitches are a Pro feature. Click to upgrade.';
+      lock.addEventListener('click', async () => {
+        const { riff_backend_url } = await getStorage(['riff_backend_url']);
+        const base = riff_backend_url || DEFAULT_BACKEND_URL;
+        chrome.tabs.create({ url: `${base}/dashboard?upgrade=pro` });
+      });
+      bar.appendChild(lock);
+      return;
+    }
 
     // Render chips for each saved template
     if (Array.isArray(templatesCache)) {
@@ -760,9 +875,18 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Live-update the save chip's enabled state when pitch changes.
   $('#pitch').addEventListener('input', refreshSaveChipState);
 
-  // Auto-load templates on popup open (background; no flash).
-  chrome.runtime.sendMessage({ type: 'RIFF_TEMPLATES_LIST' }, (resp) => {
-    templatesCache = (resp && resp.ok) ? (resp.templates || []) : [];
+  // Auto-load templates on popup open. We always render the bar (even for
+  // free users) — the renderer decides whether to show real chips or the
+  // single "lock" chip based on currentPlan. We still hit the GET endpoint
+  // for paid users; the backend short-circuits free users to an empty list
+  // with `locked: true`, so this is one extra round-trip we can afford.
+  if (hasSavedTemplates(currentPlan)) {
+    chrome.runtime.sendMessage({ type: 'RIFF_TEMPLATES_LIST' }, (resp) => {
+      templatesCache = (resp && resp.ok) ? (resp.templates || []) : [];
+      renderTemplatesBar();
+    });
+  } else {
+    templatesCache = [];
     renderTemplatesBar();
-  });
+  }
 });

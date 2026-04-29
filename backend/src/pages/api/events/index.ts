@@ -4,6 +4,7 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getUserFromBearer, serviceClient } from '../../../lib/supabase';
+import { hasReplyAnalytics } from '../../../lib/capabilities';
 
 const VARIANT_TYPES = ['cold_opener', 'follow_up', 'breakup'];
 const KINDS = ['sent', 'replied'];
@@ -16,6 +17,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const user = await getUserFromBearer(req.headers.authorization);
   if (!user) return res.status(401).json({ ok: false, error: 'Sign in first' });
+
+  // Plan gate: cross-machine reply analytics + follow-up detection are paid-tier.
+  // Free users still get LOCAL stats (chrome.storage.local) — they just don't sync.
+  if (!hasReplyAnalytics(user.plan)) {
+    return res.status(402).json({
+      ok: false,
+      error: 'Reply tracking sync is a Pro feature. Upgrade to sync sent/replied marks across devices and enable follow-up reminders.',
+      needsUpgrade: true,
+    });
+  }
 
   const supabase = serviceClient();
 

@@ -475,6 +475,12 @@
       about: parsed.about,
       currentRole: parsed.currentRole,
       currentCompany: parsed.currentCompany,
+      // Day 2 enrichment — only LinkedIn parses these today, but the field
+      // contract is consistent across surfaces so the backend prompt can ground
+      // in whatever's available without per-surface branching.
+      recentPosts: parsed.recentPosts || [],
+      skills: parsed.skills || [],
+      pastRoles: parsed.pastRoles || [],
       capturedAt: new Date().toISOString(),
     };
   }

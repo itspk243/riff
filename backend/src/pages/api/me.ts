@@ -6,7 +6,9 @@ import { serviceClient } from '../../lib/supabase';
 import { getUsageThisWeek, FREE_WEEKLY_LIMIT } from '../../lib/quota';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  // Extension calls this from chrome-extension:// origin — full CORS preflight.
   res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   if (req.method === 'OPTIONS') return res.status(204).end();
   if (req.method !== 'GET') return res.status(405).json({ ok: false });
@@ -53,6 +55,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     avatar_url,
     plan: user.plan,
     remainingThisWeek,
+    // Surfaced so the extension popup can render "X / N free this week"
+    // without hard-coding N. If we change the limit, popup picks it up.
+    freeWeeklyLimit: FREE_WEEKLY_LIMIT,
     hasSubscription: !!user.stripe_subscription_id,
     member_since: user.created_at,
     current_period_end: user.current_period_end,

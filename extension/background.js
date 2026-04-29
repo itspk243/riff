@@ -103,6 +103,14 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     return true;
   }
 
+  // /api/me — used by the popup on open to fetch plan, email, remaining quota
+  // BEFORE any generation. Lets us render the plan badge + locked chips up
+  // front instead of waiting for the user's first generation to learn the plan.
+  if (msg.type === 'RIFF_ME') {
+    apiCall('/api/me', { method: 'GET' }).then(sendResponse);
+    return true;
+  }
+
   // Saved templates
   if (msg.type === 'RIFF_TEMPLATES_LIST') {
     apiCall('/api/templates', { method: 'GET' }).then(sendResponse);

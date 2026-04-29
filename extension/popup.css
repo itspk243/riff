@@ -97,6 +97,24 @@ header {
 }
 .quota.urgent { color: var(--accent); background: var(--accent-soft); }
 
+/* Header right cluster: plan badge + quota pill side-by-side. */
+.header-right { display: inline-flex; align-items: center; gap: 6px; }
+
+/* Plan badge — small pill, color-coded per tier. */
+.plan-badge {
+  display: inline-flex; align-items: center;
+  font-size: 10px; font-weight: 700;
+  letter-spacing: 0.04em; text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 100px;
+  border: 1px solid var(--line);
+  background: var(--surface); color: var(--ink-2);
+}
+.plan-badge.plan-free { color: var(--muted); background: var(--warm); border-color: var(--line); }
+.plan-badge.plan-pro  { color: #fff; background: var(--ink); border-color: var(--ink); }
+.plan-badge.plan-plus { color: #fff; background: var(--accent); border-color: var(--accent); }
+.plan-badge.plan-team { color: var(--green); background: var(--green-soft); border-color: var(--green-soft); }
+
 /* ---------- Sections ---------- */
 
 section { margin-bottom: 12px; }
@@ -169,10 +187,11 @@ section { margin-bottom: 12px; }
 .auth-box button:active { transform: scale(0.98); }
 
 .auth-status-row {
-  display: flex; justify-content: space-between; align-items: center;
+  display: flex; align-items: center; gap: 10px;
   padding: 6px 4px;
   font-size: 11.5px; color: var(--muted);
 }
+.auth-status-row > span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .auth-status-row a { color: var(--ink-2); text-decoration: none; border-bottom: 1px dotted var(--muted); }
 .auth-status-row a:hover { color: var(--ink); border-bottom-color: var(--ink); }
 
@@ -499,6 +518,28 @@ footer .small {
   color: var(--muted); border-color: var(--line); background: transparent;
   cursor: not-allowed; opacity: 0.55;
 }
+
+/* Locked-feature chip — shown to free users in place of "+ Save this pitch".
+   Click takes them to /dashboard?upgrade=pro. Mild-pulse on hover so it
+   reads as actionable, not just informational. */
+.tpl-chip-locked {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 5px 11px;
+  background: var(--surface);
+  border: 1px solid var(--line-2);
+  border-radius: 100px;
+  font-size: 11.5px; font-weight: 600;
+  color: var(--muted);
+  cursor: pointer; font-family: inherit;
+  transition: background 120ms ease, color 120ms ease, border-color 120ms ease, transform 80ms ease;
+}
+.tpl-chip-locked:hover {
+  background: var(--accent-soft); color: var(--accent);
+  border-color: var(--accent);
+}
+.tpl-chip-locked:active { transform: scale(0.97); }
+.tpl-chip-locked .lock-icon { font-size: 11px; opacity: 0.7; }
+.tpl-chip-locked:hover .lock-icon { opacity: 1; }
 
 .tpl-saved-toast {
   display: inline-flex; align-items: center; gap: 5px;

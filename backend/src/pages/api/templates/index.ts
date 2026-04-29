@@ -4,6 +4,7 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getUserFromBearer, serviceClient } from '../../../lib/supabase';
+import { hasSavedTemplates } from '../../../lib/capabilities';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   // CORS — extension calls from chrome-extension://
@@ -14,6 +15,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const user = await getUserFromBearer(req.headers.authorization);
   if (!user) return res.status(401).json({ ok: false, error: 'Sign in first' });
+
+  // Plan gate: saved templates are paid-only. GET returns an empty list with
+  // a `locked: true` flag so the extension can render an upgrade chip cleanly
+  // (no error toast). POST/DELETE return 402.
+  if (!hasSavedTemplates(user.plan)) {
+    if (req.method === 'GET') {
+      return res.status(200).json({ ok: true, templates: [], locked: true });
+    }
+    return res.status(402).json({
+      ok: false,
+      error: 'Saved pitches are a Pro feature. Upgrade to save and reuse your favorite pitches.',
+      needsUpgrade: true,
+    });
+  }
 
   const supabase = serviceClient();
 
