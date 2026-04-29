@@ -591,96 +591,178 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  // ---------- Day 1: saved templates panel ----------
+  // ---------- Day 1 (revised): saved pitch chips ----------
+  // Auto-loads on popup open. Each saved pitch is a clickable chip.
+  // "+ Save this" reveals an inline composer — no system prompt() dialog.
 
   let templatesCache = null;
 
-  $('#templates-toggle').addEventListener('click', async () => {
-    const panel = $('#templates-panel');
-    if (!panel.classList.contains('hidden')) {
-      panel.classList.add('hidden');
-      return;
-    }
-    panel.classList.remove('hidden');
-    panel.innerHTML = '<div class="templates-empty">Loading…</div>';
-    chrome.runtime.sendMessage({ type: 'RIFF_TEMPLATES_LIST' }, (resp) => {
-      if (!resp || !resp.ok) {
-        panel.innerHTML = `<div class="templates-empty">${resp && resp.needsAuth ? 'Sign in to use templates.' : 'Could not load templates.'}</div>`;
-        return;
-      }
-      templatesCache = resp.templates || [];
-      renderTemplatesPanel(panel, templatesCache);
-    });
-  });
+  function renderTemplatesBar() {
+    const bar = $('#templates-bar');
+    if (!bar) return;
+    bar.innerHTML = '';
 
-  function renderTemplatesPanel(panel, templates) {
-    panel.innerHTML = '';
-    if (templates.length === 0) {
-      panel.innerHTML = '<div class="templates-empty">No saved templates yet. Click <strong>Save…</strong> after writing a pitch.</div>';
-      return;
-    }
-    for (const t of templates) {
-      const row = document.createElement('div');
-      row.className = 'template-row';
-      const main = document.createElement('div');
-      main.style.flex = '1';
-      main.innerHTML = `
-        <div class="tname"></div>
-        <div class="tmeta"></div>
-      `;
-      main.querySelector('.tname').textContent = t.name;
-      main.querySelector('.tmeta').textContent = `${t.purpose || 'hire'} · ${t.pitch.slice(0, 60)}${t.pitch.length > 60 ? '…' : ''}`;
-      main.addEventListener('click', () => {
-        const pitchEl = $('#pitch');
-        if (pitchEl.value.trim() && !confirm('Replace your current pitch?')) return;
-        pitchEl.value = t.pitch;
-        if (t.purpose) $('#purpose').value = t.purpose;
-        panel.classList.add('hidden');
-      });
-      row.appendChild(main);
+    // Render chips for each saved template
+    if (Array.isArray(templatesCache)) {
+      for (const t of templatesCache) {
+        const chip = document.createElement('button');
+        chip.type = 'button';
+        chip.className = 'tpl-chip';
+        chip.title = t.pitch;
+        chip.textContent = t.name;
+        chip.addEventListener('click', () => loadTemplate(t));
 
-      const del = document.createElement('button');
-      del.className = 'tdel';
-      del.title = 'Delete this template';
-      del.textContent = '×';
-      del.addEventListener('click', (e) => {
-        e.stopPropagation();
-        if (!confirm(`Delete "${t.name}"?`)) return;
-        chrome.runtime.sendMessage({ type: 'RIFF_TEMPLATES_DELETE', payload: { id: t.id } }, (resp) => {
-          if (resp && resp.ok) {
-            templatesCache = templatesCache.filter(x => x.id !== t.id);
-            renderTemplatesPanel(panel, templatesCache);
-          } else {
-            showToast('Could not delete template.', 'error');
-          }
+        const x = document.createElement('span');
+        x.className = 'tpl-x';
+        x.textContent = '×';
+        x.title = 'Delete';
+        x.addEventListener('click', (e) => {
+          e.stopPropagation();
+          deleteTemplate(t);
         });
-      });
-      row.appendChild(del);
+        chip.appendChild(x);
 
-      panel.appendChild(row);
+        bar.appendChild(chip);
+      }
+    }
+
+    // Save-this chip — last in the row.
+    const saveChip = document.createElement('button');
+    saveChip.type = 'button';
+    saveChip.className = 'tpl-chip-save';
+    saveChip.id = 'tpl-save-trigger';
+    saveChip.textContent = '+ Save this pitch';
+    saveChip.addEventListener('click', openSaveComposer);
+    bar.appendChild(saveChip);
+
+    // Disable save chip if pitch is empty
+    refreshSaveChipState();
+  }
+
+  function refreshSaveChipState() {
+    const chip = $('#tpl-save-trigger');
+    if (!chip) return;
+    const pitch = $('#pitch').value.trim();
+    if (!pitch) {
+      chip.disabled = true;
+      chip.title = 'Write a pitch first';
+    } else {
+      chip.disabled = false;
+      chip.title = 'Save this pitch as a template';
     }
   }
 
-  $('#template-save').addEventListener('click', () => {
-    const pitch = $('#pitch').value.trim();
-    if (!pitch) {
-      showToast('Write a pitch first, then save it.', 'error');
-      return;
-    }
-    const name = prompt('Name this pitch (e.g. "Senior Eng · Series A · $250K"):');
-    if (!name || !name.trim()) return;
-    const purpose = $('#purpose').value || 'hire';
-    chrome.runtime.sendMessage(
-      { type: 'RIFF_TEMPLATES_CREATE', payload: { name: name.trim(), pitch, purpose } },
-      (resp) => {
-        if (!resp || !resp.ok) {
-          showToast(resp && resp.error ? resp.error : 'Could not save template.', 'error');
-          return;
-        }
-        showToast(`Saved "${name.trim()}".`, 'info');
-        // invalidate cache so next open re-fetches
-        templatesCache = null;
+  function loadTemplate(t) {
+    const pitchEl = $('#pitch');
+    pitchEl.value = t.pitch;
+    if (t.purpose) $('#purpose').value = t.purpose;
+    pitchEl.dataset.fromTemplate = '1';
+    refreshSaveChipState();
+    showToast(`Loaded "${t.name}"`, 'info');
+  }
+
+  function deleteTemplate(t) {
+    chrome.runtime.sendMessage({ type: 'RIFF_TEMPLATES_DELETE', payload: { id: t.id } }, (resp) => {
+      if (!resp || !resp.ok) {
+        showToast('Could not delete that template.', 'error');
+        return;
       }
-    );
+      templatesCache = (templatesCache || []).filter(x => x.id !== t.id);
+      renderTemplatesBar();
+    });
+  }
+
+  function suggestName(pitch) {
+    // Auto-suggest a short name from first 3-5 meaningful words.
+    return pitch
+      .replace(/[^\w\s.-·•]/g, ' ')
+      .split(/\s+/)
+      .filter(w => w.length > 1 && !/^(the|a|an|and|or|for|of|to|in|on|at|with|is|are)$/i.test(w))
+      .slice(0, 4)
+      .join(' ')
+      .slice(0, 60);
+  }
+
+  function openSaveComposer() {
+    const pitch = $('#pitch').value.trim();
+    if (!pitch) return;
+
+    const bar = $('#templates-bar');
+    if (!bar || bar.querySelector('.tpl-save-composer')) return;
+
+    const composer = document.createElement('div');
+    composer.className = 'tpl-save-composer';
+
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.placeholder = 'Name this pitch';
+    input.value = suggestName(pitch);
+    input.maxLength = 80;
+
+    const goBtn = document.createElement('button');
+    goBtn.className = 'save-go';
+    goBtn.type = 'button';
+    goBtn.textContent = 'Save';
+
+    const cancelBtn = document.createElement('button');
+    cancelBtn.className = 'save-cancel';
+    cancelBtn.type = 'button';
+    cancelBtn.textContent = '×';
+    cancelBtn.title = 'Cancel';
+
+    function close() { composer.remove(); }
+    function commit() {
+      const name = input.value.trim();
+      if (!name) {
+        input.focus();
+        return;
+      }
+      goBtn.disabled = true;
+      goBtn.textContent = 'Saving…';
+      const purpose = $('#purpose').value || 'hire';
+      chrome.runtime.sendMessage(
+        { type: 'RIFF_TEMPLATES_CREATE', payload: { name, pitch, purpose } },
+        (resp) => {
+          if (!resp || !resp.ok) {
+            goBtn.disabled = false;
+            goBtn.textContent = 'Save';
+            showToast(resp && resp.error ? resp.error : 'Could not save.', 'error');
+            return;
+          }
+          // Optimistically update cache + re-render bar with new chip + a brief check toast.
+          templatesCache = [resp.template, ...(templatesCache || [])];
+          renderTemplatesBar();
+          // Brief inline confirmation chip
+          const bar = $('#templates-bar');
+          const ok = document.createElement('span');
+          ok.className = 'tpl-saved-toast';
+          ok.textContent = `✓ Saved "${name}"`;
+          bar.prepend(ok);
+          setTimeout(() => ok.remove(), 1800);
+        }
+      );
+    }
+
+    cancelBtn.addEventListener('click', close);
+    goBtn.addEventListener('click', commit);
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); commit(); }
+      if (e.key === 'Escape') { e.preventDefault(); close(); }
+    });
+
+    composer.appendChild(input);
+    composer.appendChild(goBtn);
+    composer.appendChild(cancelBtn);
+    bar.appendChild(composer);
+    setTimeout(() => { input.focus(); input.select(); }, 30);
+  }
+
+  // Live-update the save chip's enabled state when pitch changes.
+  $('#pitch').addEventListener('input', refreshSaveChipState);
+
+  // Auto-load templates on popup open (background; no flash).
+  chrome.runtime.sendMessage({ type: 'RIFF_TEMPLATES_LIST' }, (resp) => {
+    templatesCache = (resp && resp.ok) ? (resp.templates || []) : [];
+    renderTemplatesBar();
   });
 });

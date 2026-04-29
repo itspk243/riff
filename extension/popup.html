@@ -91,15 +91,12 @@
     </label>
 
     <label>Your pitch (1-2 sentences)
-      <span class="template-actions">
-        <button type="button" id="templates-toggle" class="link-btn">Saved ▾</button>
-        <button type="button" id="template-save" class="link-btn">Save…</button>
-      </span>
       <textarea id="pitch" placeholder="e.g. Hiring a Staff Engineer for payments infra. $250K + equity, fully remote, Series B."></textarea>
     </label>
 
-    <!-- Saved templates panel — shown when user clicks "Saved ▾" -->
-    <section id="templates-panel" class="hidden"></section>
+    <!-- Saved pitches: chip row + inline save composer.
+         Auto-renders once we have a logged-in user. -->
+    <section id="templates-bar"></section>
 
     <label>Optional: paste a recent post URL or text
       <textarea id="post" placeholder="(optional — adds deeper personalization)"></textarea>
