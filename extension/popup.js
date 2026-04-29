@@ -380,7 +380,7 @@ function renderFitScore(profile) {
     const lock = document.createElement('button');
     lock.type = 'button';
     lock.className = 'fit-score-locked';
-    lock.innerHTML = '<span class="lock-icon">🔒</span> Score this profile against your job specs — Plus';
+    lock.innerHTML = '<span class="lock-icon">🔒</span> Upgrade to Plus to start scoring profiles';
     lock.title = 'Active Profile Assist is a Plus feature. Click to upgrade.';
     lock.addEventListener('click', async () => {
       const { riff_backend_url } = await getStorage(['riff_backend_url']);
