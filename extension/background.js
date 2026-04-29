@@ -189,6 +189,27 @@ function stubResponse(payload) {
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (!msg || !msg.type) return false;
 
+  // Token hand-off from the dashboard content script. The dashboard posts
+  // {access_token, refresh_token} via window.postMessage, the bridge content
+  // script forwards it here, and we persist both. After this runs once,
+  // the user is signed in — no popup paste needed.
+  //
+  // We trust the sender because the manifest only injects the bridge content
+  // script on our own dashboard URLs; arbitrary pages can't reach this path.
+  if (msg.type === 'RIFF_SET_TOKEN') {
+    const access = msg.payload && msg.payload.access_token;
+    const refresh = msg.payload && msg.payload.refresh_token;
+    if (!access) {
+      sendResponse({ ok: false, error: 'access_token missing' });
+      return false;
+    }
+    chrome.storage.local
+      .set({ riff_token: access, riff_refresh: refresh || null })
+      .then(() => sendResponse({ ok: true }))
+      .catch((e) => sendResponse({ ok: false, error: String(e && e.message || e) }));
+    return true;
+  }
+
   // Generation
   if (msg.type === 'RIFF_GENERATE') {
     (USE_STUB ? Promise.resolve(stubResponse(msg.payload)) : callBackend(msg.payload))

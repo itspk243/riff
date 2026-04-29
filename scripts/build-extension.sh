@@ -35,6 +35,7 @@ zip -r "$OUT_FILE" \
   manifest.json \
   background.js \
   content.js \
+  dashboard-bridge.js \
   popup.html \
   popup.css \
   popup.js

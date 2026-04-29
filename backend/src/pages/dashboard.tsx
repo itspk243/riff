@@ -65,6 +65,12 @@ export default function Dashboard() {
   // bundleHint reflects the riff_v1 bundle if present — that's what Copy
   // actually puts in the clipboard, so the preview should mirror it.
   const [bundleHint, setBundleHint] = useState<string | null>(null);
+  // Extension presence + connect-flow status. extensionDetected flips to
+  // true when the content-script bridge announces itself via postMessage.
+  // connectStatus tracks the click-to-hand-off result.
+  const [extensionDetected, setExtensionDetected] = useState(false);
+  const [connectStatus, setConnectStatus] = useState<'idle' | 'connecting' | 'connected' | 'error'>('idle');
+  const [connectError, setConnectError] = useState<string | null>(null);
   const [showCanceledMsg, setShowCanceledMsg] = useState(false);
   const [showUpgradedMsg, setShowUpgradedMsg] = useState(false);
   const [devMode, setDevMode] = useState(false);
@@ -112,7 +118,107 @@ export default function Dashboard() {
       .catch(() => {
         setLoading(false);
       });
+
+    // Listen for the extension's content script announcing itself. If we hear
+    // it, the user can click "Connect extension" instead of paste.
+    function onMessage(ev: MessageEvent) {
+      if (ev.source !== window) return;
+      const data = ev.data;
+      if (!data || typeof data !== 'object') return;
+      if (data.type === 'riff:extension-ready') {
+        setExtensionDetected(true);
+      } else if (data.type === 'riff:set-token-result') {
+        if (data.ok) {
+          setConnectStatus('connected');
+          setConnectError(null);
+        } else {
+          setConnectStatus('error');
+          setConnectError(data.error || 'Could not save token in extension.');
+        }
+      }
+    }
+    window.addEventListener('message', onMessage);
+    return () => window.removeEventListener('message', onMessage);
   }, []);
+
+  // One-click hand-off: post the access + refresh tokens directly into the
+  // extension via window.postMessage. The extension's content-script bridge
+  // forwards them to background, which writes them to chrome.storage.local.
+  // No copy/paste, no expiry pain.
+  async function connectExtension() {
+    setConnectStatus('connecting');
+    setConnectError(null);
+    try {
+      // Re-mint a fresh access token if ours is near expiry, so we hand off
+      // the longest-lived session possible.
+      let access: string | null = null;
+      let refresh: string | null = null;
+      try {
+        const sessRaw = window.localStorage.getItem('riff_session');
+        if (sessRaw) {
+          const sess = JSON.parse(sessRaw);
+          access = sess.access_token || null;
+          refresh = sess.refresh_token || null;
+          if (access && refresh) {
+            const payload = JSON.parse(
+              atob(access.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))
+            );
+            const expSoon = (payload.exp || 0) * 1000 - Date.now() < 5 * 60 * 1000;
+            if (expSoon) {
+              const r = await fetch('/api/auth/refresh', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ refresh_token: refresh }),
+              });
+              const j = await r.json();
+              if (j.ok && j.access_token) {
+                access = j.access_token;
+                refresh = j.refresh_token || refresh;
+                window.localStorage.setItem('riff_token', access || '');
+                window.localStorage.setItem(
+                  'riff_session',
+                  JSON.stringify({
+                    access_token: access,
+                    refresh_token: refresh,
+                    expires_at: j.expires_at || null,
+                  })
+                );
+              }
+            }
+          }
+        }
+      } catch {}
+
+      // Fall back to the bare JWT if we couldn't load the full session
+      // (legacy users whose riff_session was never set).
+      if (!access) access = token;
+
+      if (!access) {
+        setConnectStatus('error');
+        setConnectError('No session found. Sign out and sign in again.');
+        return;
+      }
+
+      window.postMessage(
+        { type: 'riff:set-token', access_token: access, refresh_token: refresh },
+        window.location.origin
+      );
+
+      // Safety timeout: if the extension never responds, surface a hint.
+      setTimeout(() => {
+        setConnectStatus((s) => {
+          if (s === 'connecting') {
+            setConnectError("Extension didn't respond. Reload this page or use Copy token instead.");
+            return 'error';
+          }
+          return s;
+        });
+      }, 3000);
+    } catch (e: any) {
+      setConnectStatus('error');
+      setConnectError(e?.message || 'Failed to connect extension.');
+    }
+  }
 
   async function startCheckout(plan: 'pro' | 'plus' | 'team' | 'test') {
     if (!token) return;
@@ -537,16 +643,72 @@ export default function Dashboard() {
               <div style={installStepStyle}>
                 <span style={installStepNumStyle}>3</span>
                 <div style={{ flex: 1 }}>
-                  <strong>Sign in with this token</strong>
-                  <div style={installNoteStyle}>
-                    Click the Riff icon in your toolbar. The popup opens. Paste this token where it says <strong>"Sign in to Riff"</strong>, then click <strong>Save token</strong>.
-                  </div>
-                  <div style={tokenRowStyle}>
-                    <code style={tokenPreviewStyle}>{tokenPreview}</code>
-                    <button onClick={copyToken} style={tokenBtnStyle}>
-                      {tokenCopied ? '✓ Copied' : 'Copy token'}
-                    </button>
-                  </div>
+                  <strong>Sign in</strong>
+                  {extensionDetected ? (
+                    <>
+                      <div style={installNoteStyle}>
+                        Riff is installed. One click to sign in — no copy/paste needed.
+                      </div>
+                      <div style={tokenRowStyle}>
+                        <button
+                          onClick={connectExtension}
+                          style={{
+                            ...primaryBtnStyle,
+                            opacity: connectStatus === 'connecting' ? 0.6 : 1,
+                            cursor: connectStatus === 'connecting' ? 'wait' : 'pointer',
+                          }}
+                          disabled={connectStatus === 'connecting'}
+                        >
+                          {connectStatus === 'connected'
+                            ? '✓ Connected'
+                            : connectStatus === 'connecting'
+                              ? 'Connecting…'
+                              : 'Connect extension'}
+                        </button>
+                      </div>
+                      {connectStatus === 'connected' && (
+                        <div style={{ ...installNoteStyle, color: '#1a7a48' }}>
+                          You're signed in. The extension will stay signed in automatically.
+                        </div>
+                      )}
+                      {connectStatus === 'error' && connectError && (
+                        <div style={{ ...installNoteStyle, color: '#b8331a' }}>
+                          {connectError} Falling back to copy/paste — see below.
+                        </div>
+                      )}
+                      {(connectStatus === 'idle' || connectStatus === 'error') && (
+                        <details style={{ marginTop: 10 }}>
+                          <summary style={{ cursor: 'pointer', color: '#666', fontSize: 12 }}>
+                            Or paste a token manually
+                          </summary>
+                          <div style={installNoteStyle}>
+                            Click the Riff icon in your toolbar, paste this token, click <strong>Save token</strong>.
+                          </div>
+                          <div style={tokenRowStyle}>
+                            <code style={tokenPreviewStyle}>{tokenPreview}</code>
+                            <button onClick={copyToken} style={tokenBtnStyle}>
+                              {tokenCopied ? '✓ Copied' : 'Copy token'}
+                            </button>
+                          </div>
+                        </details>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      <div style={installNoteStyle}>
+                        Click the Riff icon in your toolbar. The popup opens. Paste this token where it says <strong>"Sign in to Riff"</strong>, then click <strong>Save token</strong>.
+                      </div>
+                      <div style={tokenRowStyle}>
+                        <code style={tokenPreviewStyle}>{tokenPreview}</code>
+                        <button onClick={copyToken} style={tokenBtnStyle}>
+                          {tokenCopied ? '✓ Copied' : 'Copy token'}
+                        </button>
+                      </div>
+                      <div style={{ ...installNoteStyle, fontSize: 11, opacity: 0.7 }}>
+                        Already installed? Reload this page — we'll detect the extension and show a one-click <strong>Connect</strong> button instead.
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
 
@@ -557,7 +719,7 @@ export default function Dashboard() {
               <ul style={troubleshootStyle}>
                 <li><strong>Riff popup says "Open a LinkedIn profile..."</strong> — you're on the LinkedIn home page or feed. Click into a person's profile (URL must contain <code>/in/</code>).</li>
                 <li><strong>Generation says "Sign in first"</strong> — your token wasn't saved. Click the Riff icon again, paste the token, hit Save.</li>
-                <li><strong>Token expired</strong> — Supabase tokens last about an hour. Come back to this dashboard, click <strong>Copy token</strong>, paste it again in the extension.</li>
+                <li><strong>Got signed out</strong> — your refresh token was rotated or revoked. Sign in to your dashboard again, then click <strong>Connect extension</strong> (or paste a fresh token if Connect isn't visible).</li>
                 <li><strong>Auto-update isn't picking up new versions</strong> — Chrome auto-updates extensions every few hours. To force it: open <code>chrome://extensions</code>, toggle Developer mode on, click <strong>Update</strong> at the top.</li>
               </ul>
             </details>
