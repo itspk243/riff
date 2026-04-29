@@ -65,13 +65,22 @@ export default function AuthCallback() {
             <>
               <h1 style={h1Style}>You're signed in.</h1>
               <p style={pStyle}>
-                One last step: paste your token into the Riff extension so it can talk to your account.
+                Two steps to start drafting: download the extension, then paste your token in.
               </p>
 
+              <a
+                href="/riff-extension.zip"
+                download
+                style={{ ...primaryButtonStyle, marginBottom: 12 }}
+              >
+                ↓ Download Riff extension (16 KB)
+              </a>
+
               <ol style={olStyle}>
-                <li>Click the Riff icon in your Chrome toolbar.</li>
-                <li>Click <strong>Sign in</strong> at the top of the popup.</li>
-                <li>Paste the token below.</li>
+                <li>Unzip the file.</li>
+                <li>Open <code>chrome://extensions</code> · toggle <strong>Developer mode</strong>.</li>
+                <li>Click <strong>Load unpacked</strong> · pick the unzipped folder.</li>
+                <li>Click the Riff icon in your toolbar · paste the token below.</li>
               </ol>
 
               <label style={labelStyle}>Your token</label>

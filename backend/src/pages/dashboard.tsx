@@ -21,7 +21,7 @@ interface MeResponse {
   };
 }
 
-const FREE_WEEKLY_LIMIT = 5;
+const FREE_WEEKLY_LIMIT = 3;
 
 function formatDate(iso?: string | null): string {
   if (!iso) return '—';
@@ -52,12 +52,14 @@ export default function Dashboard() {
   const [tokenCopied, setTokenCopied] = useState(false);
   const [showCanceledMsg, setShowCanceledMsg] = useState(false);
   const [showUpgradedMsg, setShowUpgradedMsg] = useState(false);
+  const [devMode, setDevMode] = useState(false);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const params = new URLSearchParams(window.location.search);
     if (params.get('canceled') === '1') setShowCanceledMsg(true);
     if (params.get('upgraded') === '1') setShowUpgradedMsg(true);
+    if (params.get('devmode') === '1') setDevMode(true);
 
     const t = window.localStorage.getItem('riff_token');
     setToken(t);
@@ -148,6 +150,39 @@ export default function Dashboard() {
             </div>
           )}
 
+          {/* Extension hero — always visible, prominent for new users.
+              First thing every user sees after sign in.
+              Without the extension, the product does nothing — so this is
+              the highest-priority action for any user who hasn't set it up. */}
+          {(me?.usage?.all_time ?? 0) === 0 ? (
+            <section style={extHeroNewStyle}>
+              <div style={extHeroEyebrowStyle}>Step 1 · 60 seconds</div>
+              <div style={extHeroTitleStyle}>Install the Riff extension</div>
+              <p style={extHeroBodyStyle}>
+                Riff lives in your Chrome toolbar. Open a LinkedIn, GitHub, or Wellfound
+                profile, click the icon, and Riff drafts the message.
+              </p>
+              <div style={extHeroBtnRowStyle}>
+                <a href="/riff-extension.zip" download style={primaryBtnStyle}>
+                  ↓ Download extension
+                </a>
+                <a href="#install-steps" style={ghostBtnStyle}>How to install ↓</a>
+              </div>
+            </section>
+          ) : (
+            <section style={extHeroCompactStyle}>
+              <div style={{ flex: 1 }}>
+                <strong>Riff extension</strong>
+                <div style={{ fontSize: 12, color: '#777', marginTop: 2 }}>
+                  Need to reinstall, or set it up on a new machine?
+                </div>
+              </div>
+              <a href="/riff-extension.zip" download style={ghostBtnSmStyle}>
+                ↓ Re-download
+              </a>
+            </section>
+          )}
+
           {/* Profile header */}
           <section style={profileStyle}>
             {me?.avatar_url ? (
@@ -170,13 +205,29 @@ export default function Dashboard() {
           <section style={sectionStyle}>
             <div style={sectionTitleStyle}>Activity</div>
             <div style={statsGridStyle}>
-              <div style={statTileStyle}>
-                <div style={statNumberStyle}>
-                  {me?.usage?.this_week ?? 0}
-                  {!isPaid && <span style={statLimitStyle}> / {FREE_WEEKLY_LIMIT}</span>}
-                </div>
-                <div style={statLabelStyle}>This week</div>
-              </div>
+              {(() => {
+                const used = me?.usage?.this_week ?? 0;
+                const remaining = isPaid ? null : Math.max(0, FREE_WEEKLY_LIMIT - used);
+                let weekColor = '#0a0a0a';
+                if (!isPaid) {
+                  if (remaining === 0) weekColor = '#b8331a';      // depleted — red
+                  else if (remaining === 1) weekColor = '#b85a1a'; // last one — amber
+                }
+                return (
+                  <div style={statTileStyle}>
+                    <div style={{ ...statNumberStyle, color: weekColor }}>
+                      {used}
+                      {!isPaid && <span style={statLimitStyle}> / {FREE_WEEKLY_LIMIT}</span>}
+                    </div>
+                    <div style={statLabelStyle}>This week</div>
+                    {!isPaid && remaining !== null && remaining <= 1 && (
+                      <div style={urgencyTextStyle}>
+                        {remaining === 0 ? 'Limit reached. Upgrade ↓' : '1 draft left this week'}
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
               <div style={statTileStyle}>
                 <div style={statNumberStyle}>{me?.usage?.this_month ?? 0}</div>
                 <div style={statLabelStyle}>This month</div>
@@ -209,12 +260,17 @@ export default function Dashboard() {
             {!isPaid && (
               <div style={upgradeStyle}>
                 <p style={upgradeTextStyle}>
-                  Upgrade for unlimited generations, 3 variants per call, tone controls, and reply tracking.
+                  Pro unlocks <strong>unlimited drafts</strong>, all <strong>3 variants per generation</strong> (cold opener + follow-up + breakup), tone controls, and reply tracking.
                 </p>
                 <div style={upgradeBtnsStyle}>
-                  <button onClick={() => startCheckout('pro')} style={primaryBtnStyle}>Get Pro · $39/mo</button>
+                  <div style={proBtnWrapStyle}>
+                    <button onClick={() => startCheckout('pro')} style={primaryBtnStyle}>Get Pro · $39/mo</button>
+                    <span style={popularBadgeStyle}>Most popular</span>
+                  </div>
                   <button onClick={() => startCheckout('team')} style={ghostBtnStyle}>Team · $99/mo</button>
-                  <button onClick={() => startCheckout('test')} style={ghostBtnStyle} title="Smoke-test tier — same Pro features, billed at $5/mo. For verifying the Stripe pipeline.">Test · $5/mo</button>
+                  {devMode && (
+                    <button onClick={() => startCheckout('test')} style={ghostBtnStyle} title="Smoke-test tier (devmode only).">Test · $5/mo</button>
+                  )}
                 </div>
               </div>
             )}
@@ -225,26 +281,53 @@ export default function Dashboard() {
           </section>
 
           {/* Extension setup */}
-          <section style={sectionStyle}>
-            <div style={sectionTitleStyle}>Connect the extension</div>
+          <section id="install-steps" style={sectionStyle}>
+            <div style={sectionTitleStyle}>Get the extension</div>
             <p style={pStyle}>
-              Open the Riff extension popup → paste this token into the Sign-in field.
+              Two minutes. Download, unzip, point Chrome at the folder, paste your token.
             </p>
-            <div style={tokenRowStyle}>
-              <code style={tokenPreviewStyle}>{tokenPreview}</code>
-              <button onClick={copyToken} style={tokenBtnStyle}>
-                {tokenCopied ? '✓ Copied' : 'Copy token'}
-              </button>
+
+            <div style={installStepsStyle}>
+              <div style={installStepStyle}>
+                <span style={installStepNumStyle}>1</span>
+                <div style={{ flex: 1 }}>
+                  <a href="/riff-extension.zip" download style={primaryBtnStyle}>
+                    ↓ Download Riff extension
+                  </a>
+                  <div style={installNoteStyle}>~16 KB · unzip after downloading</div>
+                </div>
+              </div>
+
+              <div style={installStepStyle}>
+                <span style={installStepNumStyle}>2</span>
+                <div style={{ flex: 1 }}>
+                  <strong>Open <code>chrome://extensions</code></strong> in a new tab.
+                  <div style={installNoteStyle}>Toggle <strong>Developer mode</strong> on (top right).</div>
+                </div>
+              </div>
+
+              <div style={installStepStyle}>
+                <span style={installStepNumStyle}>3</span>
+                <div style={{ flex: 1 }}>
+                  <strong>Click "Load unpacked"</strong> → pick the unzipped folder.
+                  <div style={installNoteStyle}>Pin the Riff icon to your toolbar.</div>
+                </div>
+              </div>
+
+              <div style={installStepStyle}>
+                <span style={installStepNumStyle}>4</span>
+                <div style={{ flex: 1 }}>
+                  <strong>Paste this token</strong> into the extension's Sign-in field:
+                  <div style={tokenRowStyle}>
+                    <code style={tokenPreviewStyle}>{tokenPreview}</code>
+                    <button onClick={copyToken} style={tokenBtnStyle}>
+                      {tokenCopied ? '✓ Copied' : 'Copy token'}
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
-            <details style={{ marginTop: 16 }}>
-              <summary style={detailsSummaryStyle}>Don't have the extension installed?</summary>
-              <ol style={olStyle}>
-                <li>Open <code>chrome://extensions</code> and toggle <strong>Developer mode</strong>.</li>
-                <li>Click <strong>Load unpacked</strong> → pick the <code>extension</code> folder from the Riff repo.</li>
-                <li>Pin the Riff icon to your toolbar.</li>
-                <li>Visit a LinkedIn / GitHub / Wellfound profile and click the icon.</li>
-              </ol>
-            </details>
+
             <p style={smallStyle}>
               Token is stored in <code>chrome.storage.local</code> on your device. Don't share it.
             </p>
@@ -362,7 +445,17 @@ const upgradeTextStyle: React.CSSProperties = {
   fontSize: 13, color: '#444', margin: '0 0 12px', lineHeight: 1.55,
 };
 const upgradeBtnsStyle: React.CSSProperties = {
-  display: 'flex', gap: 8, flexWrap: 'wrap',
+  display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'flex-start',
+};
+const proBtnWrapStyle: React.CSSProperties = {
+  display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: 4,
+};
+const popularBadgeStyle: React.CSSProperties = {
+  fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase',
+  color: '#b14a1a', background: '#fdeee5', padding: '2px 8px', borderRadius: 6,
+};
+const urgencyTextStyle: React.CSSProperties = {
+  fontSize: 11, color: '#b8331a', marginTop: 6, fontWeight: 600,
 };
 
 const tokenRowStyle: React.CSSProperties = {
@@ -380,12 +473,46 @@ const tokenBtnStyle: React.CSSProperties = {
   fontFamily: 'inherit',
 };
 
-const detailsSummaryStyle: React.CSSProperties = {
-  fontSize: 13, color: '#555', cursor: 'pointer',
-  paddingTop: 4, paddingBottom: 4,
+const extHeroNewStyle: React.CSSProperties = {
+  background: 'linear-gradient(180deg, #faf9f6 0%, #f3f0e8 100%)',
+  border: '1px solid #d6d2c7',
+  borderRadius: 14,
+  padding: '24px 24px 26px',
+  marginBottom: 28,
 };
-const olStyle: React.CSSProperties = {
-  marginTop: 8, paddingLeft: 22, fontSize: 13, color: '#555', lineHeight: 1.7,
+const extHeroEyebrowStyle: React.CSSProperties = {
+  fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase',
+  color: '#b14a1a', marginBottom: 10,
+};
+const extHeroTitleStyle: React.CSSProperties = {
+  fontSize: 22, fontWeight: 800, letterSpacing: '-0.02em', marginBottom: 8, color: '#0a0a0a',
+};
+const extHeroBodyStyle: React.CSSProperties = {
+  fontSize: 14, color: '#444', lineHeight: 1.55, margin: '0 0 16px',
+};
+const extHeroBtnRowStyle: React.CSSProperties = {
+  display: 'flex', gap: 8, flexWrap: 'wrap',
+};
+const extHeroCompactStyle: React.CSSProperties = {
+  display: 'flex', alignItems: 'center', gap: 12,
+  background: '#fafafa', border: '1px solid #f0f0f2', borderRadius: 10,
+  padding: '12px 14px', marginBottom: 24,
+};
+const installStepsStyle: React.CSSProperties = {
+  display: 'flex', flexDirection: 'column', gap: 16, marginTop: 14,
+};
+const installStepStyle: React.CSSProperties = {
+  display: 'flex', alignItems: 'flex-start', gap: 12,
+  fontSize: 14, color: '#333', lineHeight: 1.55,
+};
+const installStepNumStyle: React.CSSProperties = {
+  flexShrink: 0, width: 24, height: 24, borderRadius: '50%',
+  background: '#0a0a0a', color: '#fff',
+  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+  fontSize: 12, fontWeight: 700, marginTop: 2,
+};
+const installNoteStyle: React.CSSProperties = {
+  fontSize: 12, color: '#777', marginTop: 4,
 };
 
 const primaryBtnStyle: React.CSSProperties = {

@@ -1,10 +1,11 @@
-// Free-tier quota: 5 generations per rolling 7-day window.
-// Pro and Team have no soft limit (we still log usage for monitoring).
+// Free-tier quota: 3 generations per rolling 7-day window.
+// Tightened from 5 → 3 so free users feel the limit within one session and
+// have a real reason to upgrade. Pro and Team have no soft limit (still logged).
 
 import { serviceClient } from './supabase';
 import type { UserRow } from './types';
 
-export const FREE_WEEKLY_LIMIT = 5;
+export const FREE_WEEKLY_LIMIT = 3;
 
 export async function getUsageThisWeek(userId: string): Promise<number> {
   const supabase = serviceClient();

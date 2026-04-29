@@ -63,18 +63,31 @@ export default async function handler(
     return res.status(500).json({ ok: false, error: 'Generation failed. Try again in a moment.' });
   }
 
-  // Record usage (best-effort, don't block response)
+  // Record usage (best-effort, don't block response). We log the FULL variants
+  // count generated, not what we returned — accurate cost accounting.
   if (user) {
     recordUsage(user.id, variants.length).catch(err =>
       console.error('recordUsage failed', err)
     );
   }
 
+  // Variant gating: free tier sees only the cold_opener. Pro/Team see all three.
+  // The model still generated all three (it's cheap on Gemini and the same prompt
+  // pass) — we just don't return follow_up/breakup unless the user upgraded.
+  const isPaid = user && (user.plan === 'pro' || user.plan === 'team');
+  const visibleVariants = isPaid
+    ? variants
+    : variants.filter(v => v.type === 'cold_opener');
+
   return res.status(200).json({
     ok: true,
-    variants,
+    variants: visibleVariants,
     remainingThisWeek: remaining === null ? undefined : remaining - 1,
     plan: user?.plan,
+    // Surface the upgrade nudge when free users hit the variant ceiling.
+    upgradeMessage: !isPaid
+      ? 'Upgrade to Pro for the full sequence — follow-up + breakup variants automatically.'
+      : undefined,
   });
 }
 
