@@ -350,7 +350,7 @@
     <h1>Cold messages that don't get deleted.</h1>
     <p class="lede">A Chrome extension that drafts personalized LinkedIn cold-outreach grounded in what the person actually posted this week — not their headline. Three variants ready in fifteen seconds. Built for recruiters, sales, and founders sending cold messages that should actually feel cold-warm.</p>
     <div class="hero-cta">
-      <a href="/signup" class="btn btn-lg">Try it free <span class="arrow">→</span></a>
+      <a href="/signup" id="hero-cta" class="btn btn-lg">Try it free <span class="arrow">→</span></a>
       <a href="#how" class="btn btn-ghost btn-lg">How it works</a>
     </div>
     <div class="hero-meta">
@@ -503,7 +503,7 @@ Worth a 20-min trade of notes this week, even if just to compare scars?</div>
           <li><svg class="price-check" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,6 5,9 10,3"/></svg>All tones, all sources</li>
           <li><svg class="price-check" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,6 5,9 10,3"/></svg>No card required</li>
         </ul>
-        <a href="/signup" class="btn btn-ghost" style="width: 100%;">Start free</a>
+        <a href="/signup" data-plan="free" class="btn btn-ghost plan-cta" style="width: 100%;">Start free</a>
       </div>
 
       <div class="price-card featured">
@@ -517,7 +517,7 @@ Worth a 20-min trade of notes this week, even if just to compare scars?</div>
           <li><svg class="price-check" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,6 5,9 10,3"/></svg>7 languages</li>
           <li><svg class="price-check" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,6 5,9 10,3"/></svg>Cross-machine reply analytics</li>
         </ul>
-        <a href="/signup?plan=pro" class="btn" style="width: 100%;">Get Pro</a>
+        <a href="/signup?plan=pro" data-plan="pro" class="btn plan-cta" style="width: 100%;">Get Pro</a>
       </div>
 
       <div class="price-card">
@@ -530,7 +530,7 @@ Worth a 20-min trade of notes this week, even if just to compare scars?</div>
           <li><svg class="price-check" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,6 5,9 10,3"/></svg>Up to 5 active job specs</li>
           <li><svg class="price-check" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,6 5,9 10,3"/></svg>Up to 10 saved searches</li>
         </ul>
-        <a href="/signup?plan=plus" class="btn btn-ghost" style="width: 100%;">Get Plus</a>
+        <a href="/signup?plan=plus" data-plan="plus" class="btn btn-ghost plan-cta" style="width: 100%;">Get Plus</a>
       </div>
     </div>
   </div>
@@ -585,17 +585,43 @@ Worth a 20-min trade of notes this week, even if just to compare scars?</div>
 </footer>
 
 <script>
-  // If the visitor is already signed in (token in localStorage),
-  // swap the "Sign in" CTA in the nav for a "Dashboard" link.
+  // If the visitor is already signed in (token in localStorage), swap
+  // sign-up CTAs for dashboard-aware ones so they don't bounce through
+  // /signup just to come back. Pricing buttons go to /dashboard?upgrade=<plan>
+  // which auto-triggers checkout (or in-place plan swap, for existing subs).
   // Pure progressive enhancement — no impact on signed-out visitors.
   (function () {
     try {
       var token = window.localStorage.getItem('riff_token');
       if (!token) return;
+
+      // Nav: "Sign in" → "Dashboard"
       var cta = document.getElementById('auth-cta');
       if (cta) {
         cta.textContent = 'Dashboard';
         cta.setAttribute('href', '/dashboard');
+      }
+
+      // Hero "Try it free" → "Open dashboard"
+      var hero = document.getElementById('hero-cta');
+      if (hero) {
+        hero.innerHTML = 'Open dashboard <span class="arrow">→</span>';
+        hero.setAttribute('href', '/dashboard');
+      }
+
+      // Pricing tier CTAs — point at the dashboard with an `upgrade` intent
+      // that the dashboard reads on load and turns into a checkout call.
+      var planCtas = document.querySelectorAll('.plan-cta');
+      for (var i = 0; i < planCtas.length; i++) {
+        var btn = planCtas[i];
+        var plan = btn.getAttribute('data-plan');
+        if (plan === 'free') {
+          btn.textContent = 'Open dashboard';
+          btn.setAttribute('href', '/dashboard');
+        } else if (plan === 'pro' || plan === 'plus') {
+          btn.textContent = 'Get ' + (plan === 'pro' ? 'Pro' : 'Plus');
+          btn.setAttribute('href', '/dashboard?upgrade=' + plan);
+        }
       }
     } catch (e) { /* private mode, etc. — silent */ }
   })();

@@ -104,6 +104,49 @@ export default function Dashboard() {
         }, delay);
       });
     }
+
+    // Landing page sends signed-in users here with ?upgrade=pro|plus|test
+    // to express intent. Auto-trigger checkout — but ONLY if they're not
+    // already on that plan. Otherwise they'd bounce to Stripe portal which
+    // is jarring when they just clicked a tier they already own.
+    const upgradeIntent = params.get('upgrade');
+    if (upgradeIntent === 'pro' || upgradeIntent === 'plus' || upgradeIntent === 'test') {
+      // Strip the param so refreshing the dashboard doesn't re-trigger.
+      try {
+        const url = new URL(window.location.href);
+        url.searchParams.delete('upgrade');
+        window.history.replaceState({}, '', url.toString());
+      } catch {}
+      // Wait for /api/me to populate, then check plan. Up to 5 attempts
+      // (covers slow networks); skip if already on plan.
+      const tryAutoCheckout = (attempts: number) => {
+        if (attempts <= 0) return;
+        setTimeout(() => {
+          // setMe runs in refreshAndFetchMe; read latest via the closure's
+          // useEffect doesn't capture it, so we re-read the storage indirectly
+          // by reading window state via a fresh fetch call. Simplest: just
+          // call startCheckout, which the API already handles correctly
+          // (returns alreadyOnPlan: true → portal URL). But to avoid the
+          // unwanted portal redirect for same-plan, we read me from a ref-
+          // free pattern: use functional setState to peek.
+          setMe((current) => {
+            if (current?.plan === upgradeIntent) {
+              showError(`You're already on ${upgradeIntent.charAt(0).toUpperCase() + upgradeIntent.slice(1)}.`);
+              return current;
+            }
+            // Plan differs (or me hasn't loaded yet). If me is loaded and
+            // it's a real plan change, fire checkout. If me is null, retry.
+            if (current) {
+              startCheckout(upgradeIntent as 'pro' | 'plus' | 'test');
+            } else {
+              tryAutoCheckout(attempts - 1);
+            }
+            return current;
+          });
+        }, 600);
+      };
+      tryAutoCheckout(5);
+    }
     if (params.get('devmode') === '1') setDevMode(true);
 
     const t = window.localStorage.getItem('riff_token');
@@ -645,74 +688,98 @@ export default function Dashboard() {
               )}
             </div>
 
-            {!isPaid && (
-              <div style={upgradeStyle}>
-                <p style={upgradeTextStyle}>
-                  Pick a plan. Cancel anytime.
-                </p>
+            {/* Tier grid — visible to everyone, paid or free. The button on
+                each tile is plan-aware: "Current plan" disabled if it's the
+                user's plan, "Switch to X" if they're on a different paid
+                plan, "Start X" if they're free. The /api/billing/checkout
+                endpoint handles the in-place price swap (no double subs). */}
+            <div style={upgradeStyle}>
+              <p style={upgradeTextStyle}>
+                {isPaid ? 'Change your plan or manage billing.' : 'Pick a plan. Cancel anytime.'}
+              </p>
 
-                <div style={tierGridStyle}>
+              <div style={tierGridStyle}>
 
-                  {/* Free — current state, just for reference */}
-                  <div style={tierCardStyle}>
-                    <div style={tierNameStyle}>Free</div>
-                    <div style={tierPriceStyle}>$0</div>
-                    <div style={tierBlurbStyle}>Try it before paying.</div>
-                    <ul style={tierListStyle}>
-                      <li>3 drafts per week</li>
-                      <li>Cold opener variant only</li>
-                      <li>All profile sources (LinkedIn, GitHub, Wellfound)</li>
-                      <li>Local reply stats</li>
-                    </ul>
-                  </div>
-
-                  {/* Pro — most popular */}
-                  <div style={{ ...tierCardStyle, ...tierCardHighlightStyle }} className="riff-popular">
-                    <div style={tierBadgeStyle}>Most popular</div>
-                    <div style={tierNameStyle}>Pro</div>
-                    <div style={tierPriceStyle}>$14.99<span style={tierMoStyle}>/mo</span></div>
-                    <div style={tierBlurbStyle}>Everything you need to run cold outreach at speed.</div>
-                    <ul style={tierListStyle}>
-                      <li><strong>Unlimited drafts</strong></li>
-                      <li><strong>All 3 variants</strong> (cold opener + follow-up + breakup)</li>
-                      <li>Saved pitch templates, synced across devices</li>
-                      <li>Auto follow-up loop (knows when to remind you)</li>
-                      <li>7 languages</li>
-                      <li>Cross-machine reply analytics</li>
-                      <li>Priority generation queue</li>
-                      <li>Email support</li>
-                    </ul>
-                    <button onClick={() => startCheckout('pro')} style={primaryBtnStyle} className="riff-btn">Start Pro · $14.99/mo</button>
-                  </div>
-
-                  {/* Plus — agentic features */}
-                  <div style={{ ...tierCardStyle, ...tierCardPlusStyle }}>
-                    <div style={{ ...tierBadgeStyle, ...tierBadgePlusStyle }}>Power users</div>
-                    <div style={tierNameStyle}>Plus</div>
-                    <div style={tierPriceStyle}>$19.99<span style={tierMoStyle}>/mo</span></div>
-                    <div style={tierBlurbStyle}>Pro + agentic candidate finding.</div>
-                    <ul style={tierListStyle}>
-                      <li>Everything in Pro</li>
-                      <li><strong>Active Profile Assist</strong> — live fit-scoring against your job specs as you browse</li>
-                      <li><strong>Saved-Search Daily Digest</strong> — auto-rank profiles in your saved searches</li>
-                      <li>Up to 5 active job specs</li>
-                      <li>Up to 10 saved search watches</li>
-                      <li>Pre-generated drafts for high-confidence matches</li>
-                    </ul>
-                    <button onClick={() => startCheckout('plus')} style={primaryBtnStyle} className="riff-btn">Start Plus · $19.99/mo</button>
-                  </div>
+                {/* Free */}
+                <div style={tierCardStyle}>
+                  <div style={tierNameStyle}>Free</div>
+                  <div style={tierPriceStyle}>$0</div>
+                  <div style={tierBlurbStyle}>Try it before paying.</div>
+                  <ul style={tierListStyle}>
+                    <li>3 drafts per week</li>
+                    <li>Cold opener variant only</li>
+                    <li>All profile sources (LinkedIn, GitHub, Wellfound)</li>
+                    <li>Local reply stats</li>
+                  </ul>
+                  {me?.plan === 'free' ? (
+                    <button disabled style={{ ...ghostBtnStyle, opacity: 0.6, cursor: 'default' }}>Current plan</button>
+                  ) : isPaid ? (
+                    <button onClick={openBillingPortal} style={ghostBtnStyle} className="riff-ghost-btn" title="Cancel via Stripe portal — your plan ends at the period boundary.">
+                      Downgrade in portal
+                    </button>
+                  ) : null}
                 </div>
 
-                {devMode && (
-                  <div style={{ marginTop: 14, fontSize: 12, color: '#888' }}>
-                    devmode: <button onClick={() => startCheckout('test')} style={{ ...ghostBtnStyle, padding: '6px 10px', fontSize: 12 }} className="riff-ghost-btn" title="Smoke-test tier ($5/mo, full Pro features).">Test · $5/mo</button>
-                  </div>
-                )}
+                {/* Pro */}
+                <div style={{ ...tierCardStyle, ...(me?.plan === 'pro' ? {} : tierCardHighlightStyle) }} className={me?.plan !== 'pro' ? 'riff-popular' : ''}>
+                  {me?.plan !== 'pro' && me?.plan !== 'plus' && <div style={tierBadgeStyle}>Most popular</div>}
+                  <div style={tierNameStyle}>Pro</div>
+                  <div style={tierPriceStyle}>$14.99<span style={tierMoStyle}>/mo</span></div>
+                  <div style={tierBlurbStyle}>Everything you need to run cold outreach at speed.</div>
+                  <ul style={tierListStyle}>
+                    <li><strong>Unlimited drafts</strong></li>
+                    <li><strong>All 3 variants</strong> (cold opener + follow-up + breakup)</li>
+                    <li>Saved pitch templates, synced across devices</li>
+                    <li>Auto follow-up loop (knows when to remind you)</li>
+                    <li>7 languages</li>
+                    <li>Cross-machine reply analytics</li>
+                    <li>Priority generation queue</li>
+                    <li>Email support</li>
+                  </ul>
+                  {me?.plan === 'pro' ? (
+                    <button disabled style={{ ...primaryBtnStyle, opacity: 0.6, cursor: 'default' }}>Current plan</button>
+                  ) : me?.plan === 'plus' ? (
+                    <button onClick={() => startCheckout('pro')} style={ghostBtnStyle} className="riff-ghost-btn">Switch to Pro</button>
+                  ) : (
+                    <button onClick={() => startCheckout('pro')} style={primaryBtnStyle} className="riff-btn">Start Pro · $14.99/mo</button>
+                  )}
+                </div>
+
+                {/* Plus — agentic features */}
+                <div style={{ ...tierCardStyle, ...tierCardPlusStyle }}>
+                  {me?.plan !== 'plus' && <div style={{ ...tierBadgeStyle, ...tierBadgePlusStyle }}>Power users</div>}
+                  <div style={tierNameStyle}>Plus</div>
+                  <div style={tierPriceStyle}>$19.99<span style={tierMoStyle}>/mo</span></div>
+                  <div style={tierBlurbStyle}>Pro + agentic candidate finding.</div>
+                  <ul style={tierListStyle}>
+                    <li>Everything in Pro</li>
+                    <li><strong>Active Profile Assist</strong> — live fit-scoring against your job specs as you browse</li>
+                    <li><strong>Saved-Search Daily Digest</strong> — auto-rank profiles in your saved searches</li>
+                    <li>Up to 5 active job specs</li>
+                    <li>Up to 10 saved search watches</li>
+                    <li>Pre-generated drafts for high-confidence matches</li>
+                  </ul>
+                  {me?.plan === 'plus' ? (
+                    <button disabled style={{ ...primaryBtnStyle, opacity: 0.6, cursor: 'default' }}>Current plan</button>
+                  ) : me?.plan === 'pro' ? (
+                    <button onClick={() => startCheckout('plus')} style={primaryBtnStyle} className="riff-btn">Upgrade to Plus · +$5/mo</button>
+                  ) : (
+                    <button onClick={() => startCheckout('plus')} style={primaryBtnStyle} className="riff-btn">Start Plus · $19.99/mo</button>
+                  )}
+                </div>
               </div>
-            )}
+
+              {devMode && (
+                <div style={{ marginTop: 14, fontSize: 12, color: '#888' }}>
+                  devmode: <button onClick={() => startCheckout('test')} style={{ ...ghostBtnStyle, padding: '6px 10px', fontSize: 12 }} className="riff-ghost-btn" title="Smoke-test tier ($5/mo, full Pro features).">Test · $5/mo</button>
+                </div>
+              )}
+            </div>
 
             {isPaid && (
-              <button onClick={openBillingPortal} style={primaryBtnStyle}>Manage billing &amp; cancel</button>
+              <button onClick={openBillingPortal} style={{ ...primaryBtnStyle, marginTop: 16 }}>
+                Manage billing &amp; cancel
+              </button>
             )}
           </section>
 
