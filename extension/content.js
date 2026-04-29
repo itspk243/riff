@@ -124,13 +124,95 @@
       }
     }
 
+    // Day 2 enrichment — pull recent posts, skills, past roles when visible
+    // on the profile page. All best-effort: missing data is fine, never throw.
+
+    const recentPosts = parseLinkedInRecentPosts();
+    const skills = parseLinkedInSkills();
+    const pastRoles = parseLinkedInPastRoles(expSection);
+
     return {
       name: safeText(nameEl),
       headline,
       about,
       currentRole: currentRole || headline,
       currentCompany,
+      recentPosts,
+      skills,
+      pastRoles,
     };
+  }
+
+  // Pull up to 3 recent post snippets from the Activity / Posts section on a
+  // public LinkedIn profile. The Activity section embeds the user's last few
+  // posts as text inside [aria-hidden="true"] spans. Robust to mid-2025 DOM:
+  // we look at the section labeled "Activity" or "Posts" (depending on how
+  // LinkedIn renders the surface for the viewer).
+  function parseLinkedInRecentPosts() {
+    const sec =
+      findSectionByHeading('Activity') ||
+      findSectionByHeading('Posts') ||
+      findSectionByHeading('Featured');
+    if (!sec) return [];
+    const out = [];
+    const candidates = sec.querySelectorAll(
+      '.feed-shared-update-v2 span[aria-hidden="true"], ' +
+      '.update-components-text span[aria-hidden="true"], ' +
+      '.profile-creator-shared-feed-update__container span[aria-hidden="true"], ' +
+      'span[dir="ltr"]'
+    );
+    const seen = new Set();
+    for (const el of candidates) {
+      const t = safeText(el);
+      if (!t || t.length < 40 || t.length > 600) continue;
+      if (/^(see more|see less|like|comment|share|repost|reposted|liked by|commented on)/i.test(t)) continue;
+      if (seen.has(t)) continue;
+      seen.add(t);
+      out.push(t);
+      if (out.length >= 3) break;
+    }
+    return out;
+  }
+
+  // Pull top skills from the Skills section. LinkedIn lists skills with
+  // 1 element per skill; we read the first 5-8.
+  function parseLinkedInSkills() {
+    const sec = findSectionByHeading('Skills');
+    if (!sec) return [];
+    const items = sec.querySelectorAll('li, .pvs-list__item');
+    const out = [];
+    const seen = new Set();
+    for (const li of items) {
+      const t = safeText(li.querySelector('span[aria-hidden="true"], a, span'));
+      if (!t || t.length > 60) continue;
+      if (/^(show all|endorsed|endorsement)/i.test(t)) continue;
+      if (seen.has(t)) continue;
+      seen.add(t);
+      out.push(t);
+      if (out.length >= 8) break;
+    }
+    return out;
+  }
+
+  // Pull the most recent 1-2 past roles from the Experience section,
+  // skipping the current role (which is already in currentRole/currentCompany).
+  function parseLinkedInPastRoles(expSection) {
+    if (!expSection) return [];
+    const items = expSection.querySelectorAll('li');
+    const out = [];
+    // Skip index 0 (current role) — it's already in the main snapshot.
+    for (let i = 1; i < items.length && out.length < 2; i++) {
+      const li = items[i];
+      const spans = li.querySelectorAll('span[aria-hidden="true"]');
+      const title = spans[0] ? (spans[0].textContent || '').trim() : '';
+      const company = spans[1]
+        ? (spans[1].textContent || '').trim().replace(/\s+·.+$/, '')
+        : '';
+      if (title) {
+        out.push(company ? `${title} at ${company}` : title);
+      }
+    }
+    return out;
   }
 
   // ---------- LinkedIn Sales Navigator ----------

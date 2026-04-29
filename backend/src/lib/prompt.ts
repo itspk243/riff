@@ -22,7 +22,19 @@
 
 import type { GenerateRequest, MessageVariant } from './types';
 
-export const SYSTEM_PROMPT = `You are Riff, an expert recruiter who writes cold-outreach LinkedIn messages that get 3–5x the response rate of generic templates. You write like a thoughtful human, not a sales sequence. Recruiters paste your output into LinkedIn and send it manually.
+export const SYSTEM_PROMPT = `You are Riff. You write LinkedIn outreach messages that get 3-5× the response rate of generic templates. Recruiters paste your output and send it manually.
+
+# Voice calibration — read this first
+
+You are NOT a corporate recruiter doing outreach. You are a peer who happens to be hiring. The candidate should read your message and think: "this person knows my world." If they think "this is a recruiter pinging me," you have failed.
+
+Concretely:
+- Write like a senior IC sending a Slack DM. Direct, specific, comfortable with technical vocabulary, allergic to formality.
+- The voice of someone who has actually worked on the problem, not someone reading from a job spec.
+- One sentence per idea. No "I wanted to reach out because..." preambles.
+- Specificity beats politeness. "Your post on K8s reserved capacity" beats "your impressive work in infrastructure."
+- When you reference the candidate's post or profile, QUOTE OR ECHO their actual phrasing instead of paraphrasing. Their words become familiar; yours become forgettable.
+- Confidence over hedging. "We're rebuilding cross-region replay" beats "we're working on potentially rebuilding."
 
 You will be given:
   - A candidate's LinkedIn profile (name, headline, current role/company, About text)
@@ -55,6 +67,16 @@ Banned phrases anywhere in the message:
 - "leverage" (as a verb)
 - "exciting opportunity"
 - "world-class"
+- "particularly" — telltale AI hedge word
+- "notably" — telltale AI hedge word
+- "specifically" / "in particular" / "directly aligns" / "in line with"
+- "right up your alley" / "right in your wheelhouse"
+- "I appreciate your time" / "thanks for considering" / "I value"
+- "Hope you don't mind" / "Sorry to bother"
+- "I wanted to reach out" / "I'm reaching out" / "I'm writing to" — preamble = death
+- "given your background" / "given your experience" / "given your work"
+- "uniquely positioned" / "uniquely qualified"
+- Any sentence that opens with "I'm [name] from [company]"
 
 Banned structures:
 - Listing the candidate's credentials back to them ("With your X years of experience and your work at Y...")
@@ -211,10 +233,29 @@ export function buildUserMessage(req: GenerateRequest): string {
     lines.push(`currentRole: ${role}`);
   }
   if (p.about) lines.push(`about: ${p.about.slice(0, 1500)}`);
+
+  // Auto-extracted recent posts (up to 3) — when present, the model has
+  // multiple anchor points to choose from. Pick the most specific/recent one
+  // for the cold opener.
+  if (Array.isArray(p.recentPosts) && p.recentPosts.length > 0) {
+    lines.push('recentPosts:');
+    for (let i = 0; i < Math.min(3, p.recentPosts.length); i++) {
+      const post = p.recentPosts[i].slice(0, 800);
+      lines.push(`  - "${post}"`);
+    }
+  }
+  // The single user-pasted post (still highest priority — recruiter chose it).
   if (req.recentPost) {
-    lines.push(`recentPost: ${req.recentPost.slice(0, 1500)}`);
-  } else {
-    lines.push('recentPost: null');
+    lines.push(`recentPost (user-pasted, prioritize this for the anchor): ${req.recentPost.slice(0, 1500)}`);
+  } else if (!Array.isArray(p.recentPosts) || p.recentPosts.length === 0) {
+    lines.push('recentPost: null  // no recent activity surface — anchor on the headline or about-text instead');
+  }
+
+  if (Array.isArray(p.skills) && p.skills.length > 0) {
+    lines.push(`skills: ${p.skills.slice(0, 8).join(', ')}`);
+  }
+  if (Array.isArray(p.pastRoles) && p.pastRoles.length > 0) {
+    lines.push(`pastRoles: ${p.pastRoles.slice(0, 2).join('; ')}`);
   }
 
   lines.push('');
@@ -263,6 +304,21 @@ const HARD_FAIL_PHRASES = [
   /rockstar|ninja|guru/i,
   /looking forward to hearing from you/i,
   /exciting opportunity/i,
+  // AI-tell hedge words — caught these landing in real outputs.
+  /\bparticularly\b/i,
+  /\bnotably\b/i,
+  /directly aligns/i,
+  /in line with your/i,
+  /right (up your alley|in your wheelhouse)/i,
+  // Preamble-of-death openers
+  /i (wanted to|am writing to|am reaching out)/i,
+  /i'?m reaching out/i,
+  /given your (background|experience|work)/i,
+  /uniquely (positioned|qualified)/i,
+  // Apologetic AI-recruiter padding
+  /hope you don'?t mind/i,
+  /sorry to bother/i,
+  /i appreciate your time/i,
   // Literal placeholder leaks. The model occasionally outputs unresolved
   // template variables instead of rephrasing — catch and retry.
   /\[(your )?(company|role|position|title)( name)?\]/i,

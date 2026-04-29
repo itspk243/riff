@@ -8,6 +8,11 @@ export interface ProfileSnapshot {
   currentRole: string;
   currentCompany: string;
   capturedAt: string;
+  // ---- Day-2 enrichment (optional; popup falls back gracefully when missing)
+  // Auto-extracted by content.js from the candidate's profile page.
+  recentPosts?: string[]; // up to 3 most-recent post snippets
+  skills?: string[];      // up to top 5 listed skills
+  pastRoles?: string[];   // last 1-2 prior roles, formatted "Title at Company"
 }
 
 export type Tone = 'warm' | 'direct' | 'cheeky';
