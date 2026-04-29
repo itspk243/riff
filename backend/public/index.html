@@ -281,53 +281,6 @@
     font-style: italic;
   }
 
-  /* "The prompt is the product" — three cards showing real prompt rules.
-     Open craft is the proof: nobody fakes a real prompt. */
-  .prompt-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
-    gap: 18px;
-    margin-top: 28px;
-    max-width: 1080px;
-  }
-  @media (max-width: 880px) {
-    .prompt-grid { grid-template-columns: 1fr; }
-  }
-  .prompt-card {
-    padding: 20px;
-    border-radius: 10px;
-    border: 1px solid var(--line);
-    background: var(--bg);
-  }
-  .prompt-card-tag {
-    font-size: 10.5px;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    font-weight: 700;
-    color: var(--ink);
-    margin-bottom: 12px;
-  }
-  .prompt-list {
-    list-style: none; padding: 0; margin: 0;
-    font-family: ui-monospace, SF Mono, Menlo, Consolas, monospace;
-    font-size: 12.5px; line-height: 1.7;
-    color: var(--ink-2);
-  }
-  .prompt-list li {
-    padding: 3px 0;
-    border-bottom: 1px dotted var(--line);
-  }
-  .prompt-list li:last-child { border-bottom: none; }
-  .prompt-list em { font-style: italic; color: var(--accent); font-family: inherit; }
-  .prompt-note {
-    margin-top: 22px;
-    font-size: 13px;
-    color: var(--muted);
-    line-height: 1.55;
-    max-width: 720px;
-  }
-  .prompt-note a { color: var(--ink); border-bottom: 1px solid var(--line-2); }
-  .prompt-note a:hover { border-bottom-color: var(--ink); }
   .cohort-note {
     margin: -8px auto 28px;
     padding: 12px 16px;
@@ -727,57 +680,6 @@ Worth a 20-min trade of notes this week, even if just to compare scars?</div>
         <p>Riff reads what's on screen and produces text. It never types into LinkedIn, never clicks send, never crawls in the background. You manually copy and send. That's the whole product.</p>
       </div>
     </div>
-  </div>
-</section>
-
-<section id="prompt" style="background: var(--surface); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);">
-  <div class="wrap">
-    <h2>The prompt is the product. Here it is.</h2>
-    <p class="sub">Most "AI outreach" tools won't tell you what's actually in their system prompt. The whole moat is the prompt. So here it is — the actual rules every generation runs through.</p>
-
-    <div class="prompt-grid">
-      <div class="prompt-card">
-        <div class="prompt-card-tag">Banned openings</div>
-        <ul class="prompt-list">
-          <li>"I came across your..."</li>
-          <li>"Your impressive background..."</li>
-          <li>"Hope you're doing well"</li>
-          <li>"I'm reaching out because..."</li>
-          <li>Any "Hi [Name], I'm [your name] from [company]"</li>
-        </ul>
-      </div>
-
-      <div class="prompt-card">
-        <div class="prompt-card-tag">Banned anywhere in the message</div>
-        <ul class="prompt-list">
-          <li>"great fit" / "would be a great fit"</li>
-          <li>"passion for"</li>
-          <li>"scaling challenges"</li>
-          <li>"rockstar" / "ninja" / "guru"</li>
-          <li>"synergies" / "leverage" (verb)</li>
-          <li>"exciting opportunity" / "world-class"</li>
-          <li>"particularly" / "notably" — AI hedge tells</li>
-          <li>"directly aligns" / "in line with"</li>
-          <li>"right up your alley" / "in your wheelhouse"</li>
-          <li>"given your background" / "given your experience"</li>
-          <li>"uniquely positioned" / "uniquely qualified"</li>
-          <li>"I appreciate your time" / "I value"</li>
-        </ul>
-      </div>
-
-      <div class="prompt-card">
-        <div class="prompt-card-tag">Required structure (cold opener)</div>
-        <ul class="prompt-list">
-          <li>One specific observation grounded in their profile</li>
-          <li>One concrete reason it might matter to <em>them</em></li>
-          <li>One question that isn't a yes/no trap</li>
-          <li>≤80 words for "medium" length, ≤50 for "short"</li>
-          <li>Voice calibration: peer who happens to be hiring, not corporate recruiter</li>
-        </ul>
-      </div>
-    </div>
-
-    <p class="prompt-note">Full prompt source in the public GitHub repo. If you spot a phrase the model still slips through, mail <a href="mailto:pksruly@gmail.com?subject=Prompt%20feedback">pksruly@gmail.com</a> — it gets added to the blacklist that day.</p>
   </div>
 </section>
 
