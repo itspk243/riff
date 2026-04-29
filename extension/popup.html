@@ -42,6 +42,9 @@
     <div class="role" id="p-role"></div>
   </section>
 
+  <!-- Follow-up notice — appears when this candidate has prior sent events -->
+  <section id="thread-notice" class="hidden"></section>
+
   <section class="form">
     <label>Purpose
       <select id="purpose">
@@ -75,15 +78,34 @@
       </label>
     </div>
 
+    <label>Language
+      <select id="language">
+        <option value="en" selected>English</option>
+        <option value="de">Deutsch</option>
+        <option value="fr">Français</option>
+        <option value="es">Español</option>
+        <option value="pt">Português</option>
+        <option value="it">Italiano</option>
+        <option value="nl">Nederlands</option>
+      </select>
+    </label>
+
     <label>Your pitch (1-2 sentences)
+      <span class="template-actions">
+        <button type="button" id="templates-toggle" class="link-btn">Saved ▾</button>
+        <button type="button" id="template-save" class="link-btn">Save…</button>
+      </span>
       <textarea id="pitch" placeholder="e.g. Hiring a Staff Engineer for payments infra. $250K + equity, fully remote, Series B."></textarea>
     </label>
+
+    <!-- Saved templates panel — shown when user clicks "Saved ▾" -->
+    <section id="templates-panel" class="hidden"></section>
 
     <label>Optional: paste a recent post URL or text
       <textarea id="post" placeholder="(optional — adds deeper personalization)"></textarea>
     </label>
 
-    <button id="generate" disabled>Generate</button>
+    <button id="generate" disabled>Generate <span class="kbd-hint">⌘↵</span></button>
   </section>
 
   <section id="results" class="hidden"></section>

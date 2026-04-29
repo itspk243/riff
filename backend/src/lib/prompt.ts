@@ -227,6 +227,19 @@ export function buildUserMessage(req: GenerateRequest): string {
   lines.push(`length: ${req.length}`);
   lines.push(`purpose: ${req.purpose || 'hire'}`);
 
+  // Multi-language support: write the message in the recruiter's chosen language.
+  // Anti-pattern blacklist still applies — translate the *spirit*, not literal phrases.
+  // (e.g. "I came across your..." stays banned in German as "Ich bin auf Ihr Profil gestoßen...".)
+  const lang = req.language || 'en';
+  if (lang !== 'en') {
+    const langName: Record<string, string> = {
+      de: 'German', fr: 'French', es: 'Spanish', pt: 'Portuguese', it: 'Italian', nl: 'Dutch',
+    };
+    lines.push(`language: ${langName[lang] || 'English'} — write the entire message in this language. Use natural phrasing for that language, not translated English. Anti-pattern blacklist applies in spirit (don't write the German equivalent of "I came across your..."). Names and product/role names stay in their original language.`);
+  } else {
+    lines.push(`language: English`);
+  }
+
   lines.push('');
   lines.push('Generate the three variants now. Return ONLY the JSON object — no prose, no markdown fences.');
 

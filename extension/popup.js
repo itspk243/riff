@@ -231,9 +231,68 @@ async function loadProfile() {
       currentCategory = categorizeProfile(p);
       refreshTemplates($('#purpose').value, currentCategory);
 
+      // Day 1: check if we've already drafted to this candidate. Surface a
+      // follow-up nudge if there's a sent event with no reply yet.
+      checkPriorThread(tab.url);
+
       resolve(p);
     });
   });
+}
+
+// ---------- prior-thread detection (Day 1 follow-up loop) ----------
+
+function checkPriorThread(candidateUrl) {
+  if (!candidateUrl) return;
+  chrome.runtime.sendMessage(
+    { type: 'RIFF_EVENTS_FOR_CANDIDATE', payload: { candidate: candidateUrl } },
+    (resp) => {
+      if (!resp || !resp.ok || !Array.isArray(resp.events) || resp.events.length === 0) return;
+
+      const events = resp.events; // most recent first
+      const replied = events.find(e => e.kind === 'replied');
+      const sent = events.find(e => e.kind === 'sent');
+
+      const notice = $('#thread-notice');
+      if (!notice) return;
+
+      if (replied) {
+        const days = daysSince(replied.created_at);
+        notice.innerHTML = `<strong>${days === 0 ? 'They replied today.' : `They replied ${days}d ago.`}</strong> Nice. Drafting another touch?`;
+        notice.classList.remove('hidden');
+        return;
+      }
+      if (sent) {
+        const days = daysSince(sent.created_at);
+        if (days >= 14) {
+          // Long-stale — surface but don't push hard
+          notice.innerHTML = `<strong>You sent a draft here ${days}d ago.</strong> No reply yet.`;
+        } else if (days >= 2) {
+          notice.innerHTML = `<strong>You sent a draft here ${days === 0 ? 'today' : `${days}d ago`}.</strong> No reply yet — want the follow-up?
+            <div><button type="button" class="nudge-btn" id="thread-nudge">Draft the follow-up →</button></div>`;
+        } else {
+          notice.innerHTML = `<strong>Just sent here ${days === 0 ? 'today' : 'yesterday'}.</strong> Give it a few days before the follow-up.`;
+        }
+        notice.classList.remove('hidden');
+        const btn = $('#thread-nudge');
+        if (btn) {
+          btn.addEventListener('click', () => {
+            // Pre-fill: same pitch, same tone — but we'll let the model produce
+            // the follow_up variant automatically. We just trigger generate.
+            const profile = currentProfile;
+            if (profile) generate(profile);
+          });
+        }
+      }
+    }
+  );
+}
+
+function daysSince(iso) {
+  try {
+    const ms = Date.now() - new Date(iso).getTime();
+    return Math.max(0, Math.floor(ms / (1000 * 60 * 60 * 24)));
+  } catch { return 0; }
 }
 
 // ---------- template + purpose interactions ----------
@@ -276,12 +335,14 @@ function generate(profile) {
   const tone = $('#tone').value;
   const length = $('#length').value;
   const purpose = $('#purpose').value;
+  const language = ($('#language') && $('#language').value) || 'en';
 
   const payload = {
     profile,
     tone,
     length,
     purpose,
+    language,
     pitch: $('#pitch').value.trim(),
     recentPost: $('#post').value.trim() || null,
   };
@@ -317,12 +378,13 @@ function showToast(message, kind) {
   if (!region) return;
   region.innerHTML = '';
   const box = document.createElement('div');
-  box.className = kind === 'error' ? 'error-toast' : 'upgrade-hint';
+  if (kind === 'error') box.className = 'error-toast';
+  else if (kind === 'info') box.className = 'success-toast';
+  else box.className = 'upgrade-hint';
   box.textContent = message;
   region.appendChild(box);
-  if (kind === 'error') {
-    setTimeout(() => box.remove(), 5000);
-  }
+  const lifetime = kind === 'error' ? 5000 : 2400;
+  setTimeout(() => box.remove(), lifetime);
 }
 
 function showUpgradeHint(message) {
@@ -353,7 +415,12 @@ function renderVariants(variants, ctx) {
     head.className = 'variant-header';
     const label = document.createElement('div');
     label.className = 'variant-label';
-    label.textContent = v.type.replace(/_/g, ' ');
+    // Numeric badge — pairs with the 1/2/3 keyboard shortcuts.
+    const num = document.createElement('span');
+    num.className = 'variant-num';
+    num.textContent = String(idx + 1);
+    label.appendChild(num);
+    label.appendChild(document.createTextNode(v.type.replace(/_/g, ' ')));
     head.appendChild(label);
     card.appendChild(head);
 
@@ -386,6 +453,8 @@ function renderVariants(variants, ctx) {
     sentBtn.textContent = 'Mark sent';
     sentBtn.addEventListener('click', async () => {
       await recordEvent({ id: eventId, kind: 'sent', tone: ctx.tone, length: ctx.length, type: v.type, t: Date.now() });
+      // Mirror to server so follow-up loop works across machines.
+      sendServerEvent('sent', v.type, ctx);
       sentBtn.classList.add('sent');
       sentBtn.textContent = 'Sent ✓';
     });
@@ -395,6 +464,7 @@ function renderVariants(variants, ctx) {
     replyBtn.textContent = 'Mark replied';
     replyBtn.addEventListener('click', async () => {
       await recordEvent({ id: eventId, kind: 'replied', tone: ctx.tone, length: ctx.length, type: v.type, t: Date.now() });
+      sendServerEvent('replied', v.type, ctx);
       replyBtn.classList.add('replied');
       replyBtn.textContent = 'Replied ✓';
       await renderStats();
@@ -406,13 +476,32 @@ function renderVariants(variants, ctx) {
   });
 }
 
-// ---------- reply tracking (local only) ----------
+// ---------- reply tracking (local + server) ----------
 
 async function recordEvent(ev) {
   const { riff_events } = await getStorage(['riff_events']);
   const events = Array.isArray(riff_events) ? riff_events : [];
   events.push(ev);
   await setStorage({ riff_events: events.slice(-1000) });
+}
+
+// Mirror sent / replied marks to the server so the follow-up loop and
+// cross-machine stats work. Best-effort — local stats are still authoritative.
+function sendServerEvent(kind, variantType, ctx) {
+  if (!currentProfile) return;
+  const candidate_url = currentProfile.profileUrl || '';
+  if (!candidate_url) return;
+  chrome.runtime.sendMessage({
+    type: 'RIFF_EVENTS_RECORD',
+    payload: {
+      candidate_url,
+      candidate_name: currentProfile.name || null,
+      variant_type: variantType,
+      tone: (ctx && ctx.tone) || null,
+      length_label: (ctx && ctx.length) || null,
+      kind,
+    },
+  });
 }
 
 async function renderStats() {
@@ -469,5 +558,129 @@ document.addEventListener('DOMContentLoaded', async () => {
       return;
     }
     generate(profile);
+  });
+
+  // ---------- Day 1: keyboard shortcuts ----------
+  // ⌘↵ / Ctrl+Enter — Generate
+  // 1 / 2 / 3 — Copy variant N (when results visible and focus is not in a textarea)
+  document.addEventListener('keydown', (e) => {
+    const isCmdEnter = (e.metaKey || e.ctrlKey) && e.key === 'Enter';
+    if (isCmdEnter) {
+      e.preventDefault();
+      const generateBtn = $('#generate');
+      if (generateBtn && !generateBtn.disabled) generateBtn.click();
+      return;
+    }
+    // Number shortcuts only when not typing in a text field
+    const activeTag = (document.activeElement && document.activeElement.tagName) || '';
+    const isInField = activeTag === 'TEXTAREA' || activeTag === 'INPUT' || activeTag === 'SELECT';
+    if (isInField) return;
+
+    if (e.key === '1' || e.key === '2' || e.key === '3') {
+      const idx = parseInt(e.key, 10) - 1;
+      const variants = document.querySelectorAll('.variant');
+      const target = variants[idx];
+      if (target) {
+        const copyBtn = target.querySelector('button');
+        if (copyBtn) {
+          e.preventDefault();
+          copyBtn.click();
+          target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }
+    }
+  });
+
+  // ---------- Day 1: saved templates panel ----------
+
+  let templatesCache = null;
+
+  $('#templates-toggle').addEventListener('click', async () => {
+    const panel = $('#templates-panel');
+    if (!panel.classList.contains('hidden')) {
+      panel.classList.add('hidden');
+      return;
+    }
+    panel.classList.remove('hidden');
+    panel.innerHTML = '<div class="templates-empty">Loading…</div>';
+    chrome.runtime.sendMessage({ type: 'RIFF_TEMPLATES_LIST' }, (resp) => {
+      if (!resp || !resp.ok) {
+        panel.innerHTML = `<div class="templates-empty">${resp && resp.needsAuth ? 'Sign in to use templates.' : 'Could not load templates.'}</div>`;
+        return;
+      }
+      templatesCache = resp.templates || [];
+      renderTemplatesPanel(panel, templatesCache);
+    });
+  });
+
+  function renderTemplatesPanel(panel, templates) {
+    panel.innerHTML = '';
+    if (templates.length === 0) {
+      panel.innerHTML = '<div class="templates-empty">No saved templates yet. Click <strong>Save…</strong> after writing a pitch.</div>';
+      return;
+    }
+    for (const t of templates) {
+      const row = document.createElement('div');
+      row.className = 'template-row';
+      const main = document.createElement('div');
+      main.style.flex = '1';
+      main.innerHTML = `
+        <div class="tname"></div>
+        <div class="tmeta"></div>
+      `;
+      main.querySelector('.tname').textContent = t.name;
+      main.querySelector('.tmeta').textContent = `${t.purpose || 'hire'} · ${t.pitch.slice(0, 60)}${t.pitch.length > 60 ? '…' : ''}`;
+      main.addEventListener('click', () => {
+        const pitchEl = $('#pitch');
+        if (pitchEl.value.trim() && !confirm('Replace your current pitch?')) return;
+        pitchEl.value = t.pitch;
+        if (t.purpose) $('#purpose').value = t.purpose;
+        panel.classList.add('hidden');
+      });
+      row.appendChild(main);
+
+      const del = document.createElement('button');
+      del.className = 'tdel';
+      del.title = 'Delete this template';
+      del.textContent = '×';
+      del.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (!confirm(`Delete "${t.name}"?`)) return;
+        chrome.runtime.sendMessage({ type: 'RIFF_TEMPLATES_DELETE', payload: { id: t.id } }, (resp) => {
+          if (resp && resp.ok) {
+            templatesCache = templatesCache.filter(x => x.id !== t.id);
+            renderTemplatesPanel(panel, templatesCache);
+          } else {
+            showToast('Could not delete template.', 'error');
+          }
+        });
+      });
+      row.appendChild(del);
+
+      panel.appendChild(row);
+    }
+  }
+
+  $('#template-save').addEventListener('click', () => {
+    const pitch = $('#pitch').value.trim();
+    if (!pitch) {
+      showToast('Write a pitch first, then save it.', 'error');
+      return;
+    }
+    const name = prompt('Name this pitch (e.g. "Senior Eng · Series A · $250K"):');
+    if (!name || !name.trim()) return;
+    const purpose = $('#purpose').value || 'hire';
+    chrome.runtime.sendMessage(
+      { type: 'RIFF_TEMPLATES_CREATE', payload: { name: name.trim(), pitch, purpose } },
+      (resp) => {
+        if (!resp || !resp.ok) {
+          showToast(resp && resp.error ? resp.error : 'Could not save template.', 'error');
+          return;
+        }
+        showToast(`Saved "${name.trim()}".`, 'info');
+        // invalidate cache so next open re-fetches
+        templatesCache = null;
+      }
+    );
   });
 });

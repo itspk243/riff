@@ -13,6 +13,7 @@ export interface ProfileSnapshot {
 export type Tone = 'warm' | 'direct' | 'cheeky';
 export type Length = 'short' | 'medium';
 export type Purpose = 'hire' | 'refer' | 'network' | 'ask' | 'advisor';
+export type Language = 'en' | 'de' | 'fr' | 'es' | 'pt' | 'it' | 'nl';
 
 export interface GenerateRequest {
   profile: ProfileSnapshot;
@@ -21,6 +22,7 @@ export interface GenerateRequest {
   pitch: string;
   recentPost?: string | null;
   purpose?: Purpose;
+  language?: Language; // defaults to 'en' when omitted
 }
 
 export type VariantType = 'cold_opener' | 'follow_up' | 'breakup';

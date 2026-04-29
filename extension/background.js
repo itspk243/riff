@@ -25,6 +25,12 @@ async function getAuthToken() {
 const USE_STUB = false; // flip to true to bypass backend (offline UI testing)
 
 async function callBackend(payload) {
+  return apiCall('/api/generate', { method: 'POST', body: payload });
+}
+
+// Generic API caller — handles auth header, error mapping, and network failures
+// the same way for /api/generate, /api/templates, /api/events.
+async function apiCall(path, opts) {
   const base = await getBackendBase();
   const token = await getAuthToken();
   const headers = { 'Content-Type': 'application/json' };
@@ -32,13 +38,13 @@ async function callBackend(payload) {
 
   let res;
   try {
-    res = await fetch(`${base}/api/generate`, {
-      method: 'POST',
+    res = await fetch(`${base}${path}`, {
+      method: opts.method || 'GET',
       headers,
-      body: JSON.stringify(payload)
+      body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined,
     });
   } catch (e) {
-    return { ok: false, error: 'Network error — check connection or backend URL.' };
+    return { ok: false, error: 'Network error — check connection.' };
   }
 
   let body;
@@ -46,7 +52,7 @@ async function callBackend(payload) {
 
   if (!res.ok) {
     if (res.status === 401) {
-      return { ok: false, error: 'Sign in to Riff to keep generating.', needsAuth: true };
+      return { ok: false, error: 'Sign in to Riff to keep going.', needsAuth: true };
     }
     if (res.status === 402) {
       return { ok: false, error: (body && body.error) || 'Free limit hit. Upgrade for unlimited.', needsUpgrade: true };
@@ -87,10 +93,38 @@ function stubResponse(payload) {
 }
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
-  if (msg && msg.type === 'RIFF_GENERATE') {
+  if (!msg || !msg.type) return false;
+
+  // Generation
+  if (msg.type === 'RIFF_GENERATE') {
     (USE_STUB ? Promise.resolve(stubResponse(msg.payload)) : callBackend(msg.payload))
       .then(sendResponse)
       .catch(err => sendResponse({ ok: false, error: String(err && err.message || err) }));
-    return true; // async
+    return true;
+  }
+
+  // Saved templates
+  if (msg.type === 'RIFF_TEMPLATES_LIST') {
+    apiCall('/api/templates', { method: 'GET' }).then(sendResponse);
+    return true;
+  }
+  if (msg.type === 'RIFF_TEMPLATES_CREATE') {
+    apiCall('/api/templates', { method: 'POST', body: msg.payload }).then(sendResponse);
+    return true;
+  }
+  if (msg.type === 'RIFF_TEMPLATES_DELETE') {
+    apiCall(`/api/templates/${encodeURIComponent(msg.payload.id)}`, { method: 'DELETE' }).then(sendResponse);
+    return true;
+  }
+
+  // Events (sent / replied tracking + follow-up detection)
+  if (msg.type === 'RIFF_EVENTS_RECORD') {
+    apiCall('/api/events', { method: 'POST', body: msg.payload }).then(sendResponse);
+    return true;
+  }
+  if (msg.type === 'RIFF_EVENTS_FOR_CANDIDATE') {
+    const url = msg.payload && msg.payload.candidate;
+    apiCall(`/api/events?candidate=${encodeURIComponent(url || '')}`, { method: 'GET' }).then(sendResponse);
+    return true;
   }
 });
