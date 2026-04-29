@@ -84,7 +84,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const sub = event.data.object as Stripe.Subscription;
         const userId = sub.metadata?.userId;
         if (!userId) break;
-        const newPlan: 'free' | 'pro' | 'team' =
+        const newPlan: 'free' | 'pro' | 'plus' | 'team' =
           sub.status === 'active' || sub.status === 'trialing'
             ? planFromPriceId(sub.items.data[0].price.id)
             : 'free';
