@@ -282,6 +282,36 @@
     flex-shrink: 0; margin-top: 4px;
     width: 12px; height: 12px; color: var(--muted);
   }
+  /* Coming-soon and beta pills used on the Plus tier card. Calm, low-stakes
+     amber so it reads as honest disclosure rather than alarm. */
+  .coming-soon {
+    display: inline-block;
+    font-size: 9px; font-weight: 700;
+    letter-spacing: 0.04em; text-transform: uppercase;
+    color: #6b4a14; background: #fff8eb;
+    border: 1px solid #f3d99a;
+    padding: 1px 6px; border-radius: 100px;
+    margin-left: 4px; vertical-align: middle;
+    white-space: nowrap;
+  }
+  .price-beta {
+    display: inline-block;
+    font-size: 10px; font-weight: 700;
+    letter-spacing: 0.06em; text-transform: uppercase;
+    color: #6b4a14; background: #fff8eb;
+    border: 1px solid #f3d99a;
+    padding: 2px 7px; border-radius: 100px;
+    margin-left: 6px; vertical-align: middle;
+  }
+  .plus-beta-note {
+    margin: -6px 0 14px;
+    padding: 8px 10px;
+    background: #fff8eb;
+    border: 1px solid #f3d99a;
+    border-radius: 8px;
+    font-size: 12px; color: #6b4a14;
+    line-height: 1.45;
+  }
 
   /* faq */
   .faq { max-width: 680px; }
@@ -521,15 +551,16 @@ Worth a 20-min trade of notes this week, even if just to compare scars?</div>
       </div>
 
       <div class="price-card">
-        <div class="price-name">Plus</div>
+        <div class="price-name">Plus <span class="price-beta">Beta</span></div>
         <div class="price-num">$19.99<small>/month</small></div>
         <ul class="price-feats">
           <li><svg class="price-check" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,6 5,9 10,3"/></svg>Everything in Pro</li>
-          <li><svg class="price-check" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,6 5,9 10,3"/></svg><strong>Active Profile Assist</strong> — live fit-scoring as you browse</li>
-          <li><svg class="price-check" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,6 5,9 10,3"/></svg><strong>Saved-Search Daily Digest</strong> — auto-rank profiles</li>
-          <li><svg class="price-check" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,6 5,9 10,3"/></svg>Up to 5 active job specs</li>
-          <li><svg class="price-check" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,6 5,9 10,3"/></svg>Up to 10 saved searches</li>
+          <li><svg class="price-check" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,6 5,9 10,3"/></svg><strong>Active Profile Assist</strong> <span class="coming-soon">Coming soon</span> — live fit-scoring as you browse</li>
+          <li><svg class="price-check" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,6 5,9 10,3"/></svg><strong>Saved-Search Daily Digest</strong> <span class="coming-soon">Coming soon</span> — auto-rank profiles</li>
+          <li><svg class="price-check" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,6 5,9 10,3"/></svg>Up to 5 active job specs <span class="coming-soon">Coming soon</span></li>
+          <li><svg class="price-check" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,6 5,9 10,3"/></svg>Up to 10 saved searches <span class="coming-soon">Coming soon</span></li>
         </ul>
+        <p class="plus-beta-note">Plus is in beta. Agentic features ship in waves over the next few weeks. Subscribe now and lock in $19.99/mo for life.</p>
         <a href="/signup?plan=plus" data-plan="plus" class="btn btn-ghost plan-cta" style="width: 100%;">Get Plus</a>
       </div>
     </div>

@@ -745,20 +745,28 @@ export default function Dashboard() {
                   )}
                 </div>
 
-                {/* Plus — agentic features */}
+                {/* Plus — agentic features (in development).
+                    Honest framing: the Pro feature set is fully delivered;
+                    the Plus-exclusive agentic stuff ships in waves over the
+                    next few weeks. We mark each upcoming line "Coming soon"
+                    inline so anyone subscribing to Plus today knows exactly
+                    what they're getting now vs. shortly. */}
                 <div style={{ ...tierCardStyle, ...tierCardPlusStyle }}>
                   {me?.plan !== 'plus' && <div style={{ ...tierBadgeStyle, ...tierBadgePlusStyle }}>Power users</div>}
                   <div style={tierNameStyle}>Plus</div>
                   <div style={tierPriceStyle}>$19.99<span style={tierMoStyle}>/mo</span></div>
-                  <div style={tierBlurbStyle}>Pro + agentic candidate finding.</div>
+                  <div style={tierBlurbStyle}>Pro + agentic candidate finding (rolling out).</div>
                   <ul style={tierListStyle}>
                     <li>Everything in Pro</li>
-                    <li><strong>Active Profile Assist</strong> — live fit-scoring against your job specs as you browse</li>
-                    <li><strong>Saved-Search Daily Digest</strong> — auto-rank profiles in your saved searches</li>
-                    <li>Up to 5 active job specs</li>
-                    <li>Up to 10 saved search watches</li>
-                    <li>Pre-generated drafts for high-confidence matches</li>
+                    <li><strong>Active Profile Assist</strong> <span style={comingSoonPillStyle}>Coming soon</span> — live fit-scoring against your job specs as you browse</li>
+                    <li><strong>Saved-Search Daily Digest</strong> <span style={comingSoonPillStyle}>Coming soon</span> — auto-rank profiles in your saved searches</li>
+                    <li>Up to 5 active job specs <span style={comingSoonPillStyle}>Coming soon</span></li>
+                    <li>Up to 10 saved search watches <span style={comingSoonPillStyle}>Coming soon</span></li>
+                    <li>Pre-generated drafts for high-confidence matches <span style={comingSoonPillStyle}>Coming soon</span></li>
                   </ul>
+                  <div style={plusBetaNoteStyle}>
+                    Plus is in beta. Agentic features ship in waves over the next few weeks — subscribe now to lock in $19.99/mo for life.
+                  </div>
                   {me?.plan === 'plus' ? (
                     <button disabled style={{ ...primaryBtnStyle, opacity: 0.6, cursor: 'default' }}>Current plan</button>
                   ) : me?.plan === 'pro' ? (
@@ -1090,6 +1098,36 @@ const tierBadgeStyle: React.CSSProperties = {
 };
 const tierBadgePlusStyle: React.CSSProperties = {
   background: '#b14a1a',
+};
+// Inline "Coming soon" pill used inside Plus tier feature bullets.
+// Small, low-contrast, sits next to the feature so users see exactly
+// which lines aren't built yet without us hiding the tier entirely.
+const comingSoonPillStyle: React.CSSProperties = {
+  display: 'inline-block',
+  fontSize: 9,
+  fontWeight: 700,
+  letterSpacing: '0.04em',
+  textTransform: 'uppercase',
+  color: '#6b4a14',
+  background: '#fff8eb',
+  border: '1px solid #f3d99a',
+  padding: '1px 6px',
+  borderRadius: 100,
+  marginLeft: 4,
+  verticalAlign: 'middle',
+};
+// Soft footnote below the Plus feature list. Sets honest expectations
+// before checkout — Plus is in beta, features ship in waves, price-locked.
+const plusBetaNoteStyle: React.CSSProperties = {
+  marginTop: 12,
+  marginBottom: 10,
+  padding: '8px 10px',
+  background: '#fff8eb',
+  border: '1px solid #f3d99a',
+  borderRadius: 8,
+  fontSize: 11,
+  color: '#6b4a14',
+  lineHeight: 1.45,
 };
 const tierNameStyle: React.CSSProperties = {
   fontSize: 14, fontWeight: 700, color: '#0a0a0a',

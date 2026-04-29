@@ -68,3 +68,56 @@ export interface UsageRow {
   generated_at: string;
   variants: number;
 }
+
+// ---------- Active Profile Assist (Plus tier) ----------
+//
+// JobSpec is a stored description of what the user is hiring for. The LLM
+// reads it as free-form text — we don't pre-parse it into structured fields,
+// because the variation in real hiring needs ("staff backend with payments
+// experience, NY-only" vs "founding designer who's done brand systems")
+// would lock us out of cases the model handles fine on its own.
+export interface JobSpec {
+  id: string;
+  user_id: string;
+  name: string;        // short label, ≤80 chars (used in chip rows)
+  description: string; // free-form criteria, ≤5000 chars
+  archived: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+// Result of scoring one profile against one JobSpec.
+export interface ScoreResult {
+  score: number;       // 0-100 fit score
+  reasoning: string;   // one-sentence summary of the fit
+  matched: string[];   // 2-4 short bullets — what lines up
+  missing: string[];   // 2-4 short bullets — what's absent / risky
+}
+
+export interface ScoreRequest {
+  profile: ProfileSnapshot;
+  // Score against this specific spec id, or against all of the user's
+  // active specs and return the best match.
+  jobSpecId?: string;
+}
+
+export interface ScoreResponse {
+  ok: boolean;
+  error?: string;
+  // Top match across the user's active specs (or for the requested spec).
+  best?: {
+    jobSpecId: string;
+    jobSpecName: string;
+    result: ScoreResult;
+  };
+  // All scored specs, ordered by score desc. Useful for showing a list.
+  all?: Array<{
+    jobSpecId: string;
+    jobSpecName: string;
+    result: ScoreResult;
+  }>;
+  // Up to 5 active job specs per Plus user — surfaced so the popup can
+  // show "you have 3/5 active specs" and prompt to add more.
+  activeSpecsCount?: number;
+  maxActiveSpecs?: number;
+}
