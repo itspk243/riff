@@ -7,6 +7,31 @@ import Stripe from 'stripe';
 import { stripe } from '../../../lib/stripe';
 import { serviceClient } from '../../../lib/supabase';
 
+/**
+ * Map a Stripe price ID to our internal plan label.
+ *
+ * IMPORTANT: The $5 Test tier (STRIPE_PRICE_TEST_MONTHLY) intentionally maps to
+ * 'pro' so anyone who pays $5 gets identical feature access to the $39 Pro plan
+ * — unlimited generations, all 3 variants, billing portal access. The Test
+ * tier is a pricing smoke-test, NOT a feature tier.
+ *
+ * If you ever want a real "starter" tier with reduced features, add a new plan
+ * label (e.g. 'starter') to the database CHECK constraint and route Test there
+ * — but as of today every paid plan === Pro features.
+ */
+function planFromPriceId(priceId: string): 'pro' | 'team' {
+  if (priceId === process.env.STRIPE_PRICE_TEAM_MONTHLY) return 'team';
+  // Pro ($39), Test ($5), and any future low-tier prices all default to Pro features.
+  // Logged so future "why did this user get Pro" questions are answerable.
+  if (
+    priceId !== process.env.STRIPE_PRICE_PRO_MONTHLY &&
+    priceId !== process.env.STRIPE_PRICE_TEST_MONTHLY
+  ) {
+    console.log(`webhook: unknown priceId ${priceId} — defaulting to 'pro'`);
+  }
+  return 'pro';
+}
+
 export const config = { api: { bodyParser: false } };
 
 async function rawBody(req: NextApiRequest): Promise<Buffer> {
@@ -40,12 +65,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const sub = s.subscription as string;
         const customer = s.customer as string;
 
-        // Determine plan from price.
-        // The $5 Test tier maps to 'pro' for feature-gating purposes —
-        // it's a smoke-test price, not a separate feature tier.
         const subObj = await stripe.subscriptions.retrieve(sub);
         const priceId = subObj.items.data[0].price.id;
-        const plan = priceId === process.env.STRIPE_PRICE_TEAM_MONTHLY ? 'team' : 'pro';
+        const plan = planFromPriceId(priceId);
+        console.log(`webhook: checkout.session.completed user=${userId} price=${priceId} → plan=${plan}`);
 
         await supabase
           .from('users')
@@ -63,9 +86,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const sub = event.data.object as Stripe.Subscription;
         const userId = sub.metadata?.userId;
         if (!userId) break;
-        const newPlan = sub.status === 'active' || sub.status === 'trialing'
-          ? (sub.items.data[0].price.id === process.env.STRIPE_PRICE_TEAM_MONTHLY ? 'team' : 'pro')
-          : 'free';
+        const newPlan: 'free' | 'pro' | 'team' =
+          sub.status === 'active' || sub.status === 'trialing'
+            ? planFromPriceId(sub.items.data[0].price.id)
+            : 'free';
+        console.log(`webhook: subscription.${event.type.split('.').pop()} user=${userId} status=${sub.status} → plan=${newPlan}`);
         await supabase
           .from('users')
           .update({
