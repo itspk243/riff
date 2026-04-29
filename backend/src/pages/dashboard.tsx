@@ -37,7 +37,7 @@ export default function Dashboard() {
       });
   }, []);
 
-  async function startCheckout(plan: 'pro' | 'team') {
+  async function startCheckout(plan: 'pro' | 'team' | 'test') {
     if (!token) return;
     const res = await fetch('/api/billing/checkout', {
       method: 'POST',
@@ -107,6 +107,7 @@ export default function Dashboard() {
                 <div style={upgradeBtnsStyle}>
                   <button onClick={() => startCheckout('pro')} style={primaryBtnStyle}>Get Pro · $39/mo</button>
                   <button onClick={() => startCheckout('team')} style={ghostBtnStyle}>Team · $99/mo</button>
+                  <button onClick={() => startCheckout('test')} style={ghostBtnStyle} title="Smoke-test tier — same Pro features, billed at $5/mo. For verifying the Stripe pipeline without spending real Pro money.">Test · $5/mo</button>
                 </div>
               </div>
             )}

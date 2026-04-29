@@ -40,7 +40,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const sub = s.subscription as string;
         const customer = s.customer as string;
 
-        // Determine plan from price
+        // Determine plan from price.
+        // The $5 Test tier maps to 'pro' for feature-gating purposes —
+        // it's a smoke-test price, not a separate feature tier.
         const subObj = await stripe.subscriptions.retrieve(sub);
         const priceId = subObj.items.data[0].price.id;
         const plan = priceId === process.env.STRIPE_PRICE_TEAM_MONTHLY ? 'team' : 'pro';

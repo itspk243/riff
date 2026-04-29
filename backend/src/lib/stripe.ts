@@ -8,6 +8,9 @@ export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 
 export const PRICE_PRO_MONTHLY = process.env.STRIPE_PRICE_PRO_MONTHLY!;
 export const PRICE_TEAM_MONTHLY = process.env.STRIPE_PRICE_TEAM_MONTHLY!;
+// $5/mo "Test" tier — used for end-to-end pipeline smoke tests at low cost.
+// Treated as 'pro' for feature gating in the webhook + /api/me handler.
+export const PRICE_TEST_MONTHLY = process.env.STRIPE_PRICE_TEST_MONTHLY || '';
 
 export async function createCheckoutSession(opts: {
   userId: string;
