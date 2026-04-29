@@ -22,6 +22,82 @@ async function getAuthToken() {
   return riff_token || null;
 }
 
+async function getRefreshToken() {
+  const { riff_refresh } = await chrome.storage.local.get('riff_refresh');
+  return riff_refresh || null;
+}
+
+// Decode the JWT exp claim without verifying signature. Returns Unix seconds,
+// or 0 if anything goes wrong.
+function jwtExp(jwt) {
+  try {
+    const payload = JSON.parse(
+      atob(jwt.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))
+    );
+    return payload.exp || 0;
+  } catch {
+    return 0;
+  }
+}
+
+// Mint a new access_token using the stored refresh_token. Updates storage on
+// success, returns the new access token (or null on failure).
+//
+// We serialize concurrent refresh attempts via _refreshPromise — if multiple
+// API calls discover the token is expired at the same time, they all wait on
+// a single refresh round-trip instead of blowing up the rate limit.
+let _refreshPromise = null;
+async function refreshAccessToken() {
+  if (_refreshPromise) return _refreshPromise;
+  _refreshPromise = (async () => {
+    try {
+      const refresh = await getRefreshToken();
+      if (!refresh) return null;
+      const base = await getBackendBase();
+      const r = await fetch(`${base}/api/auth/refresh`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refresh_token: refresh }),
+      });
+      const j = await r.json();
+      if (!j.ok || !j.access_token) {
+        // Refresh token rejected — clear it so the popup nudges to sign in.
+        if (j.needsReauth) {
+          await chrome.storage.local.set({ riff_token: null, riff_refresh: null });
+        }
+        return null;
+      }
+      const newAccess = j.access_token;
+      const newRefresh = j.refresh_token || refresh;
+      await chrome.storage.local.set({
+        riff_token: newAccess,
+        riff_refresh: newRefresh,
+      });
+      return newAccess;
+    } catch (e) {
+      console.error('refresh failed', e);
+      return null;
+    } finally {
+      _refreshPromise = null;
+    }
+  })();
+  return _refreshPromise;
+}
+
+// Get a usable access token: returns the cached one if it's still valid for
+// at least 60s, otherwise refreshes it. Falls back to the cached token if
+// refresh fails (so legacy bare-JWT users — no refresh_token — still work).
+async function getValidAccessToken() {
+  const access = await getAuthToken();
+  if (!access) return null;
+  const exp = jwtExp(access);
+  const expiresInMs = exp * 1000 - Date.now();
+  if (expiresInMs > 60_000) return access; // still good for >1 min
+  const refresh = await getRefreshToken();
+  if (!refresh) return access; // legacy mode — best effort, will 401 if expired
+  return (await refreshAccessToken()) || access;
+}
+
 const USE_STUB = false; // flip to true to bypass backend (offline UI testing)
 
 async function callBackend(payload) {
@@ -30,19 +106,37 @@ async function callBackend(payload) {
 
 // Generic API caller — handles auth header, error mapping, and network failures
 // the same way for /api/generate, /api/templates, /api/events.
+//
+// Auto-refresh: every call uses getValidAccessToken() which silently mints a
+// fresh JWT when the cached one is near expiry. If we still get a 401 (e.g.
+// the access was revoked), we attempt one refresh-and-retry before surfacing
+// the auth error to the popup.
 async function apiCall(path, opts) {
   const base = await getBackendBase();
-  const token = await getAuthToken();
-  const headers = { 'Content-Type': 'application/json' };
-  if (token) headers['Authorization'] = `Bearer ${token}`;
 
-  let res;
-  try {
-    res = await fetch(`${base}${path}`, {
+  async function doFetch(token) {
+    const headers = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    return fetch(`${base}${path}`, {
       method: opts.method || 'GET',
       headers,
       body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined,
     });
+  }
+
+  let res;
+  try {
+    const token = await getValidAccessToken();
+    res = await doFetch(token);
+
+    // If the server still says 401 with a refresh-capable session, force a
+    // refresh and retry once. Covers token rotation edge cases.
+    if (res.status === 401 && (await getRefreshToken())) {
+      const refreshed = await refreshAccessToken();
+      if (refreshed) {
+        res = await doFetch(refreshed);
+      }
+    }
   } catch (e) {
     return { ok: false, error: 'Network error — check connection.' };
   }

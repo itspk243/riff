@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Riff — Personalized Outreach Drafts",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "Turn a candidate's profile (LinkedIn, GitHub, Wellfound) into a personalized cold-message draft. Drafting assistant only — no automation.",
   "permissions": ["activeTab", "storage"],
   "host_permissions": [

@@ -15,11 +15,19 @@ export default function AuthCallback() {
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
+  // Bundle the full session (access + refresh + expiry) into a single
+  // pasteable token. Format: `riff_v1.<base64-json>`. The extension parses
+  // both tokens and silently refreshes the access token before it expires —
+  // so users never have to re-paste again.
+  const [bundle, setBundle] = useState<string | null>(null);
+
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const hash = window.location.hash.replace(/^#/, '');
     const params = new URLSearchParams(hash);
     const accessToken = params.get('access_token');
+    const refreshToken = params.get('refresh_token');
+    const expiresAt = params.get('expires_at');
     const errParam = params.get('error_description') || params.get('error');
 
     if (errParam) {
@@ -32,16 +40,47 @@ export default function AuthCallback() {
     }
 
     setToken(accessToken);
-    try { window.localStorage.setItem('riff_token', accessToken); } catch {}
 
-    // Strip the hash from the URL so the token isn't sitting in browser history.
+    // Persist full session for the dashboard to read. Older code that only
+    // needs the JWT (e.g. fetch('/api/me')) keeps reading riff_token.
+    try {
+      window.localStorage.setItem('riff_token', accessToken);
+      if (refreshToken) {
+        window.localStorage.setItem(
+          'riff_session',
+          JSON.stringify({
+            access_token: accessToken,
+            refresh_token: refreshToken,
+            expires_at: expiresAt ? parseInt(expiresAt, 10) : null,
+          })
+        );
+      }
+    } catch {}
+
+    // Build the extension bundle if we have a refresh_token. Without one,
+    // fall back to the legacy JWT-only flow (works for ~1hr).
+    if (refreshToken) {
+      const payload = { a: accessToken, r: refreshToken };
+      try {
+        const b64 = window.btoa(JSON.stringify(payload));
+        setBundle(`riff_v1.${b64}`);
+      } catch {
+        setBundle(null);
+      }
+    } else {
+      setBundle(null);
+    }
+
+    // Strip the hash from the URL so credentials aren't sitting in history.
     window.history.replaceState({}, '', window.location.pathname);
   }, []);
 
   async function copyToken() {
-    if (!token) return;
+    // Prefer the bundle (auto-refresh capable) over the raw JWT.
+    const toCopy = bundle || token;
+    if (!toCopy) return;
     try {
-      await navigator.clipboard.writeText(token);
+      await navigator.clipboard.writeText(toCopy);
       setCopied(true);
       setTimeout(() => setCopied(false), 1600);
     } catch (e) {

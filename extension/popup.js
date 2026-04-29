@@ -236,16 +236,46 @@ async function refreshAuthUI() {
 }
 
 $('#auth-submit').addEventListener('click', async () => {
-  const token = $('#token-input').value.trim();
-  if (!token || token.length < 20) { showToast("That doesn't look like a valid token. Copy it from your dashboard and try again.", 'error'); return; }
-  await setStorage({ riff_token: token });
+  const raw = $('#token-input').value.trim();
+  if (!raw || raw.length < 20) {
+    showToast("That doesn't look like a valid token. Copy it from your dashboard and try again.", 'error');
+    return;
+  }
+
+  // Two accepted formats:
+  //   riff_v1.<base64-json>   → bundle with access + refresh tokens (auto-refresh)
+  //   eyJ…                     → bare JWT (legacy, expires in ~1hr)
+  let access = raw;
+  let refresh = null;
+  if (raw.startsWith('riff_v1.')) {
+    try {
+      const b64 = raw.slice('riff_v1.'.length);
+      const json = JSON.parse(atob(b64));
+      if (json.a && json.r) {
+        access = json.a;
+        refresh = json.r;
+      } else {
+        showToast('Token bundle is missing fields. Copy a fresh one from your dashboard.', 'error');
+        return;
+      }
+    } catch {
+      showToast('Token bundle is corrupted. Copy a fresh one from your dashboard.', 'error');
+      return;
+    }
+  }
+
+  // Persist both tokens. The background worker uses riff_refresh to silently
+  // mint new access tokens whenever the cached one expires — so the user
+  // never has to re-paste again.
+  await setStorage({ riff_token: access, riff_refresh: refresh });
   $('#token-input').value = '';
   await refreshAuthUI();
 });
 
 $('#signout-link').addEventListener('click', async (e) => {
   e.preventDefault();
-  await setStorage({ riff_token: null });
+  // Wipe both tokens so the next sign-in is clean.
+  await setStorage({ riff_token: null, riff_refresh: null });
   await refreshAuthUI();
 });
 

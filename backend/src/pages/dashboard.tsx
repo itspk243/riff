@@ -62,6 +62,9 @@ export default function Dashboard() {
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [tokenCopied, setTokenCopied] = useState(false);
+  // bundleHint reflects the riff_v1 bundle if present — that's what Copy
+  // actually puts in the clipboard, so the preview should mirror it.
+  const [bundleHint, setBundleHint] = useState<string | null>(null);
   const [showCanceledMsg, setShowCanceledMsg] = useState(false);
   const [showUpgradedMsg, setShowUpgradedMsg] = useState(false);
   const [devMode, setDevMode] = useState(false);
@@ -85,6 +88,21 @@ export default function Dashboard() {
       window.location.href = '/signup';
       return;
     }
+
+    // If we have the full session, compute the bundle preview synchronously
+    // so the displayed "tokenPreview" reflects what Copy actually copies.
+    try {
+      const sessRaw = window.localStorage.getItem('riff_session');
+      if (sessRaw) {
+        const sess = JSON.parse(sessRaw);
+        if (sess.access_token && sess.refresh_token) {
+          const b64 = window.btoa(
+            JSON.stringify({ a: sess.access_token, r: sess.refresh_token })
+          );
+          setBundleHint(`riff_v1.${b64}`);
+        }
+      }
+    } catch {}
     fetch('/api/me', { headers: { Authorization: `Bearer ${t}` } })
       .then(r => r.json())
       .then((data: MeResponse) => {
@@ -120,13 +138,76 @@ export default function Dashboard() {
   }
 
   function signOut() {
-    try { window.localStorage.removeItem('riff_token'); } catch {}
+    try {
+      window.localStorage.removeItem('riff_token');
+      window.localStorage.removeItem('riff_session');
+    } catch {}
     window.location.href = '/';
   }
 
+  // Build the extension token. Prefer the riff_v1 bundle (access + refresh,
+  // auto-refreshing) over the bare JWT (legacy, expires in 1hr). The bundle
+  // is what we want every user pasting — it's the difference between a stable
+  // sign-in and "why does it keep logging me out?".
+  async function getExtensionToken(): Promise<string | null> {
+    if (typeof window === 'undefined') return null;
+    try {
+      const raw = window.localStorage.getItem('riff_session');
+      if (raw) {
+        const sess = JSON.parse(raw) as {
+          access_token?: string;
+          refresh_token?: string;
+        };
+        if (sess.access_token && sess.refresh_token) {
+          // If the cached access token is near expiry, refresh it server-side
+          // first so the user pastes a fresh one (gives them a clean 1hr +
+          // long-lived refresh on top).
+          let access = sess.access_token;
+          let refresh = sess.refresh_token;
+          try {
+            // Check exp claim. JWTs are base64url-encoded; pad and decode.
+            const payload = JSON.parse(
+              atob(access.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))
+            );
+            const expSoon = (payload.exp || 0) * 1000 - Date.now() < 5 * 60 * 1000;
+            if (expSoon) {
+              const r = await fetch('/api/auth/refresh', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ refresh_token: refresh }),
+              });
+              const j = await r.json();
+              if (j.ok && j.access_token) {
+                access = j.access_token;
+                refresh = j.refresh_token || refresh;
+                // Cache the rotated session so subsequent /api/me calls work
+                window.localStorage.setItem('riff_token', access);
+                window.localStorage.setItem(
+                  'riff_session',
+                  JSON.stringify({
+                    access_token: access,
+                    refresh_token: refresh,
+                    expires_at: j.expires_at || null,
+                  })
+                );
+              }
+            }
+          } catch {
+            // Best-effort. If decode/refresh fails, fall through with what we have.
+          }
+          const payload = { a: access, r: refresh };
+          return `riff_v1.${btoa(JSON.stringify(payload))}`;
+        }
+      }
+    } catch {}
+    // Legacy fallback: bare JWT (will expire in <=1hr).
+    return token;
+  }
+
   async function copyToken() {
-    if (!token) return;
-    await navigator.clipboard.writeText(token);
+    const toCopy = await getExtensionToken();
+    if (!toCopy) return;
+    await navigator.clipboard.writeText(toCopy);
     setTokenCopied(true);
     setTimeout(() => setTokenCopied(false), 2000);
   }
@@ -141,7 +222,12 @@ export default function Dashboard() {
 
   const isPaid = me?.plan === 'pro' || me?.plan === 'team';
   const initials = (me?.full_name || me?.email || '?').split(/\s+|@/).filter(Boolean).map(s => s[0]?.toUpperCase()).slice(0, 2).join('');
-  const tokenPreview = token ? `${token.slice(0, 12)}…${token.slice(-6)}` : '';
+  // Show bundle prefix in the preview (riff_v1.…) when available, else fall
+  // back to raw JWT preview. The Copy button always copies the same thing.
+  const previewSource = bundleHint || token;
+  const tokenPreview = previewSource
+    ? `${previewSource.slice(0, 12)}…${previewSource.slice(-6)}`
+    : '';
 
   return (
     <>
