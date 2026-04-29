@@ -6,7 +6,7 @@ import { serviceClient } from './supabase';
 import type { UserRow } from './types';
 import { hasUnlimitedDrafts } from './capabilities';
 
-export const FREE_WEEKLY_LIMIT = 3;
+export const FREE_WEEKLY_LIMIT = 5;
 
 export async function getUsageThisWeek(userId: string): Promise<number> {
   const supabase = serviceClient();

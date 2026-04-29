@@ -47,7 +47,7 @@ export interface GenerateResponse {
 }
 
 // Plans are ranked by capability:
-//   free  → trial (3 drafts/week, cold opener only)
+//   free  → trial (5 drafts/week, cold opener only)
 //   pro   → unlimited drafts, all 3 variants, templates, follow-up loop ($14.99/mo)
 //   plus  → Pro + Active Profile Assist + Saved-Search Digest ($19.99/mo)
 //   team  → legacy, kept for grandfathered subscribers ($99/mo, no longer offered to new customers)
