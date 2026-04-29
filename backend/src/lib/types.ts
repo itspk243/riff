@@ -42,11 +42,16 @@ export interface GenerateResponse {
   variants?: MessageVariant[];
   error?: string;
   remainingThisWeek?: number; // for free-tier users
-  plan?: 'free' | 'pro' | 'team';
+  plan?: Plan;
   upgradeMessage?: string; // shown when free users hit the variant ceiling
 }
 
-export type Plan = 'free' | 'pro' | 'team';
+// Plans are ranked by capability:
+//   free  → trial (3 drafts/week, cold opener only)
+//   pro   → unlimited drafts, all 3 variants, templates, follow-up loop ($14.99/mo)
+//   plus  → Pro + Active Profile Assist + Saved-Search Digest ($19.99/mo)
+//   team  → legacy, kept for grandfathered subscribers ($99/mo, no longer offered to new customers)
+export type Plan = 'free' | 'pro' | 'plus' | 'team';
 
 export interface UserRow {
   id: string;

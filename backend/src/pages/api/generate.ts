@@ -9,6 +9,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { getUserFromBearer } from '../../lib/supabase';
 import { checkQuota, recordUsage } from '../../lib/quota';
 import { generateVariants } from '../../lib/llm';
+import { hasAllVariants } from '../../lib/capabilities';
 import type { GenerateRequest, GenerateResponse } from '../../lib/types';
 
 const ALLOW_ANON = process.env.ALLOW_ANON === 'true';
@@ -71,10 +72,10 @@ export default async function handler(
     );
   }
 
-  // Variant gating: free tier sees only the cold_opener. Pro/Team see all three.
-  // The model still generated all three (it's cheap on Gemini and the same prompt
-  // pass) — we just don't return follow_up/breakup unless the user upgraded.
-  const isPaid = user && (user.plan === 'pro' || user.plan === 'team');
+  // Variant gating: free tier sees only the cold_opener. All paid tiers see all three.
+  // The model still generated all three (cheap, same prompt pass) — we just trim
+  // follow_up + breakup unless the user upgraded.
+  const isPaid = !!user && hasAllVariants(user.plan);
   const visibleVariants = isPaid
     ? variants
     : variants.filter(v => v.type === 'cold_opener');

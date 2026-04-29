@@ -10,19 +10,17 @@ import { serviceClient } from '../../../lib/supabase';
 /**
  * Map a Stripe price ID to our internal plan label.
  *
- * IMPORTANT: The $5 Test tier (STRIPE_PRICE_TEST_MONTHLY) intentionally maps to
- * 'pro' so anyone who pays $5 gets identical feature access to the $39 Pro plan
- * — unlimited generations, all 3 variants, billing portal access. The Test
- * tier is a pricing smoke-test, NOT a feature tier.
- *
- * If you ever want a real "starter" tier with reduced features, add a new plan
- * label (e.g. 'starter') to the database CHECK constraint and route Test there
- * — but as of today every paid plan === Pro features.
+ * Tier mapping (April 2026):
+ *   STRIPE_PRICE_PLUS_MONTHLY ($19.99) → 'plus'  (agentic features)
+ *   STRIPE_PRICE_PRO_MONTHLY  ($14.99) → 'pro'   (drafting features)
+ *   STRIPE_PRICE_TEST_MONTHLY ($5)     → 'pro'   (devmode smoke-test, full Pro features)
+ *   STRIPE_PRICE_TEAM_MONTHLY ($99)    → 'team'  (legacy, grandfathered)
+ *   anything unknown                   → 'pro'   (defensive default + warning log)
  */
-function planFromPriceId(priceId: string): 'pro' | 'team' {
+function planFromPriceId(priceId: string): 'pro' | 'plus' | 'team' {
+  if (priceId === process.env.STRIPE_PRICE_PLUS_MONTHLY) return 'plus';
   if (priceId === process.env.STRIPE_PRICE_TEAM_MONTHLY) return 'team';
-  // Pro ($39), Test ($5), and any future low-tier prices all default to Pro features.
-  // Logged so future "why did this user get Pro" questions are answerable.
+  // Pro ($14.99), Test ($5), grandfathered $39 Pro all map to plan='pro'.
   if (
     priceId !== process.env.STRIPE_PRICE_PRO_MONTHLY &&
     priceId !== process.env.STRIPE_PRICE_TEST_MONTHLY

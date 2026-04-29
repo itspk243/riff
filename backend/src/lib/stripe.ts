@@ -6,10 +6,13 @@ export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2024-06-20',
 });
 
-export const PRICE_PRO_MONTHLY = process.env.STRIPE_PRICE_PRO_MONTHLY!;
-export const PRICE_TEAM_MONTHLY = process.env.STRIPE_PRICE_TEAM_MONTHLY!;
-// $5/mo "Test" tier — used for end-to-end pipeline smoke tests at low cost.
-// Treated as 'pro' for feature gating in the webhook + /api/me handler.
+// Active price IDs (set via Vercel env). The script in scripts/ creates
+// these in Stripe and the planFromPriceId() helper in webhook.ts maps them
+// to plan labels.
+export const PRICE_PRO_MONTHLY = process.env.STRIPE_PRICE_PRO_MONTHLY!;        // $14.99/mo
+export const PRICE_PLUS_MONTHLY = process.env.STRIPE_PRICE_PLUS_MONTHLY || ''; // $19.99/mo (agentic)
+export const PRICE_TEAM_MONTHLY = process.env.STRIPE_PRICE_TEAM_MONTHLY || ''; // legacy
+// $5/mo "Test" tier — devmode-only smoke-test tier. Hidden from real users.
 export const PRICE_TEST_MONTHLY = process.env.STRIPE_PRICE_TEST_MONTHLY || '';
 
 export async function createCheckoutSession(opts: {

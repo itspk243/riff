@@ -4,6 +4,7 @@
 
 import { serviceClient } from './supabase';
 import type { UserRow } from './types';
+import { hasUnlimitedDrafts } from './capabilities';
 
 export const FREE_WEEKLY_LIMIT = 3;
 
@@ -27,7 +28,7 @@ export async function recordUsage(userId: string, variants: number) {
 }
 
 export async function checkQuota(user: UserRow): Promise<{ ok: true; remaining: number | null } | { ok: false; reason: string; remaining: number }> {
-  if (user.plan === 'pro' || user.plan === 'team') {
+  if (hasUnlimitedDrafts(user.plan)) {
     return { ok: true, remaining: null };
   }
   const used = await getUsageThisWeek(user.id);

@@ -9,7 +9,7 @@ interface MeResponse {
   email?: string;
   full_name?: string | null;
   avatar_url?: string | null;
-  plan?: 'free' | 'pro' | 'team';
+  plan?: 'free' | 'pro' | 'plus' | 'team';
   remainingThisWeek?: number;
   hasSubscription?: boolean;
   member_since?: string;
@@ -34,15 +34,17 @@ function formatDate(iso?: string | null): string {
 }
 
 function planLabel(plan?: string): string {
+  if (plan === 'plus') return 'Plus';
   if (plan === 'pro') return 'Pro';
   if (plan === 'team') return 'Team';
   return 'Free';
 }
 
 function planPrice(plan?: string): string {
-  if (plan === 'pro') return '$39 / month';
-  if (plan === 'team') return '$99 / month';
-  return 'Free · 5 drafts/week';
+  if (plan === 'plus') return '$19.99 / month';
+  if (plan === 'pro') return '$14.99 / month';
+  if (plan === 'team') return '$99 / month · legacy';
+  return 'Free · 3 drafts/week';
 }
 
 export default function Dashboard() {
@@ -84,7 +86,7 @@ export default function Dashboard() {
       });
   }, []);
 
-  async function startCheckout(plan: 'pro' | 'team' | 'test') {
+  async function startCheckout(plan: 'pro' | 'plus' | 'team' | 'test') {
     if (!token) return;
     const res = await fetch('/api/billing/checkout', {
       method: 'POST',
@@ -295,18 +297,66 @@ export default function Dashboard() {
             {!isPaid && (
               <div style={upgradeStyle}>
                 <p style={upgradeTextStyle}>
-                  Pro unlocks <strong>unlimited drafts</strong>, all <strong>3 variants per generation</strong> (cold opener + follow-up + breakup), tone controls, and reply tracking.
+                  Pick a plan. Cancel anytime.
                 </p>
-                <div style={upgradeBtnsStyle}>
-                  <div style={proBtnWrapStyle} className="riff-popular">
-                    <button onClick={() => startCheckout('pro')} style={primaryBtnStyle} className="riff-btn">Get Pro · $39/mo</button>
-                    <span style={popularBadgeStyle} className="riff-pop">Most popular</span>
+
+                <div style={tierGridStyle}>
+
+                  {/* Free — current state, just for reference */}
+                  <div style={tierCardStyle}>
+                    <div style={tierNameStyle}>Free</div>
+                    <div style={tierPriceStyle}>$0</div>
+                    <div style={tierBlurbStyle}>Try it before paying.</div>
+                    <ul style={tierListStyle}>
+                      <li>3 drafts per week</li>
+                      <li>Cold opener variant only</li>
+                      <li>All profile sources (LinkedIn, GitHub, Wellfound)</li>
+                      <li>Local reply stats</li>
+                    </ul>
                   </div>
-                  <button onClick={() => startCheckout('team')} style={ghostBtnStyle} className="riff-ghost-btn">Team · $99/mo</button>
-                  {devMode && (
-                    <button onClick={() => startCheckout('test')} style={ghostBtnStyle} className="riff-ghost-btn" title="Smoke-test tier (devmode only).">Test · $5/mo</button>
-                  )}
+
+                  {/* Pro — most popular */}
+                  <div style={{ ...tierCardStyle, ...tierCardHighlightStyle }} className="riff-popular">
+                    <div style={tierBadgeStyle}>Most popular</div>
+                    <div style={tierNameStyle}>Pro</div>
+                    <div style={tierPriceStyle}>$14.99<span style={tierMoStyle}>/mo</span></div>
+                    <div style={tierBlurbStyle}>Everything you need to run cold outreach at speed.</div>
+                    <ul style={tierListStyle}>
+                      <li><strong>Unlimited drafts</strong></li>
+                      <li><strong>All 3 variants</strong> (cold opener + follow-up + breakup)</li>
+                      <li>Saved pitch templates, synced across devices</li>
+                      <li>Auto follow-up loop (knows when to remind you)</li>
+                      <li>7 languages</li>
+                      <li>Cross-machine reply analytics</li>
+                      <li>Priority generation queue</li>
+                      <li>Email support</li>
+                    </ul>
+                    <button onClick={() => startCheckout('pro')} style={primaryBtnStyle} className="riff-btn">Start Pro · $14.99/mo</button>
+                  </div>
+
+                  {/* Plus — agentic features */}
+                  <div style={{ ...tierCardStyle, ...tierCardPlusStyle }}>
+                    <div style={{ ...tierBadgeStyle, ...tierBadgePlusStyle }}>Power users</div>
+                    <div style={tierNameStyle}>Plus</div>
+                    <div style={tierPriceStyle}>$19.99<span style={tierMoStyle}>/mo</span></div>
+                    <div style={tierBlurbStyle}>Pro + agentic candidate finding.</div>
+                    <ul style={tierListStyle}>
+                      <li>Everything in Pro</li>
+                      <li><strong>Active Profile Assist</strong> — live fit-scoring against your job specs as you browse</li>
+                      <li><strong>Saved-Search Daily Digest</strong> — auto-rank profiles in your saved searches</li>
+                      <li>Up to 5 active job specs</li>
+                      <li>Up to 10 saved search watches</li>
+                      <li>Pre-generated drafts for high-confidence matches</li>
+                    </ul>
+                    <button onClick={() => startCheckout('plus')} style={primaryBtnStyle} className="riff-btn">Start Plus · $19.99/mo</button>
+                  </div>
                 </div>
+
+                {devMode && (
+                  <div style={{ marginTop: 14, fontSize: 12, color: '#888' }}>
+                    devmode: <button onClick={() => startCheckout('test')} style={{ ...ghostBtnStyle, padding: '6px 10px', fontSize: 12 }} className="riff-ghost-btn" title="Smoke-test tier ($5/mo, full Pro features).">Test · $5/mo</button>
+                  </div>
+                )}
               </div>
             )}
 
@@ -554,10 +604,60 @@ const kvSubStyle: React.CSSProperties = {
 };
 
 const upgradeStyle: React.CSSProperties = {
-  background: '#f5f5f7', padding: 18, borderRadius: 10, marginTop: 14,
+  background: '#fafafa', padding: 18, borderRadius: 10, marginTop: 14,
+  border: '1px solid #f0f0f2',
 };
 const upgradeTextStyle: React.CSSProperties = {
-  fontSize: 13, color: '#444', margin: '0 0 12px', lineHeight: 1.55,
+  fontSize: 13, color: '#555', margin: '0 0 16px', lineHeight: 1.55,
+};
+const tierGridStyle: React.CSSProperties = {
+  display: 'grid',
+  gridTemplateColumns: 'repeat(3, 1fr)',
+  gap: 10,
+};
+const tierCardStyle: React.CSSProperties = {
+  background: '#fff',
+  border: '1px solid #e5e5e7',
+  borderRadius: 10,
+  padding: '16px 14px',
+  position: 'relative',
+  display: 'flex', flexDirection: 'column', gap: 10,
+};
+const tierCardHighlightStyle: React.CSSProperties = {
+  borderColor: '#0a0a0a',
+  borderWidth: 2,
+  boxShadow: '0 2px 12px rgba(17, 17, 16, 0.08)',
+};
+const tierCardPlusStyle: React.CSSProperties = {
+  borderColor: '#b14a1a',
+  background: 'linear-gradient(180deg, #fff 0%, #fdeee5 100%)',
+};
+const tierBadgeStyle: React.CSSProperties = {
+  position: 'absolute', top: -10, left: 12,
+  fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase',
+  color: '#fff', background: '#0a0a0a',
+  padding: '3px 9px', borderRadius: 100,
+};
+const tierBadgePlusStyle: React.CSSProperties = {
+  background: '#b14a1a',
+};
+const tierNameStyle: React.CSSProperties = {
+  fontSize: 14, fontWeight: 700, color: '#0a0a0a',
+  textTransform: 'uppercase', letterSpacing: '0.04em',
+};
+const tierPriceStyle: React.CSSProperties = {
+  fontSize: 24, fontWeight: 800, letterSpacing: '-0.02em', color: '#0a0a0a',
+};
+const tierMoStyle: React.CSSProperties = {
+  fontSize: 13, fontWeight: 500, color: '#888', marginLeft: 2,
+};
+const tierBlurbStyle: React.CSSProperties = {
+  fontSize: 12, color: '#666', lineHeight: 1.45,
+};
+const tierListStyle: React.CSSProperties = {
+  margin: '4px 0 8px', paddingLeft: 16,
+  fontSize: 12, color: '#444', lineHeight: 1.55,
+  flex: 1,
 };
 const upgradeBtnsStyle: React.CSSProperties = {
   display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'flex-start',
