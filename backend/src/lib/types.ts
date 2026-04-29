@@ -36,6 +36,7 @@ export interface GenerateResponse {
   error?: string;
   remainingThisWeek?: number; // for free-tier users
   plan?: 'free' | 'pro' | 'team';
+  upgradeMessage?: string; // shown when free users hit the variant ceiling
 }
 
 export type Plan = 'free' | 'pro' | 'team';
