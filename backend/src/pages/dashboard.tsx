@@ -755,17 +755,17 @@ export default function Dashboard() {
                   {me?.plan !== 'plus' && <div style={{ ...tierBadgeStyle, ...tierBadgePlusStyle }}>Power users</div>}
                   <div style={tierNameStyle}>Plus</div>
                   <div style={tierPriceStyle}>$19.99<span style={tierMoStyle}>/mo</span></div>
-                  <div style={tierBlurbStyle}>Pro + agentic candidate finding (rolling out).</div>
+                  <div style={tierBlurbStyle}>Pro + live fit-scoring as you browse. Agentic finder rolling out.</div>
                   <ul style={tierListStyle}>
                     <li>Everything in Pro</li>
-                    <li><strong>Active Profile Assist</strong> <span style={comingSoonPillStyle}>Coming soon</span> — live fit-scoring against your job specs as you browse</li>
+                    <li><strong>Active Profile Assist</strong> — live fit-scoring against your job specs as you browse</li>
+                    <li>Up to 5 active job specs</li>
                     <li><strong>Saved-Search Daily Digest</strong> <span style={comingSoonPillStyle}>Coming soon</span> — auto-rank profiles in your saved searches</li>
-                    <li>Up to 5 active job specs <span style={comingSoonPillStyle}>Coming soon</span></li>
                     <li>Up to 10 saved search watches <span style={comingSoonPillStyle}>Coming soon</span></li>
                     <li>Pre-generated drafts for high-confidence matches <span style={comingSoonPillStyle}>Coming soon</span></li>
                   </ul>
                   <div style={plusBetaNoteStyle}>
-                    Plus is in beta. Agentic features ship in waves over the next few weeks — subscribe now to lock in $19.99/mo for life.
+                    Plus is in beta. Active Profile Assist is live; Saved-Search Daily Digest ships in the next wave. Subscribe now to lock in $19.99/mo for life.
                   </div>
                   {me?.plan === 'plus' ? (
                     <button disabled style={{ ...primaryBtnStyle, opacity: 0.6, cursor: 'default' }}>Current plan</button>
@@ -955,7 +955,7 @@ export default function Dashboard() {
           {/* Footer */}
           <footer style={footerStyle}>
             <a href="/" style={linkStyle}>Home</a>
-            <a href="mailto:hello@riff.example" style={linkStyle}>Support</a>
+            <a href="mailto:pksruly@gmail.com?subject=Riff%20feedback" style={linkStyle}>Send feedback</a>
           </footer>
         </div>
       </main>
