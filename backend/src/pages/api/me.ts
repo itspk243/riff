@@ -49,37 +49,119 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     remainingThisWeek = Math.max(0, FREE_WEEKLY_LIMIT - (weekCount || 0));
   }
 
-  // Pull the live cancel-at-period-end flag from Stripe so the dashboard
-  // can label the period boundary correctly: "Renews on X" vs "Cancels on X".
-  // We only do this for paid users with a recorded subscription_id; one
-  // Stripe API call per dashboard load is acceptable.
+  // Reconcile plan with Stripe (Stripe is source of truth for billing).
+  // This catches the failure mode where a webhook didn't fire or its
+  // metadata.userId was stale — a user can pay for Plus on Stripe but our
+  // users.plan still says 'free'. We self-heal here so the dashboard
+  // always reflects what Stripe believes.
+  //
+  // Strategy:
+  //   - If user.stripe_subscription_id is set → fetch + reconcile.
+  //   - Else if user.stripe_customer_id is set → list active subs on the
+  //     customer, pick the freshest, reconcile.
+  //   - Else → trust the DB (user is on free, or never paid).
   let cancel_at_period_end = false;
   let subscription_status: string | null = null;
-  if (user.stripe_subscription_id && user.plan !== 'free') {
+  let effectivePlan: typeof user.plan = user.plan;
+  let reconciledSubId: string | null = user.stripe_subscription_id || null;
+  let reconciledPeriodEnd: number | null = null;
+
+  if (user.stripe_customer_id) {
     try {
-      const sub = await stripe.subscriptions.retrieve(user.stripe_subscription_id);
-      cancel_at_period_end = !!sub.cancel_at_period_end;
-      subscription_status = sub.status;
-    } catch (e) {
-      // Sub may have been deleted on Stripe; default to renew-style.
+      let sub: any | null = null;
+      if (user.stripe_subscription_id) {
+        try {
+          sub = await stripe.subscriptions.retrieve(user.stripe_subscription_id);
+        } catch {
+          // Sub deleted on Stripe — fall through to customer lookup.
+        }
+      }
+      if (!sub || sub.status === 'canceled' || sub.status === 'incomplete_expired') {
+        const list = await stripe.subscriptions.list({
+          customer: user.stripe_customer_id,
+          status: 'all',
+          limit: 5,
+        });
+        sub = list.data
+          .filter(
+            (s) =>
+              s.status === 'active' ||
+              s.status === 'trialing' ||
+              s.status === 'past_due'
+          )
+          .sort((a, b) => b.created - a.created)[0] || null;
+      }
+
+      if (sub) {
+        cancel_at_period_end = !!sub.cancel_at_period_end;
+        subscription_status = sub.status;
+        reconciledSubId = sub.id;
+        reconciledPeriodEnd = sub.current_period_end || null;
+        const priceId = sub.items?.data?.[0]?.price?.id;
+        // Derive plan from the live price ID. Mirrors webhook's planFromPriceId.
+        if (priceId === process.env.STRIPE_PRICE_PLUS_MONTHLY) effectivePlan = 'plus';
+        else if (priceId === process.env.STRIPE_PRICE_TEAM_MONTHLY) effectivePlan = 'team';
+        else effectivePlan = 'pro'; // pro, test, or grandfathered all → 'pro'
+        if (sub.status !== 'active' && sub.status !== 'trialing' && sub.status !== 'past_due') {
+          // Sub is canceled/expired/etc. → revert to free.
+          effectivePlan = 'free';
+          reconciledSubId = null;
+        }
+      } else {
+        // No active sub on this customer — they're effectively on free.
+        effectivePlan = 'free';
+        reconciledSubId = null;
+      }
+
+      // Persist reconciliation if the DB drifted from Stripe.
+      const changed =
+        effectivePlan !== user.plan ||
+        (reconciledSubId || null) !== (user.stripe_subscription_id || null);
+      if (changed) {
+        const update: Record<string, any> = {
+          plan: effectivePlan,
+          stripe_subscription_id: reconciledSubId,
+        };
+        if (reconciledPeriodEnd) {
+          update.current_period_end = new Date(reconciledPeriodEnd * 1000).toISOString();
+        }
+        await supabase.from('users').update(update).eq('id', user.id);
+        console.log(
+          `me: reconciled user=${user.id} plan ${user.plan}→${effectivePlan} sub_id ${user.stripe_subscription_id}→${reconciledSubId}`
+        );
+      }
+    } catch (e: any) {
+      console.error('me: reconcile failed —', e?.message);
     }
   }
+
+  // Recompute remainingThisWeek using the reconciled plan (so a Plus user
+  // who was previously stuck on 'free' doesn't see the free-tier quota nudge).
+  let effectiveRemainingThisWeek: number | undefined = remainingThisWeek;
+  if (effectivePlan !== 'free') effectiveRemainingThisWeek = undefined;
+  else effectiveRemainingThisWeek = Math.max(0, FREE_WEEKLY_LIMIT - (weekCount || 0));
+
+  // Use the freshest period_end we have — if reconciliation pulled a fresh
+  // value from Stripe, prefer it over the cached DB column.
+  const finalPeriodEnd = reconciledPeriodEnd
+    ? new Date(reconciledPeriodEnd * 1000).toISOString()
+    : user.current_period_end;
 
   return res.status(200).json({
     ok: true,
     email: user.email,
     full_name,
     avatar_url,
-    plan: user.plan,
-    remainingThisWeek,
+    plan: effectivePlan,
+    remainingThisWeek: effectiveRemainingThisWeek,
     // Surfaced so the extension popup can render "X / N free this week"
     // without hard-coding N. If we change the limit, popup picks it up.
     freeWeeklyLimit: FREE_WEEKLY_LIMIT,
-    hasSubscription: !!user.stripe_subscription_id,
+    hasSubscription: !!reconciledSubId,
     cancel_at_period_end,
     subscription_status,
     member_since: user.created_at,
-    current_period_end: user.current_period_end,
+    current_period_end: finalPeriodEnd,
     usage: {
       this_week: weekCount || 0,
       this_month: monthCount || 0,

@@ -82,13 +82,39 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       case 'customer.subscription.updated':
       case 'customer.subscription.deleted': {
         const sub = event.data.object as Stripe.Subscription;
-        const userId = sub.metadata?.userId;
-        if (!userId) break;
+
+        // Resolve user. Preferred: sub.metadata.userId (set by checkout via
+        // subscription_data.metadata). Fallback: lookup by stripe_customer_id
+        // — covers subs whose metadata got lost across upgrade flows or
+        // manual Stripe portal edits.
+        let userId = (sub.metadata?.userId as string | undefined) || undefined;
+        if (!userId && typeof sub.customer === 'string') {
+          const { data: byCustomer } = await supabase
+            .from('users')
+            .select('id')
+            .eq('stripe_customer_id', sub.customer)
+            .maybeSingle();
+          if (byCustomer) {
+            userId = byCustomer.id;
+            console.log(
+              `webhook: ${event.type} resolved user via stripe_customer_id=${sub.customer} → user=${userId}`
+            );
+          }
+        }
+        if (!userId) {
+          console.warn(
+            `webhook: ${event.type} could not resolve user (sub=${sub.id} customer=${sub.customer})`
+          );
+          break;
+        }
+
         const newPlan: 'free' | 'pro' | 'plus' | 'team' =
-          sub.status === 'active' || sub.status === 'trialing'
+          sub.status === 'active' || sub.status === 'trialing' || sub.status === 'past_due'
             ? planFromPriceId(sub.items.data[0].price.id)
             : 'free';
-        console.log(`webhook: subscription.${event.type.split('.').pop()} user=${userId} status=${sub.status} → plan=${newPlan}`);
+        console.log(
+          `webhook: subscription.${event.type.split('.').pop()} user=${userId} status=${sub.status} → plan=${newPlan}`
+        );
         await supabase
           .from('users')
           .update({
