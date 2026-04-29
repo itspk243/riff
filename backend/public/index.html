@@ -349,12 +349,28 @@
       border: 1px solid var(--line);
       padding: 4px 12px;
       border-radius: 5px;
-      flex-shrink: 1;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
-      flex-grow: 1;
+      flex: 1 1 auto;
+      min-width: 0;
       max-width: 360px;
+    }
+
+    @media (max-width: 540px) {
+      .window-chrome {
+        padding: 8px 10px;
+        gap: 6px;
+      }
+      .window-dot {
+        width: 9px;
+        height: 9px;
+      }
+      .window-url {
+        margin-left: 8px;
+        font-size: 11px;
+        padding: 3px 8px;
+      }
     }
 
     .window-url::before {
@@ -375,7 +391,7 @@
     }
 
     .window-left {
-      padding: 24px;
+      padding: clamp(16px, 4vw, 24px);
       border-right: 1px solid var(--line);
       background: var(--bg);
     }
@@ -388,7 +404,7 @@
     }
 
     .window-right {
-      padding: 24px;
+      padding: clamp(16px, 4vw, 24px);
     }
 
     .window-section-label {
@@ -956,6 +972,52 @@
         gap: 16px;
       }
     }
+
+    /* ---------------------------------------------------------------- */
+    /* Mobile pass — narrow phones (≤480px). Above this everything       */
+    /* already responds via clamp() and the per-section breakpoints. The */
+    /* rules below tighten the few spots where the layout still feels    */
+    /* cramped on a real phone (iPhone SE through 6.1" widths).          */
+    /* ---------------------------------------------------------------- */
+    @media (max-width: 480px) {
+      nav { padding: 18px 0; }
+      .nav-links { gap: 12px; font-size: 13px; }
+      .nav-links a { color: var(--ink); }
+      .nav-links .btn { padding: 7px 12px; min-height: 38px; }
+
+      .hero { padding: 24px 0 20px; }
+      .hero h1 { font-size: 34px; line-height: 1.05; }
+      .hero .lede { font-size: 15.5px; }
+      .chrome-badge { font-size: 10.5px; padding: 4px 9px; }
+      .hero-cta { gap: 10px; width: 100%; }
+      .hero-cta a { width: 100%; }
+      .hero-meta { font-size: 12.5px; }
+      .hero-meta-dot { margin: 0 6px 2px; }
+
+      section { padding: 40px 0; }
+      section h2 { font-size: 26px; }
+      section .sub { margin-bottom: 28px; font-size: 14.5px; }
+
+      /* Demo window — kill the inset padding squeeze. The window-left/right
+         padding already clamps to ~16px on small screens; here we also
+         shrink the field text so two lines don't balloon the card. */
+      .window { border-radius: 10px; }
+      .window-section-label { font-size: 9.5px; margin-bottom: 14px; }
+      .field { margin-bottom: 14px; }
+      .field-val, .field-val span { font-size: 12.5px !important; }
+      .draft-card { padding: 16px; }
+      .draft-text { font-size: 13px; line-height: 1.55; }
+
+      .contrast-col { padding: 18px; }
+      .contrast-msg { font-size: 13.5px; }
+
+      .principle { padding: 22px; }
+      .price-card { padding: 22px; }
+
+      /* Add-to-Chrome CTA in the install section gets the most visible
+         treatment on a phone — it's the primary conversion. */
+      #install .btn-chrome { width: 100%; padding: 16px 18px; font-size: 15px; }
+    }
   </style>
 </head>
 <body>
@@ -987,9 +1049,9 @@
       </div>
       <div class="hero-container">
         <div class="hero-content">
-          <div class="eyebrow">For recruiters, founders, and operators who refuse to send templates</div>
+          <div class="eyebrow">A Chrome extension for recruiters, founders, and operators who refuse to send templates</div>
           <h1>Cold messages that don't get deleted.</h1>
-          <p class="lede">Riffly reads what they posted this week, the repos they pinned, the work in their About — and drafts an opener in <em>their</em> dialect, not yours. Fifteen seconds. Three variants. Manual send only — zero LinkedIn ban risk.</p>
+          <p class="lede">Riffly is a Chrome extension that reads what they posted this week, the repos they pinned, the work in their About — and drafts an opener in <em>their</em> dialect, not yours. Fifteen seconds. Three variants. Manual send only — zero LinkedIn ban risk.</p>
           <div class="hero-cta">
             <a href="#install" id="hero-cta" class="btn btn-lg btn-chrome">
               <svg class="chrome-logo-inline" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" style="width: 16px; height: 16px;">
@@ -1082,7 +1144,7 @@
             <circle cx="11.5" cy="7.5" r="0.6" fill="currentColor"/>
           </svg>
           <h3>Open a profile</h3>
-          <p>Works on linkedin.com, Sales Navigator, and LinkedIn Recruiter. Click the Riffly icon. The profile is auto-detected.</p>
+          <p>Works on linkedin.com, Sales Navigator, and LinkedIn Recruiter. Click the Riffly Chrome extension icon in your toolbar. The profile is auto-detected.</p>
         </div>
         <div class="step">
           <svg class="step-mark" viewBox="0 0 28 28" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
