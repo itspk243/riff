@@ -1,4 +1,4 @@
-// Riff popup logic.
+// Riffly popup logic.
 // Profile read → categorize → adapt templates → generate → render → reply tracking → stats.
 // Auth is a paste-token model: user copies token from riff.app/dashboard.
 
@@ -315,7 +315,7 @@ async function loadProfile() {
 
   if (!tab || !isSupportedProfile(tab.url)) {
     stateBox.querySelector('.hint').textContent =
-      'Open a candidate profile (LinkedIn, GitHub, or Wellfound) and reopen Riff.';
+      'Open a candidate profile (LinkedIn, GitHub, or Wellfound) and reopen Riffly.';
     card.classList.add('hidden');
     generateBtn.disabled = true;
     return null;
@@ -325,7 +325,7 @@ async function loadProfile() {
     chrome.tabs.sendMessage(tab.id, { type: 'RIFF_EXTRACT_PROFILE' }, (resp) => {
       if (chrome.runtime.lastError || !resp || !resp.ok) {
         stateBox.querySelector('.hint').textContent =
-          'Could not read this profile. Refresh the page and reopen Riff.';
+          'Could not read this profile. Refresh the page and reopen Riffly.';
         card.classList.add('hidden');
         generateBtn.disabled = true;
         return resolve(null);

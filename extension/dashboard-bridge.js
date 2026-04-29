@@ -1,5 +1,5 @@
-// Riff dashboard bridge.
-// Runs as a content script on the Riff dashboard. Two jobs:
+// Riffly dashboard bridge.
+// Runs as a content script on the Riffly dashboard. Two jobs:
 //
 //   1. Announce presence — post a `riff:extension-ready` message to the page
 //      so the dashboard can swap "Paste this token" for a one-click "Connect

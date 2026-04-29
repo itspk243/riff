@@ -1,4 +1,4 @@
-// Riff content script.
+// Riffly content script.
 // Passive read of the candidate profile the user is viewing on LinkedIn,
 // Sales Navigator, LinkedIn Recruiter, GitHub, or Wellfound (AngelList).
 //

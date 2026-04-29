@@ -37,7 +37,7 @@ export default async function handler(
   let user = await getUserFromBearer(req.headers.authorization);
   if (!user) {
     if (!ALLOW_ANON) {
-      return res.status(401).json({ ok: false, error: 'Sign in to use Riff. Visit your dashboard.' });
+      return res.status(401).json({ ok: false, error: 'Sign in to use Riffly. Visit your dashboard.' });
     }
   }
 

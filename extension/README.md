@@ -1,4 +1,4 @@
-# Riff — Chrome Extension v0.1 (sideload)
+# Riffly — Chrome Extension v0.1 (sideload)
 
 This is the v0.1 scaffold. Backend is stubbed — generation returns a deterministic mock so the full UI flow is testable end to end before we wire Claude.
 
@@ -8,9 +8,9 @@ This is the v0.1 scaffold. Backend is stubbed — generation returns a determini
 2. Toggle **Developer mode** (top right).
 3. Click **Load unpacked**.
 4. Select this `extension/` folder.
-5. Pin the Riff icon to the toolbar (puzzle icon → pin Riff).
+5. Pin the Riffly icon to the toolbar (puzzle icon → pin Riffly).
 6. Visit any `linkedin.com/in/<someone>` profile.
-7. Click the Riff icon. The popup should show the detected name, headline, and current role.
+7. Click the Riffly icon. The popup should show the detected name, headline, and current role.
 8. Type a pitch, click **Generate** — three stub variants render.
 
 If profile detection misses fields, that means LinkedIn changed their DOM (which they do regularly). Selectors live in `content.js` and are intentionally loose with multiple fallbacks — easy to patch.
@@ -49,4 +49,4 @@ The extension never:
 - types into LinkedIn's message UI
 - clicks send
 
-It only reads the visible profile when the user explicitly clicks Riff, then hands the user a draft to copy manually. This keeps Riff in the same operating zone as Apollo/Crystal/ContactOut — detected by LinkedIn but not subject to action because there's no automated behavior.
+It only reads the visible profile when the user explicitly clicks Riffly, then hands the user a draft to copy manually. This keeps Riffly in the same operating zone as Apollo/Crystal/ContactOut — detected by LinkedIn but not subject to action because there's no automated behavior.

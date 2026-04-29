@@ -91,12 +91,12 @@ export default function AuthCallback() {
   return (
     <>
       <Head>
-        <title>You're signed in — Riff</title>
+        <title>You're signed in — Riffly</title>
       </Head>
       <main style={pageStyle}>
         <div style={cardStyle}>
           <a href="/" style={brandStyle}>
-            <span style={dotStyle} />Riff
+            <span style={dotStyle} />Riffly
           </a>
 
           {error ? (
@@ -121,7 +121,7 @@ export default function AuthCallback() {
                   rel="noopener noreferrer"
                   style={{ ...primaryButtonStyle, marginBottom: 12 }}
                 >
-                  Add Riff to Chrome →
+                  Add Riffly to Chrome →
                 </a>
               ) : (
                 <div
@@ -135,15 +135,15 @@ export default function AuthCallback() {
                     color: '#6b4a14',
                   }}
                 >
-                  <strong>Riff is in Chrome Web Store review.</strong> We'll email you when the listing goes live (usually 1–7 days).
+                  <strong>Riffly is in Chrome Web Store review.</strong> We'll email you when the listing goes live (usually 1–7 days).
                 </div>
               )}
 
               {CHROME_STORE_URL && (
                 <ol style={olStyle}>
                   <li><strong>Click <em>Add to Chrome</em></strong> on the store listing, then confirm.</li>
-                  <li><strong>Pin Riff to your toolbar</strong> — click the puzzle-piece icon (top-right of Chrome) and pin Riff.</li>
-                  <li><strong>Paste your token</strong> in the popup's "Sign in to Riff" field, then click Save.</li>
+                  <li><strong>Pin Riffly to your toolbar</strong> — click the puzzle-piece icon (top-right of Chrome) and pin Riffly.</li>
+                  <li><strong>Paste your token</strong> in the popup's "Sign in to Riffly" field, then click Save.</li>
                 </ol>
               )}
               <p style={{ ...smallStyle, marginBottom: 16 }}>
@@ -162,7 +162,7 @@ export default function AuthCallback() {
               </button>
 
               <p style={smallStyle}>
-                The token is also saved in your browser localStorage on this site if you need to grab it again. Don't share it — anyone with this token can use Riff as you.
+                The token is also saved in your browser localStorage on this site if you need to grab it again. Don't share it — anyone with this token can use Riffly as you.
               </p>
 
               <p style={smallStyle}>

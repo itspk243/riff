@@ -79,13 +79,13 @@ export default function SignupPage() {
   return (
     <>
       <Head>
-        <title>Sign in — Riff</title>
-        <meta name="description" content="Sign in to Riff." />
+        <title>Sign in — Riffly</title>
+        <meta name="description" content="Sign in to Riffly." />
       </Head>
       <main style={pageStyle}>
         <div style={cardStyle}>
           <a href="/" style={brandStyle}>
-            <span style={dotStyle} />Riff
+            <span style={dotStyle} />Riffly
           </a>
 
           {state === 'sent' ? (
@@ -101,7 +101,7 @@ export default function SignupPage() {
             </>
           ) : (
             <>
-              <h1 style={h1Style}>Sign in to Riff.</h1>
+              <h1 style={h1Style}>Sign in to Riffly.</h1>
               <p style={pStyle}>One click — we use Google so you don't have to remember another password.</p>
 
               <button

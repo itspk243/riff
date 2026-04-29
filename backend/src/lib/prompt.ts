@@ -6,7 +6,7 @@
  * profile-field substitution. "Hi {name}, I came across your impressive background
  * at {company}." Recruiters know this on sight. Candidates delete it on sight.
  *
- * Riff's whole product moat is that this prompt produces output that doesn't
+ * Riffly's whole product moat is that this prompt produces output that doesn't
  * read like a template. We do that with three layers:
  *
  *   1. A hard anti-pattern blacklist of phrases that signal "AI/template" to
@@ -22,7 +22,7 @@
 
 import type { GenerateRequest, MessageVariant } from './types';
 
-export const SYSTEM_PROMPT = `You are Riff. You write LinkedIn outreach messages that get 3-5× the response rate of generic templates. Recruiters paste your output and send it manually.
+export const SYSTEM_PROMPT = `You are Riffly. You write LinkedIn outreach messages that get 3-5× the response rate of generic templates. Recruiters paste your output and send it manually.
 
 # Voice calibration — read this first
 
@@ -334,4 +334,4 @@ export function variantPassesHardChecks(v: MessageVariant): boolean {
   return true;
 }
 
-export const RIFF_FOOTER_OPTIONAL = '— drafted with Riff';
+export const RIFF_FOOTER_OPTIONAL = '— drafted with Riffly';

@@ -1,4 +1,4 @@
-// Riff service worker.
+// Riffly service worker.
 // Routes generation requests to the backend.
 //
 // Configuration is stored in chrome.storage.local:
@@ -146,7 +146,7 @@ async function apiCall(path, opts) {
 
   if (!res.ok) {
     if (res.status === 401) {
-      return { ok: false, error: 'Sign in to Riff to keep going.', needsAuth: true };
+      return { ok: false, error: 'Sign in to Riffly to keep going.', needsAuth: true };
     }
     if (res.status === 402) {
       return { ok: false, error: (body && body.error) || 'Free limit hit. Upgrade for unlimited.', needsUpgrade: true };

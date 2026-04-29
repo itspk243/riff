@@ -504,7 +504,7 @@ export default function Dashboard() {
   return (
     <>
       <Head>
-        <title>Dashboard — Riff</title>
+        <title>Dashboard — Riffly</title>
         <style>{`
           @keyframes riff-fade-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
           @keyframes riff-slide-down { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
@@ -533,7 +533,7 @@ export default function Dashboard() {
           {/* Top nav */}
           <header style={topNavStyle}>
             <a href="/" style={brandStyle}>
-              <span style={dotStyle} />Riff
+              <span style={dotStyle} />Riffly
             </a>
             <button onClick={signOut} style={ghostBtnSmStyle}>Sign out</button>
           </header>
@@ -567,10 +567,10 @@ export default function Dashboard() {
           {(me?.usage?.all_time ?? 0) === 0 ? (
             <section style={extHeroNewStyle}>
               <div style={extHeroEyebrowStyle}>Step 1 · 30 seconds</div>
-              <div style={extHeroTitleStyle}>Install the Riff extension</div>
+              <div style={extHeroTitleStyle}>Install the Riffly extension</div>
               <p style={extHeroBodyStyle}>
-                Riff lives in your Chrome toolbar. Open a LinkedIn, GitHub, or Wellfound
-                profile, click the icon, and Riff drafts the message.
+                Riffly lives in your Chrome toolbar. Open a LinkedIn, GitHub, or Wellfound
+                profile, click the icon, and Riffly drafts the message.
               </p>
               <div style={extHeroBtnRowStyle}>
                 {CHROME_STORE_URL ? (
@@ -595,10 +595,10 @@ export default function Dashboard() {
           ) : (
             <section style={extHeroCompactStyle}>
               <div style={{ flex: 1 }}>
-                <strong>Riff extension</strong>
+                <strong>Riffly extension</strong>
                 <div style={{ fontSize: 12, color: '#777', marginTop: 2 }}>
                   {CHROME_STORE_URL
-                    ? 'Set up Riff on a new machine?'
+                    ? 'Set up Riffly on a new machine?'
                     : 'Need to reinstall? The Chrome Web Store listing is in review.'}
                 </div>
               </div>
@@ -801,7 +801,7 @@ export default function Dashboard() {
 
             {!CHROME_STORE_URL && (
               <div style={inReviewBannerStyle}>
-                <strong>In Chrome Web Store review.</strong> Riff submits to the store on every release;
+                <strong>In Chrome Web Store review.</strong> Riffly submits to the store on every release;
                 Google's review usually takes 1–7 days. We'll email you the moment the listing is live.
               </div>
             )}
@@ -817,7 +817,7 @@ export default function Dashboard() {
               <div style={installStepStyle}>
                 <span style={installStepNumStyle}>1</span>
                 <div style={{ flex: 1 }}>
-                  <strong>Add Riff to Chrome</strong>
+                  <strong>Add Riffly to Chrome</strong>
                   <div style={installBodyStyle}>
                     {CHROME_STORE_URL ? (
                       <a href={CHROME_STORE_URL} target="_blank" rel="noopener noreferrer" style={primaryBtnStyle}>
@@ -838,11 +838,11 @@ export default function Dashboard() {
               <div style={installStepStyle}>
                 <span style={installStepNumStyle}>2</span>
                 <div style={{ flex: 1 }}>
-                  <strong>Pin Riff to your toolbar</strong>
+                  <strong>Pin Riffly to your toolbar</strong>
                   <div style={installNoteStyle}>
                     Click the <strong>puzzle-piece icon</strong> in the top-right of Chrome (next to your profile picture).
-                    Find <strong>Riff</strong> in the list and click the <strong>pin icon</strong> next to it.
-                    Riff's icon now sits in your toolbar.
+                    Find <strong>Riffly</strong> in the list and click the <strong>pin icon</strong> next to it.
+                    Riffly's icon now sits in your toolbar.
                   </div>
                 </div>
               </div>
@@ -854,7 +854,7 @@ export default function Dashboard() {
                   {extensionDetected ? (
                     <>
                       <div style={installNoteStyle}>
-                        Riff is installed. One click to sign in — no copy/paste needed.
+                        Riffly is installed. One click to sign in — no copy/paste needed.
                       </div>
                       <div style={tokenRowStyle}>
                         <button
@@ -889,7 +889,7 @@ export default function Dashboard() {
                             Or paste a token manually
                           </summary>
                           <div style={installNoteStyle}>
-                            Click the Riff icon in your toolbar, paste this token, click <strong>Save token</strong>.
+                            Click the Riffly icon in your toolbar, paste this token, click <strong>Save token</strong>.
                           </div>
                           <div style={tokenRowStyle}>
                             <code style={tokenPreviewStyle}>{tokenPreview}</code>
@@ -903,7 +903,7 @@ export default function Dashboard() {
                   ) : (
                     <>
                       <div style={installNoteStyle}>
-                        Click the Riff icon in your toolbar. The popup opens. Paste this token where it says <strong>"Sign in to Riff"</strong>, then click <strong>Save token</strong>.
+                        Click the Riffly icon in your toolbar. The popup opens. Paste this token where it says <strong>"Sign in to Riffly"</strong>, then click <strong>Save token</strong>.
                       </div>
                       <div style={tokenRowStyle}>
                         <code style={tokenPreviewStyle}>{tokenPreview}</code>
@@ -924,8 +924,8 @@ export default function Dashboard() {
             <details style={{ marginTop: 24 }}>
               <summary style={detailsSummaryStyle}>Something went wrong?</summary>
               <ul style={troubleshootStyle}>
-                <li><strong>Riff popup says "Open a LinkedIn profile..."</strong> — you're on the LinkedIn home page or feed. Click into a person's profile (URL must contain <code>/in/</code>).</li>
-                <li><strong>Generation says "Sign in first"</strong> — your token wasn't saved. Click the Riff icon again, paste the token, hit Save.</li>
+                <li><strong>Riffly popup says "Open a LinkedIn profile..."</strong> — you're on the LinkedIn home page or feed. Click into a person's profile (URL must contain <code>/in/</code>).</li>
+                <li><strong>Generation says "Sign in first"</strong> — your token wasn't saved. Click the Riffly icon again, paste the token, hit Save.</li>
                 <li><strong>Got signed out</strong> — your refresh token was rotated or revoked. Sign in to your dashboard again, then click <strong>Connect extension</strong> (or paste a fresh token if Connect isn't visible).</li>
                 <li><strong>Auto-update isn't picking up new versions</strong> — Chrome auto-updates extensions every few hours. To force it: open <code>chrome://extensions</code>, toggle Developer mode on, click <strong>Update</strong> at the top.</li>
               </ul>
@@ -938,7 +938,7 @@ export default function Dashboard() {
                   <li>Clone or pull the latest <code>riff</code> repo to your machine.</li>
                   <li>Open <code>chrome://extensions</code> and turn on <strong>Developer mode</strong> (top-right toggle).</li>
                   <li>Click <strong>Load unpacked</strong> and select the <code>extension/</code> folder from the repo.</li>
-                  <li>Pin Riff to your toolbar (puzzle-piece icon → pin).</li>
+                  <li>Pin Riffly to your toolbar (puzzle-piece icon → pin).</li>
                   <li>Paste the token above into the popup.</li>
                 </ol>
                 <p style={smallStyle}>
@@ -948,14 +948,14 @@ export default function Dashboard() {
             )}
 
             <p style={smallStyle}>
-              Your token is stored only in <code>chrome.storage.local</code> on your computer. It never leaves your machine except when the extension talks to Riff's API. Don't share it — anyone with this token can use Riff as you.
+              Your token is stored only in <code>chrome.storage.local</code> on your computer. It never leaves your machine except when the extension talks to Riffly's API. Don't share it — anyone with this token can use Riffly as you.
             </p>
           </section>
 
           {/* Footer */}
           <footer style={footerStyle}>
             <a href="/" style={linkStyle}>Home</a>
-            <a href="mailto:pksruly@gmail.com?subject=Riff%20feedback" style={linkStyle}>Send feedback</a>
+            <a href="mailto:pksruly@gmail.com?subject=Riffly%20feedback" style={linkStyle}>Send feedback</a>
           </footer>
         </div>
       </main>
