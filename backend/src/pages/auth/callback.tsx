@@ -77,11 +77,14 @@ export default function AuthCallback() {
               </a>
 
               <ol style={olStyle}>
-                <li>Unzip the file.</li>
-                <li>Open <code>chrome://extensions</code> · toggle <strong>Developer mode</strong>.</li>
-                <li>Click <strong>Load unpacked</strong> · pick the unzipped folder.</li>
-                <li>Click the Riff icon in your toolbar · paste the token below.</li>
+                <li><strong>Unzip the file</strong> — double-click <code>riff-extension.zip</code> on Mac, or right-click → Extract All on Windows. You should get a folder.</li>
+                <li><strong>Open <code>chrome://extensions</code></strong> in a new Chrome tab (type that URL exactly). Turn on <strong>Developer mode</strong> in the top-right corner.</li>
+                <li><strong>Click "Load unpacked"</strong> — the file picker that opens, navigate to your unzipped folder, click Select / Open.</li>
+                <li><strong>Click the Riff icon</strong> (a black square) in your Chrome toolbar — pin it from the puzzle-piece menu if you don't see it. Paste the token below into the popup's Sign-in field.</li>
               </ol>
+              <p style={{ ...smallStyle, marginBottom: 16 }}>
+                Stuck? <a href="/dashboard#install-steps" style={linkStyle}>The full step-by-step guide is on your dashboard.</a>
+              </p>
 
               <label style={labelStyle}>Your token</label>
               <textarea

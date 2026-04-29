@@ -53,6 +53,12 @@ export default function Dashboard() {
   const [showCanceledMsg, setShowCanceledMsg] = useState(false);
   const [showUpgradedMsg, setShowUpgradedMsg] = useState(false);
   const [devMode, setDevMode] = useState(false);
+  const [errorToast, setErrorToast] = useState<string | null>(null);
+
+  function showError(msg: string) {
+    setErrorToast(msg);
+    setTimeout(() => setErrorToast(null), 5000);
+  }
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -87,7 +93,7 @@ export default function Dashboard() {
     });
     const data = await res.json();
     if (data.ok && data.url) window.location.href = data.url;
-    else alert(data.error || 'Could not start checkout');
+    else showError(data.error || 'Could not start checkout. Try again in a moment.');
   }
 
   async function openBillingPortal() {
@@ -98,7 +104,7 @@ export default function Dashboard() {
     });
     const data = await res.json();
     if (data.ok && data.url) window.location.href = data.url;
-    else alert(data.error || 'Could not open billing portal');
+    else showError(data.error || 'Could not open billing portal. Try again in a moment.');
   }
 
   function signOut() {
@@ -127,9 +133,33 @@ export default function Dashboard() {
 
   return (
     <>
-      <Head><title>Dashboard — Riff</title></Head>
+      <Head>
+        <title>Dashboard — Riff</title>
+        <style>{`
+          @keyframes riff-fade-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+          @keyframes riff-slide-down { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
+          @keyframes riff-pop { 0% { transform: scale(0); opacity: 0; } 60% { transform: scale(1.15); opacity: 1; } 100% { transform: scale(1); opacity: 1; } }
+          @keyframes riff-pulse-ring { 0% { box-shadow: 0 0 0 0 rgba(177, 74, 26, 0.35); } 70% { box-shadow: 0 0 0 10px rgba(177, 74, 26, 0); } 100% { box-shadow: 0 0 0 0 rgba(177, 74, 26, 0); } }
+          .riff-card { animation: riff-fade-in 380ms cubic-bezier(.22,.61,.36,1); }
+          .riff-stat { animation: riff-fade-in 320ms cubic-bezier(.22,.61,.36,1) backwards; }
+          .riff-stat:nth-child(1) { animation-delay: 60ms; }
+          .riff-stat:nth-child(2) { animation-delay: 140ms; }
+          .riff-stat:nth-child(3) { animation-delay: 220ms; }
+          .riff-banner { animation: riff-slide-down 320ms cubic-bezier(.22,.61,.36,1); }
+          .riff-pop { animation: riff-pop 300ms cubic-bezier(.22,1.4,.36,1); }
+          .riff-popular { animation: riff-pulse-ring 2.4s ease-out 600ms; }
+          .riff-btn { transition: transform 80ms ease, background 140ms ease, box-shadow 200ms ease; }
+          .riff-btn:hover { box-shadow: 0 4px 12px rgba(17,17,16,0.15); }
+          .riff-btn:active { transform: scale(0.985); }
+          .riff-ghost-btn { transition: background 140ms ease, border-color 140ms ease, transform 80ms ease; }
+          .riff-ghost-btn:hover { background: #f3f0e8; border-color: #b14a1a; }
+          .riff-ghost-btn:active { transform: scale(0.985); }
+          .riff-link-card { transition: border-color 160ms ease, box-shadow 200ms ease; }
+          .riff-link-card:hover { border-color: #d6d2c7; box-shadow: 0 4px 16px rgba(17,17,16,0.06); }
+        `}</style>
+      </Head>
       <main style={pageStyle}>
-        <div style={cardStyle}>
+        <div style={cardStyle} className="riff-card">
           {/* Top nav */}
           <header style={topNavStyle}>
             <a href="/" style={brandStyle}>
@@ -140,13 +170,18 @@ export default function Dashboard() {
 
           {/* Banners */}
           {showUpgradedMsg && (
-            <div style={bannerOkStyle}>
+            <div style={bannerOkStyle} className="riff-banner">
               <strong>Welcome to Pro.</strong> Your subscription is active — happy drafting.
             </div>
           )}
           {showCanceledMsg && (
-            <div style={bannerInfoStyle}>
+            <div style={bannerInfoStyle} className="riff-banner">
               Checkout canceled. No charge. You can upgrade anytime below.
+            </div>
+          )}
+          {errorToast && (
+            <div style={bannerErrorStyle} className="riff-banner">
+              {errorToast}
             </div>
           )}
 
@@ -163,10 +198,10 @@ export default function Dashboard() {
                 profile, click the icon, and Riff drafts the message.
               </p>
               <div style={extHeroBtnRowStyle}>
-                <a href="/riff-extension.zip" download style={primaryBtnStyle}>
+                <a href="/riff-extension.zip" download style={primaryBtnStyle} className="riff-btn">
                   ↓ Download extension
                 </a>
-                <a href="#install-steps" style={ghostBtnStyle}>How to install ↓</a>
+                <a href="#install-steps" style={ghostBtnStyle} className="riff-ghost-btn">How to install ↓</a>
               </div>
             </section>
           ) : (
@@ -214,7 +249,7 @@ export default function Dashboard() {
                   else if (remaining === 1) weekColor = '#b85a1a'; // last one — amber
                 }
                 return (
-                  <div style={statTileStyle}>
+                  <div style={statTileStyle} className="riff-stat">
                     <div style={{ ...statNumberStyle, color: weekColor }}>
                       {used}
                       {!isPaid && <span style={statLimitStyle}> / {FREE_WEEKLY_LIMIT}</span>}
@@ -228,11 +263,11 @@ export default function Dashboard() {
                   </div>
                 );
               })()}
-              <div style={statTileStyle}>
+              <div style={statTileStyle} className="riff-stat">
                 <div style={statNumberStyle}>{me?.usage?.this_month ?? 0}</div>
                 <div style={statLabelStyle}>This month</div>
               </div>
-              <div style={statTileStyle}>
+              <div style={statTileStyle} className="riff-stat">
                 <div style={statNumberStyle}>{me?.usage?.all_time ?? 0}</div>
                 <div style={statLabelStyle}>All time</div>
               </div>
@@ -263,13 +298,13 @@ export default function Dashboard() {
                   Pro unlocks <strong>unlimited drafts</strong>, all <strong>3 variants per generation</strong> (cold opener + follow-up + breakup), tone controls, and reply tracking.
                 </p>
                 <div style={upgradeBtnsStyle}>
-                  <div style={proBtnWrapStyle}>
-                    <button onClick={() => startCheckout('pro')} style={primaryBtnStyle}>Get Pro · $39/mo</button>
-                    <span style={popularBadgeStyle}>Most popular</span>
+                  <div style={proBtnWrapStyle} className="riff-popular">
+                    <button onClick={() => startCheckout('pro')} style={primaryBtnStyle} className="riff-btn">Get Pro · $39/mo</button>
+                    <span style={popularBadgeStyle} className="riff-pop">Most popular</span>
                   </div>
-                  <button onClick={() => startCheckout('team')} style={ghostBtnStyle}>Team · $99/mo</button>
+                  <button onClick={() => startCheckout('team')} style={ghostBtnStyle} className="riff-ghost-btn">Team · $99/mo</button>
                   {devMode && (
-                    <button onClick={() => startCheckout('test')} style={ghostBtnStyle} title="Smoke-test tier (devmode only).">Test · $5/mo</button>
+                    <button onClick={() => startCheckout('test')} style={ghostBtnStyle} className="riff-ghost-btn" title="Smoke-test tier (devmode only).">Test · $5/mo</button>
                   )}
                 </div>
               </div>
@@ -282,54 +317,130 @@ export default function Dashboard() {
 
           {/* Extension setup */}
           <section id="install-steps" style={sectionStyle}>
-            <div style={sectionTitleStyle}>Get the extension</div>
+            <div style={sectionTitleStyle}>Install the extension · step by step</div>
             <p style={pStyle}>
-              Two minutes. Download, unzip, point Chrome at the folder, paste your token.
+              About 5 minutes the first time. After that, Riff lives in your Chrome toolbar.
             </p>
 
             <div style={installStepsStyle}>
+
               <div style={installStepStyle}>
                 <span style={installStepNumStyle}>1</span>
                 <div style={{ flex: 1 }}>
-                  <a href="/riff-extension.zip" download style={primaryBtnStyle}>
-                    ↓ Download Riff extension
-                  </a>
-                  <div style={installNoteStyle}>~16 KB · unzip after downloading</div>
+                  <strong>Download the extension file</strong>
+                  <div style={installBodyStyle}>
+                    <a href="/riff-extension.zip" download style={primaryBtnStyle}>
+                      ↓ Download riff-extension.zip
+                    </a>
+                  </div>
+                  <div style={installNoteStyle}>
+                    It's a 16 KB file. It'll go to your <strong>Downloads</strong> folder.
+                  </div>
                 </div>
               </div>
 
               <div style={installStepStyle}>
                 <span style={installStepNumStyle}>2</span>
                 <div style={{ flex: 1 }}>
-                  <strong>Open <code>chrome://extensions</code></strong> in a new tab.
-                  <div style={installNoteStyle}>Toggle <strong>Developer mode</strong> on (top right).</div>
+                  <strong>Unzip it</strong>
+                  <div style={installNoteStyle}>
+                    On <strong>Mac</strong>: double-click <code>riff-extension.zip</code>. macOS auto-creates a folder next to it.<br />
+                    On <strong>Windows</strong>: right-click the file → <strong>Extract All…</strong> → click Extract.<br />
+                    You should now have a <strong>folder</strong> (not a zip) called <code>riff-extension</code> or similar.
+                  </div>
                 </div>
               </div>
 
               <div style={installStepStyle}>
                 <span style={installStepNumStyle}>3</span>
                 <div style={{ flex: 1 }}>
-                  <strong>Click "Load unpacked"</strong> → pick the unzipped folder.
-                  <div style={installNoteStyle}>Pin the Riff icon to your toolbar.</div>
+                  <strong>Open Chrome's extensions page</strong>
+                  <div style={installNoteStyle}>
+                    Open a new tab in Chrome. In the address bar at the top, type exactly <code>chrome://extensions</code> and hit Enter. (Yes, the <code>chrome://</code> part is required — Chrome won't autocomplete it.)
+                  </div>
                 </div>
               </div>
 
               <div style={installStepStyle}>
                 <span style={installStepNumStyle}>4</span>
                 <div style={{ flex: 1 }}>
-                  <strong>Paste this token</strong> into the extension's Sign-in field:
+                  <strong>Turn on Developer mode</strong>
+                  <div style={installNoteStyle}>
+                    Look at the <strong>top-right corner</strong> of that page. There's a toggle labeled <strong>Developer mode</strong>. Click it so it turns blue / on.
+                  </div>
+                  <div style={installNoteStyle}>
+                    Three new buttons appear at the top: <code>Load unpacked</code>, <code>Pack extension</code>, <code>Update</code>.
+                  </div>
+                </div>
+              </div>
+
+              <div style={installStepStyle}>
+                <span style={installStepNumStyle}>5</span>
+                <div style={{ flex: 1 }}>
+                  <strong>Click "Load unpacked"</strong>
+                  <div style={installNoteStyle}>
+                    A file picker opens. Navigate to your <strong>Downloads</strong> folder. Click on the <strong>riff-extension folder</strong> from Step 2 (single-click — don't double-click in). Click <strong>Select Folder</strong> / <strong>Open</strong>.
+                  </div>
+                  <div style={installNoteStyle}>
+                    A "Riff" card should appear in the extensions list. That means it loaded.
+                  </div>
+                </div>
+              </div>
+
+              <div style={installStepStyle}>
+                <span style={installStepNumStyle}>6</span>
+                <div style={{ flex: 1 }}>
+                  <strong>Pin Riff to your toolbar</strong>
+                  <div style={installNoteStyle}>
+                    Look for a <strong>puzzle-piece icon</strong> in the top-right of Chrome (next to your profile picture). Click it. A list of installed extensions drops down. Find <strong>Riff</strong>. Click the <strong>pin icon</strong> next to it. Riff's icon (a black square) now sits in your toolbar.
+                  </div>
+                </div>
+              </div>
+
+              <div style={installStepStyle}>
+                <span style={installStepNumStyle}>7</span>
+                <div style={{ flex: 1 }}>
+                  <strong>Sign the extension in</strong>
+                  <div style={installNoteStyle}>
+                    Click the Riff icon in your toolbar. The popup opens. At the top it says <strong>"Sign in to Riff"</strong> — paste this token there:
+                  </div>
                   <div style={tokenRowStyle}>
                     <code style={tokenPreviewStyle}>{tokenPreview}</code>
                     <button onClick={copyToken} style={tokenBtnStyle}>
                       {tokenCopied ? '✓ Copied' : 'Copy token'}
                     </button>
                   </div>
+                  <div style={installNoteStyle}>
+                    Click <strong>Save token</strong>. You're in.
+                  </div>
                 </div>
               </div>
+
+              <div style={installStepStyle}>
+                <span style={installStepNumStyle}>8</span>
+                <div style={{ flex: 1 }}>
+                  <strong>Try it</strong>
+                  <div style={installNoteStyle}>
+                    Open a real LinkedIn profile (any <code>linkedin.com/in/...</code> URL). Click the Riff icon. The popup auto-detects the profile. Type a 1–2 sentence pitch in the box. Click <strong>Generate</strong>. Paste the result into LinkedIn.
+                  </div>
+                </div>
+              </div>
+
             </div>
 
+            <details style={{ marginTop: 24 }}>
+              <summary style={detailsSummaryStyle}>Something went wrong?</summary>
+              <ul style={troubleshootStyle}>
+                <li><strong>"This extension may have been corrupted"</strong> — you tried to load the .zip file instead of the unzipped folder. Go back to Step 2 and unzip it.</li>
+                <li><strong>Can't find Developer mode toggle</strong> — make sure you're at <code>chrome://extensions</code> (not Settings or anywhere else). The toggle is in the top-right corner, not in a menu.</li>
+                <li><strong>Riff popup says "Open a LinkedIn profile..."</strong> — you're on the LinkedIn home page or feed. Click into a person's profile (URL must contain <code>/in/</code>).</li>
+                <li><strong>Generation says "Sign in first"</strong> — your token wasn't saved. Click the Riff icon again, paste the token, hit Save.</li>
+                <li><strong>Token expired</strong> — Supabase tokens last about an hour. Come back to this dashboard, click <strong>Copy token</strong>, paste it again in the extension.</li>
+              </ul>
+            </details>
+
             <p style={smallStyle}>
-              Token is stored in <code>chrome.storage.local</code> on your device. Don't share it.
+              Your token is stored only in <code>chrome.storage.local</code> on your computer. It never leaves your machine except when the extension talks to Riff's API. Don't share it — anyone with this token can use Riff as you.
             </p>
           </section>
 
@@ -372,6 +483,10 @@ const bannerOkStyle: React.CSSProperties = {
 };
 const bannerInfoStyle: React.CSSProperties = {
   background: '#f5f5f7', border: '1px solid #e5e5e7', color: '#444',
+  padding: '12px 14px', borderRadius: 10, fontSize: 14, marginBottom: 18,
+};
+const bannerErrorStyle: React.CSSProperties = {
+  background: '#fef2f0', border: '1px solid #f4c4ba', color: '#b8331a',
   padding: '12px 14px', borderRadius: 10, fontSize: 14, marginBottom: 18,
 };
 
@@ -512,7 +627,17 @@ const installStepNumStyle: React.CSSProperties = {
   fontSize: 12, fontWeight: 700, marginTop: 2,
 };
 const installNoteStyle: React.CSSProperties = {
-  fontSize: 12, color: '#777', marginTop: 4,
+  fontSize: 13, color: '#555', marginTop: 6, lineHeight: 1.6,
+};
+const installBodyStyle: React.CSSProperties = {
+  marginTop: 8,
+};
+const detailsSummaryStyle: React.CSSProperties = {
+  fontSize: 13, color: '#555', cursor: 'pointer',
+  paddingTop: 6, paddingBottom: 6, fontWeight: 600,
+};
+const troubleshootStyle: React.CSSProperties = {
+  marginTop: 10, paddingLeft: 22, fontSize: 13, color: '#555', lineHeight: 1.7,
 };
 
 const primaryBtnStyle: React.CSSProperties = {

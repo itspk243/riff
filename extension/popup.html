@@ -29,8 +29,11 @@
   </section>
 
   <section id="profile-state">
-    <div class="hint">Open a LinkedIn profile to draft a message.</div>
+    <div class="hint">Open a LinkedIn, GitHub, or Wellfound profile to start drafting.</div>
   </section>
+
+  <!-- Inline error / upgrade nudges (replace alert popups) -->
+  <section id="toast-region"></section>
 
   <section id="profile-card" class="hidden">
     <div class="muted small" id="surface-label">Reading profile</div>
@@ -56,20 +59,21 @@
       </select>
     </label>
 
-    <label>Tone
-      <select id="tone">
-        <option value="warm">Warm</option>
-        <option value="direct" selected>Direct</option>
-        <option value="cheeky">Cheeky</option>
-      </select>
-    </label>
-
-    <label>Length
-      <select id="length">
-        <option value="short">Short (~50 words)</option>
-        <option value="medium" selected>Medium (~80 words)</option>
-      </select>
-    </label>
+    <div class="row-2">
+      <label>Tone
+        <select id="tone">
+          <option value="warm">Warm</option>
+          <option value="direct" selected>Direct</option>
+          <option value="cheeky">Cheeky</option>
+        </select>
+      </label>
+      <label>Length
+        <select id="length">
+          <option value="short">Short · 50w</option>
+          <option value="medium" selected>Medium · 80w</option>
+        </select>
+      </label>
+    </div>
 
     <label>Your pitch (1-2 sentences)
       <textarea id="pitch" placeholder="e.g. Hiring a Staff Engineer for payments infra. $250K + equity, fully remote, Series B."></textarea>

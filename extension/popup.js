@@ -167,7 +167,7 @@ async function refreshAuthUI() {
 
 $('#auth-submit').addEventListener('click', async () => {
   const token = $('#token-input').value.trim();
-  if (!token || token.length < 20) { alert('That doesn\'t look like a valid token.'); return; }
+  if (!token || token.length < 20) { showToast("That doesn't look like a valid token. Copy it from your dashboard and try again.", 'error'); return; }
   await setStorage({ riff_token: token });
   $('#token-input').value = '';
   await refreshAuthUI();
@@ -270,7 +270,8 @@ $('#pitch').addEventListener('input', () => {
 function generate(profile) {
   const generateBtn = $('#generate');
   generateBtn.disabled = true;
-  generateBtn.textContent = 'Generating…';
+  generateBtn.classList.add('loading');
+  generateBtn.textContent = 'Drafting…';
 
   const tone = $('#tone').value;
   const length = $('#length').value;
@@ -287,19 +288,55 @@ function generate(profile) {
 
   chrome.runtime.sendMessage({ type: 'RIFF_GENERATE', payload }, async (resp) => {
     generateBtn.disabled = false;
+    generateBtn.classList.remove('loading');
     generateBtn.textContent = 'Generate';
     if (!resp || !resp.ok) {
       if (resp && resp.needsAuth) {
         $('#auth-section').classList.remove('hidden');
       }
-      alert('Generation failed. ' + (resp && resp.error ? resp.error : ''));
+      showToast(resp && resp.error ? resp.error : 'Generation failed. Try again in a moment.', 'error');
       return;
     }
+    // Quota label — uses 3/wk now (free tier was tightened from 5).
     if (typeof resp.remainingThisWeek === 'number') {
-      $('#quota').textContent = `${resp.remainingThisWeek} / 5 free this week`;
+      const q = $('#quota');
+      q.textContent = `${resp.remainingThisWeek} / 3 free this week`;
+      q.classList.toggle('urgent', resp.remainingThisWeek <= 1);
     }
     renderVariants(resp.variants, { tone, length });
+    if (resp.upgradeMessage) {
+      showUpgradeHint(resp.upgradeMessage);
+    }
   });
+}
+
+// ---------- inline toasts (replace alert popups) ----------
+
+function showToast(message, kind) {
+  const region = $('#toast-region');
+  if (!region) return;
+  region.innerHTML = '';
+  const box = document.createElement('div');
+  box.className = kind === 'error' ? 'error-toast' : 'upgrade-hint';
+  box.textContent = message;
+  region.appendChild(box);
+  if (kind === 'error') {
+    setTimeout(() => box.remove(), 5000);
+  }
+}
+
+function showUpgradeHint(message) {
+  const results = $('#results');
+  if (!results) return;
+  // Insert as the last card-following node so it sits under the variants.
+  const hint = document.createElement('div');
+  hint.className = 'upgrade-hint';
+  hint.innerHTML = `${escapeHtml(message)} <a href="https://riff-sandy.vercel.app/dashboard" target="_blank">Upgrade →</a>`;
+  results.appendChild(hint);
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
 }
 
 function renderVariants(variants, ctx) {
@@ -333,9 +370,15 @@ function renderVariants(variants, ctx) {
     copyBtn.addEventListener('click', async () => {
       try {
         await navigator.clipboard.writeText(v.text);
+        copyBtn.classList.add('copied');
         copyBtn.textContent = 'Copied';
-        setTimeout(() => (copyBtn.textContent = 'Copy'), 1200);
-      } catch (e) { copyBtn.textContent = 'Copy failed'; }
+        setTimeout(() => {
+          copyBtn.classList.remove('copied');
+          copyBtn.textContent = 'Copy';
+        }, 1800);
+      } catch (e) {
+        showToast('Copy failed — try selecting and copying manually.', 'error');
+      }
     });
     actions.appendChild(copyBtn);
 
@@ -422,7 +465,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   $('#generate').addEventListener('click', () => {
     if (!profile) return;
     if (!$('#pitch').value.trim()) {
-      alert('Add your pitch (1-2 sentences) so the message has something to say.');
+      showToast('Add your pitch (1-2 sentences) so the message has something to say.', 'error');
       return;
     }
     generate(profile);
