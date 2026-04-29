@@ -32,7 +32,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     email: user.email,
     priceId,
     successUrl: `${base}/dashboard?upgraded=1`,
-    cancelUrl: `${base}/pricing?canceled=1`,
+    // No /pricing route exists. Send canceled checkouts back to the dashboard
+    // (the user is already authenticated; this avoids a 404).
+    cancelUrl: `${base}/dashboard?canceled=1`,
   });
 
   return res.status(200).json({ ok: true, url: session.url });
