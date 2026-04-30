@@ -763,7 +763,6 @@ export default function Dashboard() {
                     <li>Up to 5 active job specs</li>
                     <li><strong>Saved-Search Daily Digest</strong> — auto-rank profiles in your saved LinkedIn searches</li>
                     <li>Up to 10 saved search watches</li>
-                    <li>Pre-generated drafts for high-confidence matches <span style={comingSoonPillStyle}>Coming soon</span></li>
                   </ul>
                   <div style={plusBetaNoteStyle}>
                     Plus is in beta. Active Profile Assist and the Saved-Search Daily Digest are both live. Subscribe now to lock in $19.99/mo for life.
