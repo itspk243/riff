@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Riffly — Personalized Outreach Drafts",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "description": "Turn a candidate's profile (LinkedIn, GitHub, Wellfound) into a personalized cold-message draft. Drafting assistant only — no automation.",
   "permissions": ["activeTab", "storage"],
   "host_permissions": [
@@ -11,6 +11,8 @@
     "https://wellfound.com/*",
     "https://www.wellfound.com/*",
     "https://angel.co/*",
+    "https://rifflylabs.com/*",
+    "https://*.rifflylabs.com/*",
     "https://riff-sandy.vercel.app/*",
     "https://*.riff-sandy.vercel.app/*"
   ],
@@ -23,6 +25,8 @@
         "https://www.linkedin.com/in/*",
         "https://www.linkedin.com/sales/lead/*",
         "https://www.linkedin.com/talent/profile/*",
+        "https://www.linkedin.com/search/results/people/*",
+        "https://www.linkedin.com/search/results/all/*",
         "https://github.com/*",
         "https://wellfound.com/u/*",
         "https://www.wellfound.com/u/*",
@@ -35,6 +39,8 @@
     },
     {
       "matches": [
+        "https://rifflylabs.com/dashboard*",
+        "https://rifflylabs.com/auth/callback*",
         "https://riff-sandy.vercel.app/dashboard*",
         "https://riff-sandy.vercel.app/auth/callback*"
       ],

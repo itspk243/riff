@@ -281,7 +281,7 @@ $('#signout-link').addEventListener('click', async (e) => {
 
 // Production backend URL. Override only for local dev:
 //   chrome.storage.local.set({ riff_backend_url: 'http://localhost:3000' })
-const DEFAULT_BACKEND_URL = 'https://riff-sandy.vercel.app';
+const DEFAULT_BACKEND_URL = 'https://rifflylabs.com';
 
 $('#signup-link').addEventListener('click', async (e) => {
   e.preventDefault();
@@ -903,6 +903,230 @@ $('#stats-clear').addEventListener('click', async (e) => {
   }
 });
 
+// ---------- Saved-Search Scan (Plus tier — Daily Digest hookup) ----------
+//
+// When the active tab is a LinkedIn search-results URL that matches one of
+// the user's saved searches, surface a "Scan visible profiles" button. Click
+// → ask content.js for visible profile cards → POST to /api/saved-searches/scan
+// → render top-N results with score + reasoning.
+//
+// Free/Pro users on a search URL see a locked upgrade chip in the same slot.
+
+function isLinkedInSearchUrl(url) {
+  return !!url && /^https:\/\/www\.linkedin\.com\/search\/results\/(people|all)\b/.test(url);
+}
+
+// Match the active tab URL against the list of saved searches. We compare
+// origin + path (ignoring query/hash) — LinkedIn appends session-specific
+// query params that we don't want to cause false misses.
+function findMatchingSavedSearch(currentUrl, searches) {
+  if (!searches || searches.length === 0) return null;
+  let curPath = '';
+  try { curPath = new URL(currentUrl).pathname; } catch { return null; }
+  // Exact path match wins; otherwise prefix-match (so a saved
+  // /search/results/people/ matches any specific keyword variant).
+  const exact = searches.find((s) => {
+    try { return new URL(s.search_url).pathname === curPath; } catch { return false; }
+  });
+  if (exact) return exact;
+  return searches.find((s) => {
+    try {
+      const sp = new URL(s.search_url).pathname;
+      return sp && curPath.startsWith(sp);
+    } catch { return false; }
+  }) || null;
+}
+
+async function renderSavedSearchScan() {
+  const root = $('#search-scan');
+  if (!root) return;
+  const tab = await getActiveTab();
+  if (!tab || !isLinkedInSearchUrl(tab.url)) {
+    root.classList.add('hidden');
+    return;
+  }
+
+  // Free/Pro: locked upgrade chip.
+  if (!hasPlusFeatures(currentPlan)) {
+    root.classList.remove('hidden');
+    root.innerHTML = '';
+    const lock = document.createElement('button');
+    lock.type = 'button';
+    lock.className = 'fit-score-locked';
+    lock.innerHTML = '<span class="lock-icon">🔒</span> Upgrade to Plus to scan saved searches';
+    lock.title = 'Saved-Search Daily Digest is a Plus feature. Click to upgrade.';
+    lock.addEventListener('click', async () => {
+      const { riff_backend_url } = await getStorage(['riff_backend_url']);
+      const base = riff_backend_url || DEFAULT_BACKEND_URL;
+      chrome.tabs.create({ url: `${base}/dashboard?upgrade=plus` });
+    });
+    root.appendChild(lock);
+    return;
+  }
+
+  // Plus: fetch saved searches, look for a match.
+  const { riff_token } = await getStorage(['riff_token']);
+  if (!riff_token) {
+    root.classList.add('hidden');
+    return;
+  }
+  const { riff_backend_url } = await getStorage(['riff_backend_url']);
+  const base = riff_backend_url || DEFAULT_BACKEND_URL;
+
+  let searches = [];
+  try {
+    const res = await fetch(`${base}/api/saved-searches`, {
+      headers: { Authorization: `Bearer ${riff_token}` },
+    });
+    const data = await res.json();
+    if (data && data.ok) searches = data.searches || [];
+  } catch {
+    root.classList.add('hidden');
+    return;
+  }
+
+  const match = findMatchingSavedSearch(tab.url, searches);
+
+  root.classList.remove('hidden');
+  root.innerHTML = '';
+
+  if (!match) {
+    // No saved search for this URL — offer to add it.
+    const wrap = document.createElement('div');
+    wrap.className = 'search-scan-card';
+    wrap.innerHTML = `
+      <div class="search-scan-title">This search isn't tracked yet</div>
+      <div class="search-scan-sub">Add it from your dashboard to start auto-ranking results in your daily digest.</div>
+    `;
+    const addBtn = document.createElement('button');
+    addBtn.type = 'button';
+    addBtn.className = 'search-scan-secondary';
+    addBtn.textContent = 'Open dashboard';
+    addBtn.addEventListener('click', () => {
+      chrome.tabs.create({ url: `${base}/dashboard` });
+    });
+    wrap.appendChild(addBtn);
+    root.appendChild(wrap);
+    return;
+  }
+
+  // Match found — render the scan button + result area.
+  const wrap = document.createElement('div');
+  wrap.className = 'search-scan-card';
+  wrap.innerHTML = `
+    <div class="search-scan-title">Tracking: ${escapeHtml(match.name)}</div>
+    <div class="search-scan-sub">Scan visible profile cards and score them against your active job specs.</div>
+  `;
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'search-scan-primary';
+  btn.textContent = 'Scan visible profiles';
+  const resultsDiv = document.createElement('div');
+  resultsDiv.className = 'search-scan-results';
+  wrap.appendChild(btn);
+  wrap.appendChild(resultsDiv);
+  root.appendChild(wrap);
+
+  btn.addEventListener('click', async () => {
+    btn.disabled = true;
+    btn.textContent = 'Reading profiles…';
+    resultsDiv.innerHTML = '';
+
+    // 1) Ask content.js for visible profile cards.
+    let extracted;
+    try {
+      extracted = await new Promise((resolve) => {
+        chrome.tabs.sendMessage(tab.id, { type: 'RIFF_EXTRACT_SEARCH_RESULTS' }, (resp) => {
+          resolve(resp);
+        });
+      });
+    } catch (e) {
+      btn.disabled = false;
+      btn.textContent = 'Scan visible profiles';
+      resultsDiv.textContent = 'Could not read this page. Refresh and try again.';
+      return;
+    }
+    if (!extracted || !extracted.ok || !Array.isArray(extracted.profiles) || extracted.profiles.length === 0) {
+      btn.disabled = false;
+      btn.textContent = 'Scan visible profiles';
+      resultsDiv.textContent = (extracted && extracted.error) || 'No profile cards detected. Scroll the search results into view, then try again.';
+      return;
+    }
+
+    // 2) POST to /api/saved-searches/scan.
+    btn.textContent = `Scoring ${extracted.profiles.length} profiles…`;
+    let scanData;
+    try {
+      const res = await fetch(`${base}/api/saved-searches/scan`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${riff_token}`,
+        },
+        body: JSON.stringify({
+          saved_search_id: match.id,
+          profiles: extracted.profiles,
+        }),
+      });
+      scanData = await res.json();
+    } catch (e) {
+      btn.disabled = false;
+      btn.textContent = 'Scan visible profiles';
+      resultsDiv.textContent = 'Network error contacting Riffly. Try again in a moment.';
+      return;
+    }
+
+    btn.disabled = false;
+    btn.textContent = 'Scan again';
+
+    if (!scanData || !scanData.ok) {
+      resultsDiv.textContent = (scanData && scanData.error) || 'Scan failed. Try again.';
+      return;
+    }
+
+    if (!scanData.results || scanData.results.length === 0) {
+      resultsDiv.textContent = `Scored ${scanData.scanned || 0} profiles but none returned a match. Try scrolling for more results, then scan again.`;
+      return;
+    }
+
+    // 3) Render top results inline (top 5).
+    const topN = scanData.results.slice(0, 5);
+    const list = document.createElement('ol');
+    list.className = 'search-scan-list';
+    for (const r of topN) {
+      const li = document.createElement('li');
+      const score = r.best ? r.best.result.score : 0;
+      const reasoning = r.best ? r.best.result.reasoning : '';
+      const scoreClass = score >= 70 ? 'score-high' : score >= 40 ? 'score-mid' : 'score-low';
+      li.innerHTML = `
+        <div class="search-scan-row">
+          <span class="search-scan-score ${scoreClass}">${score}</span>
+          ${r.profileUrl ? `<a href="${escapeAttr(r.profileUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(r.candidateName || 'Unnamed')}</a>` : `<span>${escapeHtml(r.candidateName || 'Unnamed')}</span>`}
+        </div>
+        ${reasoning ? `<div class="search-scan-reason">${escapeHtml(reasoning)}</div>` : ''}
+      `;
+      list.appendChild(li);
+    }
+    resultsDiv.innerHTML = '';
+    const summary = document.createElement('div');
+    summary.className = 'search-scan-summary';
+    summary.textContent = `Top ${topN.length} of ${scanData.scored || topN.length} matches · also visible in your dashboard digest.`;
+    resultsDiv.appendChild(summary);
+    resultsDiv.appendChild(list);
+  });
+}
+
+function escapeHtml(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+function escapeAttr(s) {
+  return escapeHtml(s).replace(/'/g, '&#39;');
+}
+
 // ---------- init ----------
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -912,6 +1136,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   refreshTemplates('hire', 'other');
 
   const profile = await loadProfile();
+  // Plus tier — surface saved-search scan UI when on a tracked search URL.
+  // Runs independently of profile load (different active-tab branch).
+  renderSavedSearchScan();
 
   $('#generate').addEventListener('click', () => {
     if (!profile) return;

@@ -485,11 +485,109 @@
     };
   }
 
+  // ---------- LinkedIn search-results scraping (Plus tier — Saved-Search Daily Digest) ----------
+  //
+  // When the user is on a /search/results/people/* URL and asks the popup to
+  // "scan visible profiles", we walk the visible search-result cards and
+  // extract { profileUrl, name, headline, currentRole } for each.
+  //
+  // Strict capture limits:
+  //   - Only currently rendered cards (no infinite-scroll trigger)
+  //   - Cap at 25 to match backend's MAX_PROFILES_PER_SCAN
+  //   - Skip ads, "Open profile" prompts, and entries without a /in/ URL
+  //
+  // No automation. Just like profile parsing, this requires explicit user click.
+  function isLinkedInSearchResultsUrl(href) {
+    href = href || window.location.href;
+    return /^https:\/\/www\.linkedin\.com\/search\/results\/(people|all)\b/.test(href);
+  }
+
+  function extractLinkedInSearchResults() {
+    const MAX = 25;
+    const out = [];
+    const seen = new Set();
+
+    // LinkedIn renders search-result cards as <li> items in a UL inside the main
+    // results container. The DOM classes change but structure is stable enough:
+    // each card has an <a href="https://www.linkedin.com/in/..."> anchor with
+    // the candidate name, plus 1–3 small text rows for headline / location /
+    // current role context.
+    const anchors = Array.from(
+      document.querySelectorAll('a[href*="/in/"]')
+    ).filter((a) => a.offsetParent !== null);
+
+    for (const a of anchors) {
+      if (out.length >= MAX) break;
+      let href = a.href || '';
+      // Strip query/fragment to dedupe anchors that point at the same profile
+      // with different miniProfileUrn params.
+      href = href.replace(/[?#].*$/, '').replace(/\/$/, '');
+      if (!/\/in\/[^/]+$/.test(href)) continue;
+      if (seen.has(href)) continue;
+
+      // The visible name is usually inside this anchor — but the same profile
+      // is also linked from the avatar (image-only). Prefer anchors with text.
+      const aText = safeText(a);
+      if (!aText) continue;
+      // Skip "Open profile in a new tab" and other UI affordances.
+      if (/^(open\s+profile|see\s+full|view\s+profile|status\s+is)/i.test(aText)) continue;
+      // Skip your own profile if it sneaks in (Me menu).
+      if (/^(me|home|premium)$/i.test(aText)) continue;
+
+      // Walk up to the result-card container. LinkedIn nests deeply; cap at 8.
+      let card = a;
+      for (let i = 0; i < 8 && card; i++) {
+        card = card.parentElement;
+        if (!card) break;
+        // A search card is roughly any LI/DIV that contains a heading + a
+        // subtitle line. We stop as soon as we find the smallest such block.
+        if (card.tagName === 'LI' || (card.querySelector('img') && card.offsetHeight > 60)) break;
+      }
+      if (!card) continue;
+
+      const allText = visibleTextNodes(card, 12);
+      const filtered = allText.filter(
+        (t) => t !== aText && !/^(connect|follow|message|more|view\s+profile|·|\d+(?:st|nd|rd|th)\b)$/i.test(t)
+      );
+
+      // First non-name text is typically the headline; the second is current
+      // role/company or location. Heuristic, but clean enough.
+      const headline = filtered[0] || '';
+      const currentRole = filtered[1] || '';
+
+      seen.add(href);
+      out.push({
+        profileUrl: href,
+        name: aText,
+        headline,
+        currentRole,
+        currentCompany: '',
+        about: '',
+        capturedAt: new Date().toISOString(),
+      });
+    }
+
+    return out;
+  }
+
   chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     if (msg && msg.type === 'RIFF_EXTRACT_PROFILE') {
       try {
         const profile = extractProfile();
         sendResponse({ ok: true, profile });
+      } catch (e) {
+        sendResponse({ ok: false, error: String((e && e.message) || e) });
+      }
+      return true;
+    }
+    if (msg && msg.type === 'RIFF_EXTRACT_SEARCH_RESULTS') {
+      try {
+        if (!isLinkedInSearchResultsUrl(window.location.href)) {
+          sendResponse({ ok: false, error: 'Not on a LinkedIn search-results page.' });
+          return true;
+        }
+        const profiles = extractLinkedInSearchResults();
+        sendResponse({ ok: true, profiles, currentUrl: window.location.href });
       } catch (e) {
         sendResponse({ ok: false, error: String((e && e.message) || e) });
       }

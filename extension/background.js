@@ -10,7 +10,7 @@
 
 // Production backend. Override only for local dev:
 //   chrome.storage.local.set({ riff_backend_url: 'http://localhost:3000' })
-const DEFAULT_BACKEND_URL = 'https://riff-sandy.vercel.app';
+const DEFAULT_BACKEND_URL = 'https://rifflylabs.com';
 
 async function getBackendBase() {
   const { riff_backend_url } = await chrome.storage.local.get('riff_backend_url');
