@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="Paste any cold message and find out how many template phrases it contains. Free, no signup. From the team behind Riffly.">
+  <link rel="canonical" href="https://rifflylabs.com/roast">
+  <meta name="theme-color" content="#faf9f6">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://rifflylabs.com/roast">
+  <meta property="og:title" content="Roast my LinkedIn message — by Riffly">
+  <meta property="og:description" content="Paste any cold message. Find out how many template phrases it contains. Free, no signup.">
+  <meta property="og:image" content="https://rifflylabs.com/og.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Roast my LinkedIn message — by Riffly">
+  <meta name="twitter:description" content="Paste any cold message. Find out how many template phrases it contains.">
+  <meta name="twitter:image" content="https://rifflylabs.com/og.png">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
+  <title>Roast my LinkedIn message — Riffly</title>
+  <style>
+    :root {
+      --bg: #faf9f6;
+      --surface: #ffffff;
+      --ink: #111110;
+      --ink-2: #2a2a28;
+      --muted: #6b6a65;
+      --line: #e7e4dc;
+      --accent: #b14a1a;
+      --warm: #f3f0e8;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+      font-size: clamp(14px, 2vw, 16px);
+      line-height: 1.55;
+      -webkit-font-smoothing: antialiased;
+    }
+    a { color: inherit; }
+    .wrap { max-width: 760px; margin: 0 auto; padding: clamp(16px, 4vw, 64px); }
+    header { padding: 24px 0; }
+    .brand { display: inline-flex; align-items: center; gap: 9px; font-weight: 600; font-size: 17px; letter-spacing: -0.02em; text-decoration: none; }
+    .logo-mark { display: inline-block; width: 20px; height: 20px; background: var(--ink); border-radius: 5px; position: relative; }
+    .logo-mark::after { content: ""; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 8px; height: 8px; background: var(--bg); border-radius: 1.5px; }
+    .nav-link { color: var(--muted); font-size: 14px; text-decoration: none; margin-left: 18px; }
+    .nav-link:hover { color: var(--ink); }
+    .nav-row { display: flex; justify-content: space-between; align-items: center; }
+
+    h1 { font-size: clamp(28px, 6vw, 44px); font-weight: 600; letter-spacing: -0.03em; margin: 32px 0 8px; }
+    .lede { font-size: 17px; color: var(--muted); margin: 0 0 32px; max-width: 560px; line-height: 1.5; }
+
+    .roast-input {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 18px 20px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      font-size: 15px;
+      line-height: 1.65;
+      font-family: inherit;
+      background: #fff;
+      color: var(--ink);
+      resize: vertical;
+      min-height: 220px;
+    }
+    .roast-input:focus { outline: none; border-color: var(--ink); }
+
+    .button-row { margin-top: 14px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+    .btn-roast {
+      padding: 12px 22px;
+      background: var(--accent);
+      color: #fff;
+      border: 1px solid var(--accent);
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    .btn-roast:hover { filter: brightness(1.08); }
+    .btn-ghost {
+      padding: 12px 18px;
+      background: transparent;
+      color: var(--ink);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      font-size: 14px;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    .btn-ghost:hover { background: var(--warm); }
+
+    .result {
+      margin-top: 32px;
+      padding: 24px;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+    }
+    .verdict {
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      margin-bottom: 8px;
+    }
+    .verdict.ouch { color: var(--accent); }
+    .verdict.ok { color: #1a7a48; }
+    .verdict-sub { color: var(--muted); font-size: 14px; margin-bottom: 20px; }
+
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 22px;
+    }
+    @media (max-width: 540px) { .stats-row { grid-template-columns: 1fr; } }
+    .stat-card {
+      padding: 14px 16px;
+      background: var(--bg);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+    }
+    .stat-num { font-size: 28px; font-weight: 700; color: var(--ink); line-height: 1; }
+    .stat-label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; font-weight: 700; margin-top: 4px; }
+
+    .highlighted {
+      font-size: 14.5px;
+      line-height: 1.7;
+      padding: 18px;
+      background: var(--bg);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      font-family: inherit;
+    }
+    .highlighted mark {
+      background: #fdebd9;
+      color: var(--accent);
+      padding: 1px 4px;
+      border-radius: 3px;
+      font-weight: 600;
+      cursor: help;
+    }
+
+    .findings { margin-top: 22px; }
+    .findings-title { font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); font-weight: 700; margin-bottom: 10px; }
+    .finding-item { font-size: 13.5px; color: var(--ink-2); padding: 8px 0; border-top: 1px solid var(--line); }
+    .finding-item .phrase { font-weight: 600; color: var(--accent); }
+
+    .cta-card {
+      margin-top: 32px;
+      padding: 24px;
+      background: linear-gradient(135deg, var(--warm) 0%, var(--bg) 100%);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      text-align: center;
+    }
+    .cta-card h3 { font-size: 18px; margin: 0 0 8px; font-weight: 600; }
+    .cta-card p { color: var(--muted); margin: 0 0 16px; font-size: 14px; }
+    .cta-card a {
+      display: inline-block;
+      padding: 11px 22px;
+      background: var(--ink);
+      color: #fff;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      text-decoration: none;
+    }
+
+    .examples { margin-top: 14px; }
+    .examples-label { font-size: 12px; color: var(--muted); margin-bottom: 8px; }
+    .example-chip {
+      display: inline-block;
+      padding: 6px 12px;
+      margin: 4px 6px 0 0;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      font-size: 12.5px;
+      color: var(--ink-2);
+      cursor: pointer;
+      font-family: inherit;
+    }
+    .example-chip:hover { background: var(--warm); border-color: var(--ink); }
+
+    footer { padding: 40px 0; text-align: center; color: var(--muted); font-size: 13px; }
+    footer a { color: var(--muted); margin: 0 8px; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap">
+      <div class="nav-row">
+        <a href="/" class="brand">
+          <span class="logo-mark"></span>Riffly
+        </a>
+        <div>
+          <a href="/" class="nav-link">Home</a>
+          <a href="/#pricing" class="nav-link">Pricing</a>
+          <a href="/signup" class="nav-link">Sign in</a>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <div class="wrap">
+      <h1>Roast my LinkedIn message.</h1>
+      <p class="lede">Paste any cold outreach you've sent (or received). We'll highlight the template phrases that signal "I sent this to 200 people" and tell you how bad it is. Free, instant, no signup. Powered by the same blacklist that runs inside Riffly.</p>
+
+      <textarea
+        id="roast-input"
+        class="roast-input"
+        placeholder="Paste a cold message here. Anything from a Lemlist sequence, a recruiter ping, a 'quick question' email — we'll roast it."
+        spellcheck="false"
+      ></textarea>
+
+      <div class="button-row">
+        <button id="roast-btn" class="btn-roast" type="button">Roast it →</button>
+        <button id="example-btn" class="btn-ghost" type="button">Try a sample</button>
+      </div>
+
+      <div class="examples">
+        <div class="examples-label">Or paste one of these classics:</div>
+        <span class="example-chip" data-example="Hi Alex, I came across your impressive background in distributed systems and thought you'd be a great fit for an exciting opportunity at our company. We're scaling rapidly and looking for top talent who has a passion for building world-class infrastructure. I'd love to leverage your experience to help us tackle our scaling challenges. Would you be open to a quick chat? Best regards.">The recruiter classic</span>
+        <span class="example-chip" data-example="Hi Sarah, hope you're doing well. I'm reaching out because I noticed your impressive work at [Your Company]. I think there's a unique opportunity here that's right up your alley — particularly given your background. We're a fast-scaling startup looking for rockstars who can leverage their experience to drive synergies across our org. Would love to circle back next week. Looking forward to hearing from you!">The fundraising/sales blend</span>
+        <span class="example-chip" data-example="Hi {{first_name}}, I came across your profile and was particularly impressed by your experience. Your background uniquely positions you for this exciting opportunity. We're a passionate team looking to leverage world-class talent. I appreciate your time — hope you don't mind the outreach!">The bot-generated mess</span>
+      </div>
+
+      <div id="result" class="result" style="display: none;"></div>
+
+      <div class="cta-card">
+        <h3>Want messages that don't read like this?</h3>
+        <p>Riffly is a Chrome extension that drafts LinkedIn outreach grounded in what the candidate actually wrote — and won't let you ship the phrases above.</p>
+        <a href="/">See the live demo →</a>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <a href="/">Home</a>·
+    <a href="/#pricing">Pricing</a>·
+    <a href="/privacy">Privacy</a>·
+    <a href="/terms">Terms</a>
+  </footer>
+
+  <script>
+    // Static blacklist mirrored from /lib/prompt.ts. Kept client-side so
+    // /roast costs $0 and stays viral-fast even under heavy traffic.
+    // Each entry: phrase OR pattern + WHY it's bad (shown to the user).
+    const BLACKLIST = [
+      // Banned openers
+      { p: /\bI came across (your|you)\b/gi, why: "Universal recruiter-bot opener. ChatGPT defaults to it." },
+      { p: /\byour impressive background\b/gi, why: "Generic flattery. Read like a Mad Lib." },
+      { p: /\byour experience caught my eye\b/gi, why: "Bot phrase. Means you didn't read the profile." },
+      { p: /\bhope you'?re doing well\b/gi, why: "Filler. Adds zero information about why you're writing." },
+      { p: /\bhope this finds you well\b/gi, why: "Filler. Cut and start with what you actually want." },
+      { p: /\bI hope you'?re having a great (week|day|time)\b/gi, why: "Filler. Cut." },
+      { p: /\bI'?m reaching out\b/gi, why: "Preamble = death. Get to the point." },
+      { p: /\bI wanted to reach out\b/gi, why: "Preamble. Cut." },
+      { p: /\bI'?m writing to\b/gi, why: "Preamble. Cut." },
+      // Banned phrases
+      { p: /\b(would be a |a )?great fit\b/gi, why: "The number-one phrase that gets cold messages archived." },
+      { p: /\bscaling challenges\b/gi, why: "B2B SaaS sales-deck cliché." },
+      { p: /\bpassion for\b/gi, why: "Means nothing. Specific is better than emotional." },
+      { p: /\b(rockstar|ninja|guru)\b/gi, why: "Recruiting-vocabulary buzzwords. Embarrassing in 2026." },
+      { p: /\bcircle back\b/gi, why: "Calendar-speak. Use 'follow up' or skip it." },
+      { p: /\bsynerg(y|ies)\b/gi, why: "Consultant-speak. Always vague, always template." },
+      { p: /\bleverage\b/gi, why: "Verb of doom. Use 'use'." },
+      { p: /\bexciting opportunity\b/gi, why: "Tells them nothing. Show why it's exciting instead." },
+      { p: /\bworld-class\b/gi, why: "Self-aggrandizing. Show, don't tell." },
+      { p: /\bparticularly\b/gi, why: "Telltale AI hedge word. Models love this." },
+      { p: /\bnotably\b/gi, why: "Telltale AI hedge word." },
+      { p: /\bspecifically\b/gi, why: "Telltale AI hedge word." },
+      { p: /\bin particular\b/gi, why: "AI filler." },
+      { p: /\bdirectly aligns\b/gi, why: "Bot phrase." },
+      { p: /\bin line with\b/gi, why: "Stiff. Use plainer language." },
+      { p: /\bright up your alley\b/gi, why: "Cliché." },
+      { p: /\bright in your wheelhouse\b/gi, why: "Cliché." },
+      { p: /\bI appreciate your time\b/gi, why: "Filler. Cut." },
+      { p: /\bthanks for considering\b/gi, why: "Premature thanks. Cut." },
+      { p: /\bhope you don'?t mind\b/gi, why: "Apologizing for outreach undermines it." },
+      { p: /\bsorry to bother\b/gi, why: "Same. Don't apologize for the email." },
+      { p: /\bgiven your (background|experience|work)\b/gi, why: "Generic. Quote something specific instead." },
+      { p: /\buniquely (positioned|qualified)\b/gi, why: "Empty flattery. Show why." },
+      // Closings
+      { p: /\blooking forward to hearing from you\b/gi, why: "Closes ~80% of cold messages. Forgettable." },
+      { p: /\bbest regards\b/gi, why: "Stiff. Try 'Thanks' or your name only." },
+      // Placeholders
+      { p: /\[your company name\]/gi, why: "Unfilled template literal. Means the bot didn't have your company info." },
+      { p: /\[company\]/gi, why: "Unfilled template literal." },
+      { p: /\[role\]/gi, why: "Unfilled template literal." },
+      { p: /\[your name\]/gi, why: "Unfilled template literal." },
+      { p: /\{\{[^}]+\}\}/g, why: "Mail-merge placeholder leaked through." },
+      { p: /<[a-z][^>]*>/gi, why: "HTML / placeholder tag in plain text." },
+    ];
+
+    function escapeHtml(s) {
+      return s.replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+    }
+
+    function roast(text) {
+      const findings = [];
+      // Build a list of [start, end, phrase, why] matches across all patterns.
+      const matches = [];
+      for (const { p, why } of BLACKLIST) {
+        p.lastIndex = 0;
+        let m;
+        while ((m = p.exec(text)) !== null) {
+          matches.push({ start: m.index, end: m.index + m[0].length, phrase: m[0], why });
+          if (m.index === p.lastIndex) p.lastIndex++; // guard against zero-width
+        }
+      }
+      // Sort and merge overlapping matches (longer wins).
+      matches.sort((a, b) => a.start - b.start || b.end - a.end);
+      const merged = [];
+      for (const m of matches) {
+        const last = merged[merged.length - 1];
+        if (last && m.start < last.end) {
+          if (m.end > last.end) last.end = m.end; // extend
+          continue;
+        }
+        merged.push({ ...m });
+      }
+
+      // Build highlighted HTML.
+      let html = '';
+      let cursor = 0;
+      for (const m of merged) {
+        html += escapeHtml(text.slice(cursor, m.start));
+        html += `<mark title="${escapeHtml(m.why)}">${escapeHtml(text.slice(m.start, m.end))}</mark>`;
+        cursor = m.end;
+      }
+      html += escapeHtml(text.slice(cursor));
+
+      // Stats.
+      const wordCount = (text.trim().match(/\S+/g) || []).length;
+      const cliches = merged.length;
+      const clichePer100 = wordCount > 0 ? (cliches / wordCount * 100).toFixed(1) : '0';
+
+      // Findings list (deduplicate by phrase).
+      const seen = new Set();
+      for (const m of merged) {
+        const key = m.phrase.toLowerCase();
+        if (seen.has(key)) continue;
+        seen.add(key);
+        findings.push({ phrase: m.phrase, why: m.why });
+      }
+
+      // Verdict.
+      let verdict, verdictClass, verdictSub;
+      if (cliches === 0) {
+        verdict = 'No template phrases detected.';
+        verdictClass = 'ok';
+        verdictSub = "It's not the obvious mistakes. If your reply rate's still low, the problem is probably content (you're not saying anything specific to them) rather than language.";
+      } else if (cliches <= 2) {
+        verdict = `${cliches} cliché${cliches === 1 ? '' : 's'} found. Salvageable.`;
+        verdictClass = 'ouch';
+        verdictSub = "Mostly clean. Cut the highlighted phrases, replace each with a specific reference to the candidate's actual work, and you're 80% there.";
+      } else if (cliches <= 5) {
+        verdict = `${cliches} clichés. This reads as a template.`;
+        verdictClass = 'ouch';
+        verdictSub = "If a candidate gets 50 of these a week, yours is one of them. Strip every highlight and rewrite from a specific observation about them.";
+      } else {
+        verdict = `${cliches} clichés. This is a Mad Lib.`;
+        verdictClass = 'ouch';
+        verdictSub = "This message is indistinguishable from every other cold pitch sitting in their inbox. The only way to fix it is to throw it out and write something grounded in what they actually do.";
+      }
+
+      return { html, wordCount, cliches, clichePer100, findings, verdict, verdictClass, verdictSub };
+    }
+
+    function render(text) {
+      if (!text || !text.trim()) return;
+      const r = roast(text);
+      const result = document.getElementById('result');
+      result.style.display = 'block';
+      result.innerHTML = `
+        <div class="verdict ${r.verdictClass}">${escapeHtml(r.verdict)}</div>
+        <div class="verdict-sub">${escapeHtml(r.verdictSub)}</div>
+        <div class="stats-row">
+          <div class="stat-card">
+            <div class="stat-num">${r.cliches}</div>
+            <div class="stat-label">Clichés</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-num">${r.wordCount}</div>
+            <div class="stat-label">Words</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-num">${r.clichePer100}</div>
+            <div class="stat-label">Per 100 words</div>
+          </div>
+        </div>
+        <div class="highlighted">${r.html}</div>
+        ${r.findings.length > 0 ? `
+          <div class="findings">
+            <div class="findings-title">What got flagged and why</div>
+            ${r.findings.map(f => `<div class="finding-item"><span class="phrase">"${escapeHtml(f.phrase)}"</span> — ${escapeHtml(f.why)}</div>`).join('')}
+          </div>
+        ` : ''}
+      `;
+      result.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    document.getElementById('roast-btn').addEventListener('click', () => {
+      const text = document.getElementById('roast-input').value;
+      render(text);
+    });
+
+    document.getElementById('example-btn').addEventListener('click', () => {
+      const chips = document.querySelectorAll('.example-chip');
+      const random = chips[Math.floor(Math.random() * chips.length)];
+      const text = random.getAttribute('data-example');
+      document.getElementById('roast-input').value = text;
+      render(text);
+    });
+
+    document.querySelectorAll('.example-chip').forEach(chip => {
+      chip.addEventListener('click', () => {
+        const text = chip.getAttribute('data-example');
+        document.getElementById('roast-input').value = text;
+        render(text);
+      });
+    });
+
+    // ⌘↵ / Ctrl+↵ to roast
+    document.getElementById('roast-input').addEventListener('keydown', (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+        e.preventDefault();
+        render(document.getElementById('roast-input').value);
+      }
+    });
+  </script>
+</body>
+</html>

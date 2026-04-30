@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
+  <!-- Background -->
+  <rect width="1200" height="630" fill="#faf9f6"/>
+
+  <!-- Subtle accent strip -->
+  <rect x="0" y="0" width="8" height="630" fill="#b14a1a"/>
+
+  <!-- Logo + wordmark -->
+  <g transform="translate(80, 80)">
+    <rect x="0" y="0" width="36" height="36" rx="7" fill="#111110"/>
+    <rect x="13" y="13" width="10" height="10" rx="2" fill="#faf9f6"/>
+    <text x="52" y="27" font-family="ui-sans-serif, -apple-system, 'Inter', system-ui, sans-serif" font-size="26" font-weight="700" fill="#111110" letter-spacing="-0.5">Riffly</text>
+  </g>
+
+  <!-- Headline -->
+  <text x="80" y="280" font-family="ui-sans-serif, -apple-system, 'Inter', system-ui, sans-serif" font-size="76" font-weight="600" fill="#111110" letter-spacing="-2.5">Cold messages that</text>
+  <text x="80" y="368" font-family="ui-sans-serif, -apple-system, 'Inter', system-ui, sans-serif" font-size="76" font-weight="600" fill="#111110" letter-spacing="-2.5">don't get deleted.</text>
+
+  <!-- Sub -->
+  <text x="80" y="440" font-family="ui-sans-serif, -apple-system, 'Inter', system-ui, sans-serif" font-size="26" font-weight="400" fill="#6b6a65" letter-spacing="-0.4">A Chrome extension that drafts personalized LinkedIn outreach</text>
+  <text x="80" y="478" font-family="ui-sans-serif, -apple-system, 'Inter', system-ui, sans-serif" font-size="26" font-weight="400" fill="#6b6a65" letter-spacing="-0.4">grounded in the candidate's actual recent activity. No automation.</text>
+
+  <!-- Trust strip at bottom -->
+  <g transform="translate(80, 540)">
+    <text x="0" y="0" font-family="ui-sans-serif, -apple-system, 'Inter', system-ui, sans-serif" font-size="18" font-weight="500" fill="#111110">5 drafts a week, free</text>
+    <circle cx="200" cy="-6" r="3" fill="#b14a1a"/>
+    <text x="218" y="0" font-family="ui-sans-serif, -apple-system, 'Inter', system-ui, sans-serif" font-size="18" font-weight="500" fill="#111110">Manual send only</text>
+    <circle cx="385" cy="-6" r="3" fill="#b14a1a"/>
+    <text x="403" y="0" font-family="ui-sans-serif, -apple-system, 'Inter', system-ui, sans-serif" font-size="18" font-weight="500" fill="#111110">Three variants per click</text>
+  </g>
+
+  <!-- URL pill -->
+  <g transform="translate(960, 540)">
+    <rect x="0" y="-22" width="160" height="32" rx="16" fill="#111110"/>
+    <text x="80" y="0" font-family="ui-sans-serif, -apple-system, 'Inter', system-ui, sans-serif" font-size="14" font-weight="600" fill="#faf9f6" text-anchor="middle">rifflylabs.com</text>
+  </g>
+</svg>

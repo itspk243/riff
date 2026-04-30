@@ -7,7 +7,7 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getUserFromBearer } from '../../lib/supabase';
-import { checkQuota, recordUsage } from '../../lib/quota';
+import { checkQuota, recordUsage, bumpGlobalCounter, decrementGlobalCounter } from '../../lib/quota';
 import { generateVariants } from '../../lib/llm';
 import { hasAllVariants } from '../../lib/capabilities';
 import type { GenerateRequest, GenerateResponse } from '../../lib/types';
@@ -55,11 +55,22 @@ export default async function handler(
     remaining = quota.remaining;
   }
 
+  // Global daily circuit breaker — even after per-user quota passes, this
+  // is the last line of defense vs runaway prompts or coordinated abuse
+  // hitting the LLM bill directly.
+  if (!bumpGlobalCounter()) {
+    return res.status(503).json({
+      ok: false,
+      error: "We've hit today's global generation cap. Try again in a few hours; if this persists, email support@rifflylabs.com.",
+    });
+  }
+
   // Generate
   let variants;
   try {
     variants = await generateVariants(body);
   } catch (e: any) {
+    decrementGlobalCounter(); // refund the slot — generation didn't happen
     console.error('generateVariants failed', e);
     return res.status(500).json({ ok: false, error: 'Generation failed. Try again in a moment.' });
   }
