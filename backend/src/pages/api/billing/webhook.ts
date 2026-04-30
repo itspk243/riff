@@ -68,20 +68,42 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const plan = planFromPriceId(priceId);
         console.log(`webhook: checkout.session.completed user=${userId} price=${priceId} → plan=${plan}`);
 
+        // current_period_end may be on the Subscription (older Stripe API
+        // versions) or on the SubscriptionItem (newer "dahlia"). Try both.
+        const cpe =
+          (subObj as any).current_period_end ??
+          (subObj.items?.data?.[0] as any)?.current_period_end ??
+          null;
+
         await supabase
           .from('users')
           .update({
             plan,
             stripe_customer_id: customer,
             stripe_subscription_id: sub,
-            current_period_end: new Date(subObj.current_period_end * 1000).toISOString(),
+            current_period_end: cpe ? new Date(cpe * 1000).toISOString() : null,
           })
           .eq('id', userId);
         break;
       }
       case 'customer.subscription.updated':
       case 'customer.subscription.deleted': {
-        const sub = event.data.object as Stripe.Subscription;
+        // The embedded webhook payload comes back in the *account's* Stripe
+        // API version — newer ("dahlia") versions moved current_period_end
+        // from the Subscription onto the SubscriptionItem. Re-retrieve via
+        // our pinned-version SDK so we get a consistent shape regardless of
+        // what Stripe sent us.
+        const eventSub = event.data.object as Stripe.Subscription;
+        let sub: Stripe.Subscription;
+        try {
+          sub = await stripe.subscriptions.retrieve(eventSub.id);
+        } catch (e) {
+          console.warn(
+            `webhook: subscriptions.retrieve(${eventSub.id}) failed; falling back to event payload`,
+            e
+          );
+          sub = eventSub;
+        }
 
         // Resolve user. Preferred: sub.metadata.userId (set by checkout via
         // subscription_data.metadata). Fallback: lookup by stripe_customer_id
@@ -115,12 +137,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         console.log(
           `webhook: subscription.${event.type.split('.').pop()} user=${userId} status=${sub.status} → plan=${newPlan}`
         );
+
+        // current_period_end can live on the Subscription (older API versions)
+        // or on the SubscriptionItem (newer "dahlia"). Read whichever has it.
+        const cpe =
+          (sub as any).current_period_end ??
+          (sub.items?.data?.[0] as any)?.current_period_end ??
+          null;
+
         await supabase
           .from('users')
           .update({
             plan: newPlan,
             stripe_subscription_id: sub.status === 'canceled' ? null : sub.id,
-            current_period_end: new Date(sub.current_period_end * 1000).toISOString(),
+            current_period_end: cpe ? new Date(cpe * 1000).toISOString() : null,
           })
           .eq('id', userId);
         break;
