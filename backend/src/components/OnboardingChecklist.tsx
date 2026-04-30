@@ -100,9 +100,9 @@ export default function OnboardingChecklist({ token, plan }: Props) {
     steps.push({
       id: 'spec',
       title: 'Add a job spec for fit-scoring',
-      description: 'Open any candidate profile, click the Riffly icon, then "Add a job spec" inside the popup.',
+      description: 'Free-text description of who you\'re hiring. Riffly live-scores every profile against it.',
       done: !!status.firstSpec,
-      action: { label: 'Where?', href: '#install-steps' },
+      action: { label: 'Add spec', href: '#job-specs' },
     });
     steps.push({
       id: 'search',

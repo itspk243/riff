@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import Head from 'next/head';
 import SavedSearchesPanel from '../components/SavedSearchesPanel';
 import OnboardingChecklist from '../components/OnboardingChecklist';
+import JobSpecsPanel from '../components/JobSpecsPanel';
 
 interface MeResponse {
   ok: boolean;
@@ -750,6 +751,11 @@ export default function Dashboard() {
               </button>
             )}
           </section>
+
+          {/* Job specs (Plus tier — Active Profile Assist).
+              Renders before saved-search digest because specs power the
+              fit-scoring that the digest results depend on. */}
+          <JobSpecsPanel token={token} plan={me?.plan} />
 
           {/* Saved-Search Daily Digest (Plus tier).
               Self-contained: fetches its own /api/saved-searches and
