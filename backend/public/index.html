@@ -241,18 +241,24 @@
       padding: clamp(40px, 10vw, 80px) 0 clamp(24px, 5vw, 32px);
     }
 
+    /* Hero now stacks: copy block on top, full-width demo window below.
+       The previous 1fr 1fr split squeezed the interactive demo into half
+       the hero width (~470px), then the inner 2-column window-body cut
+       that to ~220px per side — way too narrow for the editable form
+       and the draft text. Stacking gives the demo the full ~1080px so
+       its inner columns get ~520px each, comfortable. */
     .hero-container {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 48px;
-      align-items: start;
+      display: flex;
+      flex-direction: column;
+      gap: 40px;
+      align-items: stretch;
+    }
+    .hero-content {
+      max-width: 760px;
     }
 
     @media (max-width: 768px) {
-      .hero-container {
-        grid-template-columns: 1fr;
-        gap: 32px;
-      }
+      .hero-container { gap: 28px; }
     }
 
     .hero-content {
