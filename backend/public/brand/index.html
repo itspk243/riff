@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="Riffly brand assets — marks, wordmarks, lockups, avatars. Free to use in coverage, partnerships, and integrations.">
+  <link rel="canonical" href="https://rifflylabs.com/brand">
+  <meta name="theme-color" content="#faf9f6">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://rifflylabs.com/brand">
+  <meta property="og:title" content="Riffly — Brand & Press Kit">
+  <meta property="og:description" content="Logos, color palette, and usage rules for Riffly. Free to use in coverage and partnerships.">
+  <meta property="og:image" content="https://rifflylabs.com/og.png">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
+  <title>Brand & Press Kit — Riffly</title>
+  <style>
+    :root {
+      --bg: #faf9f6;
+      --surface: #ffffff;
+      --ink: #111110;
+      --ink-2: #2a2a28;
+      --muted: #6b6a65;
+      --line: #e7e4dc;
+      --accent: #b14a1a;
+      --warm: #f3f0e8;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+      font-size: clamp(14px, 2vw, 16px);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+    a { color: inherit; }
+    .wrap { max-width: 980px; margin: 0 auto; padding: clamp(16px, 4vw, 64px); }
+
+    header { padding: 24px 0 32px; border-bottom: 1px solid var(--line); margin-bottom: 56px; }
+    .nav-row { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; }
+    .brand-link { display: inline-flex; align-items: center; gap: 12px; text-decoration: none; }
+    .brand-link img { display: block; width: 28px; height: 28px; }
+    .brand-link span { font-size: 17px; font-weight: 600; letter-spacing: -0.02em; }
+    .nav-link { color: var(--muted); font-size: 14px; text-decoration: none; margin-left: 18px; }
+    .nav-link:hover { color: var(--ink); }
+
+    h1 { font-size: clamp(32px, 6vw, 48px); font-weight: 600; letter-spacing: -0.03em; margin: 0 0 12px; }
+    .lede { font-size: 17px; color: var(--muted); margin: 0 0 56px; max-width: 640px; line-height: 1.55; }
+
+    h2 { font-size: 22px; font-weight: 600; letter-spacing: -0.01em; margin: 64px 0 8px; }
+    .sub { color: var(--muted); font-size: 14px; margin: 0 0 24px; max-width: 620px; }
+
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .card.dark .preview { background: var(--ink); }
+    .card.warm .preview { background: var(--bg); }
+    .preview {
+      height: 160px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      background: var(--surface);
+    }
+    .preview img { max-width: 100%; max-height: 100%; display: block; }
+    .meta {
+      padding: 14px 16px;
+      border-top: 1px solid var(--line);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+    }
+    .meta-name { font-size: 13.5px; font-weight: 500; color: var(--ink); }
+    .meta-formats { display: flex; gap: 6px; flex-wrap: wrap; }
+    .meta-formats a {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      font-weight: 600;
+      color: var(--muted);
+      text-decoration: none;
+      padding: 3px 8px;
+      border: 1px solid var(--line);
+      border-radius: 4px;
+      background: var(--bg);
+    }
+    .meta-formats a:hover { color: var(--ink); border-color: var(--ink); }
+
+    .palette { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 16px; }
+    .swatch { border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+    .swatch-color { height: 100px; }
+    .swatch-meta { padding: 12px 14px; }
+    .swatch-name { font-size: 13.5px; font-weight: 600; }
+    .swatch-hex { font-size: 12px; color: var(--muted); font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; margin-top: 2px; }
+
+    .rules { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    @media (max-width: 640px) { .rules { grid-template-columns: 1fr; } }
+    .rule {
+      padding: 18px 20px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: var(--surface);
+    }
+    .rule-tag {
+      display: inline-block;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 4px;
+      margin-bottom: 10px;
+    }
+    .rule.do .rule-tag { background: #e3f0e9; color: #1a7a48; }
+    .rule.dont .rule-tag { background: #fdebd9; color: var(--accent); }
+    .rule-list { margin: 0; padding-left: 20px; }
+    .rule-list li { margin-bottom: 6px; color: var(--ink-2); font-size: 14px; }
+
+    code {
+      font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+      font-size: 13px;
+      background: var(--warm);
+      padding: 1px 6px;
+      border-radius: 3px;
+    }
+
+    footer { margin-top: 80px; padding: 32px 0; border-top: 1px solid var(--line); color: var(--muted); font-size: 13px; text-align: center; }
+    footer a { color: var(--muted); margin: 0 10px; text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap">
+      <div class="nav-row">
+        <a href="/" class="brand-link">
+          <img src="/brand/riffly-mark.svg" alt="">
+          <span>Riffly</span>
+        </a>
+        <div>
+          <a href="/" class="nav-link">Home</a>
+          <a href="/#pricing" class="nav-link">Pricing</a>
+          <a href="/security" class="nav-link">Security</a>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <div class="wrap">
+      <h1>Brand &amp; press kit.</h1>
+      <p class="lede">Logos, palette, and usage rules. Free to use in coverage, partnerships, integrations, or anywhere you need to refer to Riffly. Don't recolor or distort the marks.</p>
+
+      <h2>Mark</h2>
+      <p class="sub">Three bars at different lengths — three drafts of the same line. Use the mark on its own at small sizes (favicons, app icons, social avatars).</p>
+      <div class="grid">
+        <div class="card warm">
+          <div class="preview"><img src="/brand/riffly-mark.svg" alt="Riffly mark" style="width: 96px;"></div>
+          <div class="meta">
+            <span class="meta-name">Mark · dark</span>
+            <span class="meta-formats">
+              <a href="/brand/riffly-mark.svg" download>SVG</a>
+              <a href="/brand/riffly-mark-512.png" download>PNG</a>
+            </span>
+          </div>
+        </div>
+        <div class="card dark">
+          <div class="preview"><img src="/brand/riffly-mark-light.svg" alt="Riffly mark, light" style="width: 96px;"></div>
+          <div class="meta">
+            <span class="meta-name">Mark · light</span>
+            <span class="meta-formats">
+              <a href="/brand/riffly-mark-light.svg" download>SVG</a>
+            </span>
+          </div>
+        </div>
+        <div class="card warm">
+          <div class="preview"><img src="/brand/riffly-mark-accent.svg" alt="Riffly mark, accent" style="width: 96px;"></div>
+          <div class="meta">
+            <span class="meta-name">Mark · accent</span>
+            <span class="meta-formats">
+              <a href="/brand/riffly-mark-accent.svg" download>SVG</a>
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <h2>Wordmark</h2>
+      <p class="sub">Use when the audience already knows the brand and you need a clean text lockup.</p>
+      <div class="grid">
+        <div class="card warm">
+          <div class="preview"><img src="/brand/riffly-wordmark.svg" alt="Riffly wordmark" style="width: 220px;"></div>
+          <div class="meta">
+            <span class="meta-name">Wordmark · dark</span>
+            <span class="meta-formats">
+              <a href="/brand/riffly-wordmark.svg" download>SVG</a>
+            </span>
+          </div>
+        </div>
+        <div class="card dark">
+          <div class="preview"><img src="/brand/riffly-wordmark-light.svg" alt="Riffly wordmark, light" style="width: 220px;"></div>
+          <div class="meta">
+            <span class="meta-name">Wordmark · light</span>
+            <span class="meta-formats">
+              <a href="/brand/riffly-wordmark-light.svg" download>SVG</a>
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <h2>Horizontal lockup</h2>
+      <p class="sub">Mark + wordmark side by side. Default for headers, banners, slide intros, and press coverage.</p>
+      <div class="grid">
+        <div class="card warm">
+          <div class="preview"><img src="/brand/riffly-lockup.svg" alt="Riffly horizontal lockup" style="width: 320px;"></div>
+          <div class="meta">
+            <span class="meta-name">Lockup · dark</span>
+            <span class="meta-formats">
+              <a href="/brand/riffly-lockup.svg" download>SVG</a>
+            </span>
+          </div>
+        </div>
+        <div class="card dark">
+          <div class="preview"><img src="/brand/riffly-lockup-light.svg" alt="Riffly horizontal lockup, light" style="width: 320px;"></div>
+          <div class="meta">
+            <span class="meta-name">Lockup · light</span>
+            <span class="meta-formats">
+              <a href="/brand/riffly-lockup-light.svg" download>SVG</a>
+            </span>
+          </div>
+        </div>
+        <div class="card warm">
+          <div class="preview"><img src="/brand/riffly-lockup-accent.svg" alt="Riffly horizontal lockup, accent" style="width: 320px;"></div>
+          <div class="meta">
+            <span class="meta-name">Lockup · accent</span>
+            <span class="meta-formats">
+              <a href="/brand/riffly-lockup-accent.svg" download>SVG</a>
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <h2>Social avatars</h2>
+      <p class="sub">Square mark inside a rounded square — sized for X, LinkedIn, GitHub, Chrome Web Store. Drop the PNG straight into the profile-pic field.</p>
+      <div class="grid">
+        <div class="card warm">
+          <div class="preview"><img src="/brand/riffly-avatar-warm.svg" alt="Riffly avatar, warm" style="width: 128px; border-radius: 24px;"></div>
+          <div class="meta">
+            <span class="meta-name">Avatar · warm</span>
+            <span class="meta-formats">
+              <a href="/brand/riffly-avatar-warm.svg" download>SVG</a>
+              <a href="/brand/riffly-avatar-warm-400.png" download>400</a>
+              <a href="/brand/riffly-avatar-warm-512.png" download>512</a>
+              <a href="/brand/riffly-avatar-warm-1024.png" download>1024</a>
+            </span>
+          </div>
+        </div>
+        <div class="card dark">
+          <div class="preview"><img src="/brand/riffly-avatar-dark.svg" alt="Riffly avatar, dark" style="width: 128px; border-radius: 24px;"></div>
+          <div class="meta">
+            <span class="meta-name">Avatar · dark</span>
+            <span class="meta-formats">
+              <a href="/brand/riffly-avatar-dark.svg" download>SVG</a>
+              <a href="/brand/riffly-avatar-dark-400.png" download>400</a>
+              <a href="/brand/riffly-avatar-dark-512.png" download>512</a>
+              <a href="/brand/riffly-avatar-dark-1024.png" download>1024</a>
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <h2>Color palette</h2>
+      <p class="sub">Two neutrals and one accent. The accent (burnt orange) only appears in highlights — never as a full background.</p>
+      <div class="palette">
+        <div class="swatch">
+          <div class="swatch-color" style="background: #111110;"></div>
+          <div class="swatch-meta">
+            <div class="swatch-name">Ink</div>
+            <div class="swatch-hex">#111110</div>
+          </div>
+        </div>
+        <div class="swatch">
+          <div class="swatch-color" style="background: #faf9f6; border-bottom: 1px solid var(--line);"></div>
+          <div class="swatch-meta">
+            <div class="swatch-name">Warm</div>
+            <div class="swatch-hex">#faf9f6</div>
+          </div>
+        </div>
+        <div class="swatch">
+          <div class="swatch-color" style="background: #b14a1a;"></div>
+          <div class="swatch-meta">
+            <div class="swatch-name">Accent</div>
+            <div class="swatch-hex">#b14a1a</div>
+          </div>
+        </div>
+        <div class="swatch">
+          <div class="swatch-color" style="background: #6b6a65;"></div>
+          <div class="swatch-meta">
+            <div class="swatch-name">Muted</div>
+            <div class="swatch-hex">#6b6a65</div>
+          </div>
+        </div>
+      </div>
+
+      <h2>Typography</h2>
+      <p class="sub">Inter at <code>font-weight: 600</code> with <code>letter-spacing: -0.02em</code> for the wordmark and headings. Body type uses the system stack at 400/500.</p>
+
+      <h2>Usage</h2>
+      <div class="rules">
+        <div class="rule do">
+          <div class="rule-tag">Do</div>
+          <ul class="rule-list">
+            <li>Keep clear space around the mark equal to one bar's height.</li>
+            <li>Use the SVG version whenever possible — it scales without softening.</li>
+            <li>Pair with the warm <code>#faf9f6</code> background or the ink <code>#111110</code> background.</li>
+            <li>Use the accent variant sparingly — typically once per surface.</li>
+          </ul>
+        </div>
+        <div class="rule dont">
+          <div class="rule-tag">Don't</div>
+          <ul class="rule-list">
+            <li>Don't recolor the bars outside the palette above.</li>
+            <li>Don't add gradients, drop shadows, or strokes.</li>
+            <li>Don't stretch the mark non-proportionally.</li>
+            <li>Don't place the mark on a busy photo or low-contrast background.</li>
+            <li>Don't typeset the wordmark in a different typeface.</li>
+          </ul>
+        </div>
+      </div>
+
+      <h2>Naming</h2>
+      <p class="sub">The product is <strong>Riffly</strong>. The company is <strong>Riffly Labs</strong>. The Chrome extension is <strong>the Riffly extension</strong>. Lowercase only when it's part of a URL: <code>rifflylabs.com</code>.</p>
+
+      <h2>Press contact</h2>
+      <p class="sub">For coverage, partnerships, or anything that doesn't fit support: <a href="mailto:support@rifflylabs.com?subject=Press">support@rifflylabs.com</a>.</p>
+    </div>
+  </main>
+
+  <footer>
+    <a href="/">Home</a>·
+    <a href="/#pricing">Pricing</a>·
+    <a href="/security">Security</a>·
+    <a href="/privacy">Privacy</a>·
+    <a href="/terms">Terms</a>
+  </footer>
+</body>
+</html>
