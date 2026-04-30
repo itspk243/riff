@@ -324,6 +324,9 @@ export default function SavedSearchesPanel({ token, plan }: Props) {
           ))}
         </select>
         <span style={{ fontSize: 11, color: '#888' }}>UTC</span>
+        <span style={{ fontSize: 11, color: '#888', marginLeft: 'auto' }}>
+          ({localTimeForUtcHour(digestHour)} your time)
+        </span>
       </div>
 
       {error && (
@@ -504,6 +507,23 @@ function formatHour(h: number): string {
   if (h < 12) return `${h} AM`;
   if (h === 12) return '12 PM';
   return `${h - 12} PM`;
+}
+
+// Display the local time equivalent of a UTC hour so users can pick
+// without doing math. Uses the browser's timezone via Intl.
+function localTimeForUtcHour(utcHour: number): string {
+  try {
+    const today = new Date();
+    today.setUTCHours(utcHour, 0, 0, 0);
+    const fmt = new Intl.DateTimeFormat([], {
+      hour: 'numeric',
+      hour12: true,
+      timeZoneName: 'short',
+    });
+    return fmt.format(today); // e.g. "4 AM EDT"
+  } catch {
+    return '—';
+  }
 }
 
 function nextScanLabel(s: SavedSearch): string | null {

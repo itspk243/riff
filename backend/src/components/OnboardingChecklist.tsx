@@ -82,13 +82,17 @@ export default function OnboardingChecklist({ token, plan }: Props) {
       title: 'Install Riffly in Chrome',
       description: 'Riffly lives in your browser toolbar. Open a profile, click the icon, get a draft.',
       done: !!status.extensionUsed,
-      action: { label: 'Get the extension', href: '#install' },
+      action: { label: 'Install steps', href: '#install-steps' },
     },
     {
       id: 'first-draft',
       title: 'Generate your first draft',
       description: 'Open any LinkedIn, GitHub, or Wellfound profile and click the Riffly icon. Three variants in 15 seconds.',
       done: !!status.extensionUsed,
+      action: {
+        label: 'Open LinkedIn',
+        href: 'https://www.linkedin.com/feed/',
+      },
     },
   ];
 
@@ -96,14 +100,16 @@ export default function OnboardingChecklist({ token, plan }: Props) {
     steps.push({
       id: 'spec',
       title: 'Add a job spec for fit-scoring',
-      description: 'Riffly will live-score every profile you visit against your active spec.',
+      description: 'Open any candidate profile, click the Riffly icon, then "Add a job spec" inside the popup.',
       done: !!status.firstSpec,
+      action: { label: 'Where?', href: '#install-steps' },
     });
     steps.push({
       id: 'search',
       title: 'Track your first LinkedIn search',
       description: 'Paste a search URL — Riffly auto-ranks results and surfaces top matches in your daily digest.',
       done: !!status.firstSearch,
+      action: { label: 'Add search', href: '#digest-prefs' },
     });
   }
 

@@ -562,57 +562,11 @@ export default function Dashboard() {
             </div>
           )}
 
-          {/* Extension hero — always visible, prominent for new users.
-              First thing every user sees after sign in.
-              Without the extension, the product does nothing — so this is
-              the highest-priority action for any user who hasn't set it up. */}
-          {(me?.usage?.all_time ?? 0) === 0 ? (
-            <section style={extHeroNewStyle}>
-              <div style={extHeroEyebrowStyle}>Step 1 · 30 seconds</div>
-              <div style={extHeroTitleStyle}>Install the Riffly extension</div>
-              <p style={extHeroBodyStyle}>
-                Riffly lives in your Chrome toolbar. Open a LinkedIn, GitHub, or Wellfound
-                profile, click the icon, and Riffly drafts the message.
-              </p>
-              <div style={extHeroBtnRowStyle}>
-                {CHROME_STORE_URL ? (
-                  <>
-                    <a href={CHROME_STORE_URL} target="_blank" rel="noopener noreferrer" style={primaryBtnStyle} className="riff-btn">
-                      Add to Chrome →
-                    </a>
-                    <a href="#install-steps" style={ghostBtnStyle} className="riff-ghost-btn">How to install ↓</a>
-                  </>
-                ) : (
-                  <>
-                    <span style={{ ...primaryBtnStyle, opacity: 0.55, cursor: 'default' }}>
-                      Coming to Chrome Web Store
-                    </span>
-                    <span style={{ fontSize: 12, color: '#888', alignSelf: 'center' }}>
-                      Listing in review — we'll email you when it's live.
-                    </span>
-                  </>
-                )}
-              </div>
-            </section>
-          ) : (
-            <section style={extHeroCompactStyle}>
-              <div style={{ flex: 1 }}>
-                <strong>Riffly extension</strong>
-                <div style={{ fontSize: 12, color: '#777', marginTop: 2 }}>
-                  {CHROME_STORE_URL
-                    ? 'Set up Riffly on a new machine?'
-                    : 'Need to reinstall? The Chrome Web Store listing is in review.'}
-                </div>
-              </div>
-              {CHROME_STORE_URL && (
-                <a href={CHROME_STORE_URL} target="_blank" rel="noopener noreferrer" style={ghostBtnSmStyle}>
-                  Add to Chrome →
-                </a>
-              )}
-            </section>
-          )}
-
-          {/* Profile header */}
+          {/* Profile header.
+              The "Install the Riffly extension" prompt that used to live here
+              was redundant with the OnboardingChecklist below AND with the
+              detailed install walkthrough at the bottom of the page. Removed
+              to cut three duplicate install CTAs down to one progress card. */}
           <section style={profileStyle}>
             {me?.avatar_url ? (
               <img src={me.avatar_url} alt="" referrerPolicy="no-referrer" style={avatarStyle} />
