@@ -983,38 +983,57 @@
     }
 
     footer {
-      padding: 32px 0 56px;
+      padding: 48px 0 32px;
       border-top: 1px solid var(--line);
       color: var(--muted);
       font-size: 13px;
     }
 
-    footer .row {
-      display: flex;
-      justify-content: space-between;
-      flex-wrap: wrap;
-      gap: 16px;
-      align-items: center;
+    footer a {
+      color: var(--muted);
+      text-decoration: none;
+      display: block;
     }
 
-    footer .links {
-      display: flex;
-      gap: 28px;
-      flex-wrap: wrap;
+    footer a:hover { color: var(--ink); }
+
+    .footer-grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr 1fr;
+      gap: 32px;
+      margin-bottom: 32px;
     }
 
-    footer a:hover {
-      color: var(--ink);
+    .footer-brand { max-width: 280px; }
+    .footer-tag { font-size: 12.5px; line-height: 1.5; }
+
+    .footer-col { display: flex; flex-direction: column; gap: 8px; }
+    .footer-col-title {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      font-weight: 700;
+      color: var(--ink-2);
+      margin-bottom: 4px;
+    }
+    .footer-text { color: var(--muted); }
+
+    .footer-bottom {
+      padding-top: 20px;
+      border-top: 1px solid var(--line);
+      font-size: 12px;
+      color: var(--muted);
     }
 
-    @media (max-width: 640px) {
-      footer .row {
-        flex-direction: column;
-        align-items: flex-start;
+    @media (max-width: 720px) {
+      .footer-grid {
+        grid-template-columns: 1fr 1fr;
       }
-
-      footer .links {
-        gap: 16px;
+    }
+    @media (max-width: 480px) {
+      .footer-grid {
+        grid-template-columns: 1fr;
+        gap: 24px;
       }
     }
 
@@ -1102,6 +1121,18 @@
           </div>
           <div class="hero-meta">
             No card<span class="hero-meta-dot"></span>5 drafts a week, free<span class="hero-meta-dot"></span>You always edit before sending
+          </div>
+
+          <!-- Mobile-only: phone visitors can't install a Chrome extension
+               from a phone. Capture an email so we can ping them on desktop.
+               Hidden on desktop via @media (min-width: 769px) below. -->
+          <div id="mobile-install-capture">
+            <div class="mic-headline">On your phone? Riffly's a desktop Chrome extension.</div>
+            <form id="mic-form" class="mic-form" novalidate>
+              <input type="email" id="mic-email" name="email" placeholder="you@email.com" required autocomplete="email" inputmode="email" />
+              <button type="submit" id="mic-submit">Email me a desktop link</button>
+            </form>
+            <div id="mic-status" class="mic-status" aria-live="polite"></div>
           </div>
         </div>
 
@@ -1255,9 +1286,37 @@
     </div>
   </section>
 
-  <section id="vs-chatgpt" style="background: var(--surface); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);">
-    <div class="wrap" style="padding-top: clamp(48px, 8vw, 80px); padding-bottom: clamp(48px, 8vw, 80px);">
-      <h2>"Couldn't I just paste the profile into ChatGPT?"</h2>
+  <section id="three-options" style="background: var(--surface); border-top: 1px solid var(--line);">
+    <div class="wrap" style="padding-top: clamp(48px, 8vw, 80px); padding-bottom: clamp(24px, 5vw, 32px);">
+      <h2>The third option.</h2>
+      <p class="sub">Cold outreach today is mostly two camps. Both have a problem.</p>
+
+      <div class="three-grid">
+        <div class="three-col">
+          <div class="three-eyebrow">Automation tools</div>
+          <div class="three-name">Apollo · Lemlist · HeyReach · Phantombuster</div>
+          <div class="three-text">Script clicks and connection requests inside LinkedIn. Fast at scale. Also exactly what LinkedIn detects and bans for. Recruiter and Sales Navigator seats are extra-flagged.</div>
+          <div class="three-tag three-tag-bad">Account risk</div>
+        </div>
+        <div class="three-col">
+          <div class="three-eyebrow">DIY with ChatGPT</div>
+          <div class="three-name">A new tab, a copy-paste, a "write me a cold message"</div>
+          <div class="three-text">Safe — but the model only sees what you bothered to paste. Output reaches for the same template phrases ChatGPT reaches for in every other window. One draft per session.</div>
+          <div class="three-tag three-tag-bad">Generic output</div>
+        </div>
+        <div class="three-col three-col-riff">
+          <div class="three-eyebrow three-eyebrow-riff">Riffly</div>
+          <div class="three-name">A Chrome extension that reads what's already on screen</div>
+          <div class="three-text">Auto-parses the candidate's About, headline, role, pinned repos. 40+ template phrases blacklisted. Three variants per click. You review and copy-paste manually — never types into LinkedIn.</div>
+          <div class="three-tag three-tag-good">Read-only · 3 variants per click</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="vs-chatgpt" style="background: var(--surface); border-bottom: 1px solid var(--line);">
+    <div class="wrap" style="padding-top: clamp(24px, 5vw, 32px); padding-bottom: clamp(48px, 8vw, 80px);">
+      <h2>"But couldn't I just paste the profile into ChatGPT?"</h2>
       <p class="sub">You could. Most people quietly do. Here's what's actually different when you stop.</p>
 
       <div class="vs-grid">
@@ -1342,6 +1401,107 @@
       line-height: 1;
     }
     .vs-col-riff .vs-list li::before { color: var(--accent); }
+
+    /* Three-options grid */
+    .three-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      max-width: 920px;
+      margin: 32px auto 8px;
+    }
+    @media (max-width: 860px) {
+      .three-grid { grid-template-columns: 1fr; }
+    }
+    .three-col {
+      padding: 22px;
+      background: var(--bg);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .three-col-riff {
+      border-color: var(--ink);
+      background: #fff;
+    }
+    .three-eyebrow {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      font-weight: 700;
+      color: var(--muted);
+    }
+    .three-eyebrow-riff { color: var(--accent); }
+    .three-name { font-size: 14px; font-weight: 600; color: var(--ink); line-height: 1.35; }
+    .three-text { font-size: 13.5px; color: var(--ink-2); line-height: 1.55; flex: 1; }
+    .three-tag {
+      display: inline-block;
+      align-self: flex-start;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      padding: 4px 10px;
+      border-radius: 4px;
+    }
+    .three-tag-bad { background: #fdf2ee; color: var(--accent); border: 1px solid #f0d8cd; }
+    .three-tag-good { background: #e7f4ec; color: #1a7a48; border: 1px solid #c8e6d4; }
+
+    /* Mobile install capture — desktop hides it entirely */
+    #mobile-install-capture {
+      margin: 24px 0 0;
+      padding: 16px;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      display: none;
+    }
+    @media (max-width: 768px) {
+      #mobile-install-capture { display: block; }
+    }
+    .mic-headline {
+      font-size: 13px;
+      color: var(--ink);
+      font-weight: 600;
+      margin-bottom: 10px;
+      line-height: 1.4;
+    }
+    .mic-form {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .mic-form input {
+      flex: 1;
+      min-width: 200px;
+      padding: 10px 12px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      font-size: 14px;
+      font-family: inherit;
+      background: var(--bg);
+      color: var(--ink);
+      box-sizing: border-box;
+    }
+    .mic-form input:focus { outline: none; border-color: var(--ink); }
+    .mic-form button {
+      padding: 10px 14px;
+      background: var(--ink);
+      color: #fff;
+      border: 1px solid var(--ink);
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      font-family: inherit;
+      flex-shrink: 0;
+    }
+    .mic-form button:disabled { opacity: 0.5; cursor: wait; }
+    .mic-status { margin-top: 8px; font-size: 12.5px; color: var(--muted); min-height: 1.2em; }
+    .mic-status.success { color: var(--green, #1a7a48); }
+    .mic-status.error { color: var(--accent); }
   </style>
 
   <section id="pricing">
@@ -1463,16 +1623,40 @@
 
   <footer>
     <div class="wrap">
-      <div class="row">
-        <div style="display: flex; align-items: center; gap: 8px;">
-          <span class="logo-mark" style="width: 16px; height: 16px;"></span>
-          <span>Riffly</span>
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+            <span class="logo-mark" style="width: 16px; height: 16px;"></span>
+            <span style="font-weight: 600;">Riffly</span>
+          </div>
+          <div class="footer-tag">A Chrome extension for cold messages that get replies.</div>
         </div>
-        <div class="links">
+
+        <div class="footer-col">
+          <div class="footer-col-title">Product</div>
+          <a href="#how">How it works</a>
+          <a href="#pricing">Pricing</a>
+          <a href="#faq">FAQ</a>
+          <a href="/signup">Sign in</a>
+        </div>
+
+        <div class="footer-col">
+          <div class="footer-col-title">Company</div>
           <a href="/privacy">Privacy</a>
           <a href="/terms">Terms</a>
-          <a href="mailto:support@rifflylabs.com?subject=Riffly%20feedback">Tell us what's broken</a>
+          <a href="mailto:support@rifflylabs.com?subject=Riffly%20feedback">Support</a>
+          <a href="mailto:support@rifflylabs.com?subject=Riffly%20feedback%20-%20broken">Report a bug</a>
         </div>
+
+        <div class="footer-col">
+          <div class="footer-col-title">Status</div>
+          <a href="https://github.com/itspk243/riff/commits/main" target="_blank" rel="noopener noreferrer">Changelog</a>
+          <span class="footer-text">All systems normal</span>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        <span>© 2026 Riffly Labs · Built in beta</span>
       </div>
     </div>
   </footer>
@@ -1529,6 +1713,56 @@
     })();
 
     // (Typewriter reveal is CSS-only now — no JS hook needed.)
+
+    // Mobile install-capture form. Only mobile users can see it (CSS gates
+    // by viewport width), so we always wire — JS doesn't double-check.
+    (function () {
+      var form = document.getElementById('mic-form');
+      if (!form) return;
+      var btn = document.getElementById('mic-submit');
+      var input = document.getElementById('mic-email');
+      var status = document.getElementById('mic-status');
+
+      form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        var email = (input.value || '').trim();
+        if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+          status.textContent = 'That doesn\'t look like a valid email.';
+          status.className = 'mic-status error';
+          return;
+        }
+        btn.disabled = true;
+        var oldLabel = btn.textContent;
+        btn.textContent = 'Sending…';
+        status.textContent = '';
+        status.className = 'mic-status';
+
+        fetch('/api/install-reminder', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: email })
+        })
+          .then(function (r) { return r.json(); })
+          .then(function (j) {
+            btn.disabled = false;
+            btn.textContent = oldLabel;
+            if (j && j.ok) {
+              status.textContent = 'Sent. Check ' + email + ' on your desktop.';
+              status.className = 'mic-status success';
+              input.value = '';
+            } else {
+              status.textContent = (j && j.error) || 'Something went wrong. Try again.';
+              status.className = 'mic-status error';
+            }
+          })
+          .catch(function () {
+            btn.disabled = false;
+            btn.textContent = oldLabel;
+            status.textContent = 'Network error. Try again in a moment.';
+            status.className = 'mic-status error';
+          });
+      });
+    })();
   </script>
 </body>
 </html>
