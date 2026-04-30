@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="How Riffly handles your data and the data of the candidates you draft messages to.">
+  <title>Security — Riffly</title>
+  <style>
+    :root {
+      --bg: #faf9f6;
+      --surface: #ffffff;
+      --ink: #111110;
+      --ink-2: #2a2a28;
+      --muted: #6b6a65;
+      --line: #e7e4dc;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+      font-size: clamp(14px, 2vw, 16px);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+    a { color: inherit; text-decoration: underline; }
+    .wrap { max-width: 760px; margin: 0 auto; padding: clamp(16px, 4vw, 64px); }
+    header { border-bottom: 1px solid var(--line); padding: 32px 0; margin-bottom: 32px; }
+    h1 { font-size: 32px; font-weight: 600; margin: 0 0 8px; letter-spacing: -0.02em; }
+    h2 { font-size: 20px; font-weight: 600; margin: 32px 0 16px; letter-spacing: -0.01em; }
+    h3 { font-size: 15px; font-weight: 600; margin: 18px 0 8px; }
+    p { margin: 0 0 16px; color: var(--ink-2); line-height: 1.65; }
+    ul { margin: 16px 0; padding-left: 24px; }
+    li { margin-bottom: 8px; color: var(--ink-2); }
+    .subtitle { color: var(--muted); font-size: 14px; }
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      margin: 18px 0;
+    }
+    @media (max-width: 540px) { .stat-grid { grid-template-columns: 1fr; } }
+    .stat {
+      padding: 14px 16px;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+    }
+    .stat .label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 700; color: var(--muted); margin-bottom: 4px; }
+    .stat .value { font-size: 14px; color: var(--ink); font-weight: 500; }
+    .table-wrap { overflow-x: auto; margin: 18px 0; }
+    table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+    th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+    th { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 700; }
+    td { color: var(--ink-2); }
+    .pill {
+      display: inline-block;
+      padding: 2px 8px;
+      font-size: 11px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      font-weight: 700;
+      border-radius: 4px;
+    }
+    .pill-ok { background: #e7f4ec; color: #1a7a48; border: 1px solid #c8e6d4; }
+    .pill-na { background: #fafaf7; color: var(--muted); border: 1px solid var(--line); }
+    .pill-soon { background: #fff4d8; color: #6b4a14; border: 1px solid #ead8a8; }
+    footer { margin-top: 48px; padding-top: 32px; border-top: 1px solid var(--line); font-size: 13px; color: var(--muted); }
+    footer a { color: var(--muted); }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap">
+      <h1>Security &amp; data handling</h1>
+      <p class="subtitle">A plain-English version of how Riffly handles your data and the data of the candidates you draft messages to. Last reviewed April 2026.</p>
+    </div>
+  </header>
+
+  <main>
+    <div class="wrap">
+      <p>Riffly is a small team building a product that touches LinkedIn profile data and recruiter outreach. We take that seriously. This page is what we'd want to see from any vendor we'd install in our own browser — written without the legalese version.</p>
+
+      <h2>The short version</h2>
+      <div class="stat-grid">
+        <div class="stat">
+          <div class="label">Data residency</div>
+          <div class="value">United States (us-east-1)</div>
+        </div>
+        <div class="stat">
+          <div class="label">Profile content stored</div>
+          <div class="value">No — used once, then dropped</div>
+        </div>
+        <div class="stat">
+          <div class="label">Encryption at rest</div>
+          <div class="value">AES-256 (Supabase / Stripe)</div>
+        </div>
+        <div class="stat">
+          <div class="label">Encryption in transit</div>
+          <div class="value">TLS 1.2+ everywhere</div>
+        </div>
+        <div class="stat">
+          <div class="label">DPA available</div>
+          <div class="value">Yes — email support</div>
+        </div>
+        <div class="stat">
+          <div class="label">SOC 2</div>
+          <div class="value">Not yet — we're early-stage</div>
+        </div>
+      </div>
+
+      <h2>What we collect, what we don't</h2>
+
+      <h3>About you (the recruiter / founder / operator using Riffly)</h3>
+      <ul>
+        <li>Your email address and Google sign-in identifier (so you can log in).</li>
+        <li>Your subscription state and billing identifiers (managed by Stripe — we never see your card details).</li>
+        <li>Generation events — a per-user counter so we can enforce free-tier limits and show your dashboard stats. We log only that a generation happened, not what it said.</li>
+        <li>Saved job specs and saved searches you create yourself, plus pitch templates you save. You can delete any of these from the dashboard.</li>
+      </ul>
+
+      <h3>About candidates (the people you draft messages to)</h3>
+      <ul>
+        <li>Their public profile content (name, headline, About, role, recent post you paste in) is sent to our backend so the model can reference it.</li>
+        <li>Their content is dropped immediately after the generation completes. We do not persist it. There is no candidate database.</li>
+        <li>The generated draft is sent back to your browser and never logged on our side.</li>
+        <li>We do not crawl LinkedIn in the background. We do not scrape connections. We never read activity feeds. The extension only sees the profile that's already on your screen.</li>
+      </ul>
+
+      <h2>Where the data lives</h2>
+      <p>Application data (your account, subscription, saved specs/searches) is stored in <strong>Supabase</strong>, hosted on AWS in <strong>us-east-1 (Northern Virginia)</strong>. EU customers can request data export or deletion at any time — email <a href="mailto:support@rifflylabs.com?subject=GDPR%20request">support@rifflylabs.com</a>.</p>
+      <p>We use Postgres Row-Level Security so each user can only read their own rows. Service-role writes are confined to our backend.</p>
+
+      <h2>Sub-processors</h2>
+      <p>The third parties Riffly shares data with, what they do, and where they sit:</p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Vendor</th>
+              <th>What it does</th>
+              <th>Region</th>
+              <th>Their certs</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Supabase</strong></td>
+              <td>Postgres database, Auth (Google OAuth), session management</td>
+              <td>US</td>
+              <td>SOC 2 Type 2, GDPR-compliant DPA</td>
+            </tr>
+            <tr>
+              <td><strong>Vercel</strong></td>
+              <td>Application hosting and serverless functions</td>
+              <td>US (global edge)</td>
+              <td>SOC 2 Type 2, ISO 27001</td>
+            </tr>
+            <tr>
+              <td><strong>Stripe</strong></td>
+              <td>Subscription billing</td>
+              <td>US</td>
+              <td>PCI DSS Level 1, SOC 1, SOC 2</td>
+            </tr>
+            <tr>
+              <td><strong>Resend</strong></td>
+              <td>Transactional email (digest, install reminders)</td>
+              <td>US</td>
+              <td>SOC 2 Type 2 (Resend) + AWS SES underneath</td>
+            </tr>
+            <tr>
+              <td><strong>LLM API provider</strong></td>
+              <td>Drafts the message text from profile inputs</td>
+              <td>US</td>
+              <td>SOC 2 Type 2, contractual no-training-on-customer-data</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p style="font-size: 13px; color: var(--muted);">We don't publicly name the LLM provider — none of our direct competitors do, and the choice changes as model quality shifts. Enterprise customers under NDA can request the full provider list and switch our routing if you need a specific vendor.</p>
+
+      <h2>What we don't do</h2>
+      <ul>
+        <li>We don't sell, rent, or share your data with third parties for advertising.</li>
+        <li>We don't train models on your inputs. The LLM provider's contract prohibits training on customer data.</li>
+        <li>We don't store candidate profile content beyond a single generation.</li>
+        <li>We don't access your LinkedIn account, password, or messages — we only read the page you're already viewing.</li>
+        <li>We don't automate sending. Manual copy-paste is the entire point.</li>
+      </ul>
+
+      <h2>Compliance status</h2>
+      <p>Riffly is early-stage. We're transparent about where we are:</p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Item</th>
+              <th>Status</th>
+              <th>Notes</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>GDPR-aligned DPA</td>
+              <td><span class="pill pill-ok">Available</span></td>
+              <td>Email support and we'll send our standard DPA, customizable for your team.</td>
+            </tr>
+            <tr>
+              <td>SOC 2 Type 1</td>
+              <td><span class="pill pill-soon">On roadmap</span></td>
+              <td>Targeted once paid usage justifies the audit cost (~$25–60K).</td>
+            </tr>
+            <tr>
+              <td>SOC 2 Type 2</td>
+              <td><span class="pill pill-na">Not yet</span></td>
+              <td>Requires Type 1 first, plus 6+ months of audited operating window.</td>
+            </tr>
+            <tr>
+              <td>ISO 27001</td>
+              <td><span class="pill pill-na">Not yet</span></td>
+              <td>Less common in our segment; may pursue alongside SOC 2.</td>
+            </tr>
+            <tr>
+              <td>HIPAA</td>
+              <td><span class="pill pill-na">Out of scope</span></td>
+              <td>We don't process health information; not pursuing.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h2>Account and access</h2>
+      <ul>
+        <li>Sign-in is Google OAuth (no passwords on our side) or magic-link email.</li>
+        <li>Session tokens use Supabase JWTs with 1-hour access lifetime and silent refresh — invalidated on sign-out.</li>
+        <li>Service-role keys live only on Vercel (server-side) and are rotated on suspected exposure.</li>
+        <li>Internal access is limited to the Riffly team (currently very small) — every backend write is logged at the database level.</li>
+      </ul>
+
+      <h2>Incident response</h2>
+      <p>If we discover a security incident affecting your data, we'll notify affected accounts within 72 hours of confirmation, including: what happened, what data was involved, what we've done, and what (if anything) you should do.</p>
+
+      <h2>Vulnerability disclosure</h2>
+      <p>If you find a security issue, please email <a href="mailto:support@rifflylabs.com?subject=Security">support@rifflylabs.com</a> with subject "Security." We'll respond within 24 hours. We don't run a paid bug bounty yet, but we will publicly thank you (with permission) and we won't sue you for responsibly disclosed findings.</p>
+
+      <h2>Data deletion</h2>
+      <p>You can request deletion of your account and all associated data at any time by emailing <a href="mailto:support@rifflylabs.com?subject=Delete%20account">support@rifflylabs.com</a>. We'll process the deletion within 7 days and confirm by email. Backup copies in Supabase's automated backup system age out within 30 days and we never restore from them once a deletion is requested.</p>
+
+      <h2>Questions</h2>
+      <p>If your procurement, legal, or InfoSec team needs anything not covered here — sub-processor list under NDA, custom DPA terms, security questionnaire, evidence files for any of the controls above — email <a href="mailto:support@rifflylabs.com?subject=Security%20questions">support@rifflylabs.com</a>. We'll get back within one business day.</p>
+    </div>
+  </main>
+
+  <footer>
+    <div class="wrap">
+      <p><a href="/">Back to Riffly</a> · <a href="/privacy">Privacy Policy</a> · <a href="/terms">Terms of Service</a></p>
+    </div>
+  </footer>
+</body>
+</html>
