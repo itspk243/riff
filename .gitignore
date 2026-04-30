@@ -34,3 +34,8 @@ yarn-debug.log*
 # manually to the Chrome Web Store dev console.
 backend/public/riff-extension.zip
 backend/public/*.zip
+
+# Build artifacts
+riffly-extension-*.zip
+zi[A-Za-z0-9]*
+
