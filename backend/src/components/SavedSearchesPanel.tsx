@@ -270,7 +270,7 @@ export default function SavedSearchesPanel({ token, plan }: Props) {
             against your active job specs. Top matches surface here every day.
           </div>
           <div style={{ fontSize: 13, color: '#888' }}>
-            Plus tier · $19.99/mo · upgrade in the Subscription section above.
+            Plus tier · $25/mo (600 drafts/month) · upgrade in the Subscription section above.
           </div>
         </div>
       </section>

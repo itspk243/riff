@@ -42,18 +42,27 @@ export default async function handler(
     }
   }
 
-  let remaining: number | null = null;
+  let usageSnapshot: import('../../lib/types').UsageSnapshot | undefined;
   if (user) {
     const quota = await checkQuota(user);
+    usageSnapshot = {
+      used: quota.used,
+      limit: quota.limit,
+      remaining: quota.remaining,
+      plan: quota.plan,
+      resetsAt: quota.resetsAt,
+      resetsLabel: quota.resetsLabel,
+      windowKind: quota.windowKind,
+    };
     if (!quota.ok) {
       return res.status(402).json({
         ok: false,
         error: quota.reason,
-        remainingThisWeek: 0,
+        remainingThisWeek: 0, // legacy field, kept for old extension versions
         plan: user.plan,
+        usage: usageSnapshot,
       });
     }
-    remaining = quota.remaining;
   }
 
   // Global daily circuit breaker — even after per-user quota passes, this
@@ -115,15 +124,25 @@ export default async function handler(
     ? variants
     : variants.filter(v => v.type === 'cold_opener');
 
+  // Decrement remaining in the snapshot we return to the client (this
+  // generation just counted). Saves the dashboard one round-trip.
+  const finalUsage = usageSnapshot
+    ? {
+        ...usageSnapshot,
+        used: usageSnapshot.used + 1,
+        remaining: usageSnapshot.remaining === null ? null : Math.max(0, usageSnapshot.remaining - 1),
+      }
+    : undefined;
+
   return res.status(200).json({
     ok: true,
     variants: visibleVariants,
-    remainingThisWeek: remaining === null ? undefined : remaining - 1,
+    remainingThisWeek: finalUsage?.windowKind === 'weekly' ? (finalUsage.remaining ?? undefined) : undefined,
     plan: user?.plan,
-    // Surface the upgrade nudge when free users hit the variant ceiling.
     upgradeMessage: !isPaid
-      ? 'Upgrade to Pro for the full sequence — follow-up + breakup variants automatically.'
+      ? 'Upgrade to Pro for the full sequence (follow-up + breakup variants).'
       : undefined,
+    usage: finalUsage,
   });
 }
 

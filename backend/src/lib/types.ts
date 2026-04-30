@@ -40,19 +40,36 @@ export interface MessageVariant {
   text: string;
 }
 
+// Snapshot of where the user stands against their quota at the moment
+// this generation either ran or was blocked. Mirrors lib/quota.QuotaInfo
+// (kept as its own type here to avoid circular import + so the extension
+// has a self-contained shape to read).
+export interface UsageSnapshot {
+  used: number;
+  limit: number | null;
+  remaining: number | null;
+  plan: Plan;
+  resetsAt: string | null;     // ISO; null on weekly window
+  resetsLabel: string;         // "Jun 1" or "weekly" or "in 24 hours"
+  windowKind: 'monthly' | 'weekly';
+}
+
 export interface GenerateResponse {
   ok: boolean;
   variants?: MessageVariant[];
   error?: string;
-  remainingThisWeek?: number; // for free-tier users
+  /** @deprecated use `usage.remaining` — kept for older extension versions. */
+  remainingThisWeek?: number;
   plan?: Plan;
-  upgradeMessage?: string; // shown when free users hit the variant ceiling
+  upgradeMessage?: string;
+  /** Rich quota snapshot for dashboard + extension warning bars. */
+  usage?: UsageSnapshot;
 }
 
 // Plans are ranked by capability:
 //   free  → trial (5 drafts/week, cold opener only)
-//   pro   → unlimited drafts, all 3 variants, templates, follow-up loop ($14.99/mo)
-//   plus  → Pro + Active Profile Assist + Saved-Search Digest ($19.99/mo)
+//   pro   → 200 drafts/month, all 3 variants, templates, follow-up loop ($15/mo)
+//   plus  → 600 drafts/month, Pro + Active Profile Assist + Saved-Search Digest ($25/mo)
 //   team  → legacy, kept for grandfathered subscribers ($99/mo, no longer offered to new customers)
 export type Plan = 'free' | 'pro' | 'plus' | 'team';
 

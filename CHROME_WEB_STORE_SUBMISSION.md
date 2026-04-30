@@ -67,8 +67,8 @@ WHAT IT DOESN'T DO
 
 PRICING
 • Free — 5 drafts a week, all features unlocked. No credit card.
-• Pro ($14.99/mo) — Unlimited drafts, voice fingerprint, draft history.
-• Plus ($19.99/mo) — Everything in Pro plus saved-search tracking, daily candidate digest, active profile fit-scoring.
+• Pro ($15/mo) — 200 drafts a month, voice fingerprint, draft history.
+• Plus ($25/mo) — 600 drafts a month plus saved-search tracking, daily candidate digest, active profile fit-scoring.
 
 PRIVACY
 We use Anthropic's Claude API to generate drafts. Your profile snapshot and pitch are sent there, processed, and returned. Full privacy policy at rifflylabs.com/privacy. Sub-processors, retention, and your rights all listed.

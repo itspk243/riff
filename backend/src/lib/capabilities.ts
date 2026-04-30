@@ -38,7 +38,7 @@ export function hasFollowUpLoop(plan: Plan | null | undefined): boolean {
 
 /** Active Profile Assist — live fit-scoring against saved job specs as the
  *  user browses LinkedIn. Each scored profile costs ~$0.005 in Claude calls,
- *  so this is gated to Plus tier ($19.99/mo) where margin covers it. */
+ *  so this is gated to Plus tier ($25/mo) where margin covers it. */
 export function hasActiveProfileAssist(plan: Plan | null | undefined): boolean {
   return plan === 'plus' || plan === 'team';
 }

@@ -9,8 +9,8 @@ export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 // Active price IDs (set via Vercel env). The script in scripts/ creates
 // these in Stripe and the planFromPriceId() helper in webhook.ts maps them
 // to plan labels.
-export const PRICE_PRO_MONTHLY = process.env.STRIPE_PRICE_PRO_MONTHLY!;        // $14.99/mo
-export const PRICE_PLUS_MONTHLY = process.env.STRIPE_PRICE_PLUS_MONTHLY || ''; // $19.99/mo (agentic)
+export const PRICE_PRO_MONTHLY = process.env.STRIPE_PRICE_PRO_MONTHLY!;        // $15/mo, 200 drafts
+export const PRICE_PLUS_MONTHLY = process.env.STRIPE_PRICE_PLUS_MONTHLY || ''; // $25/mo, 600 drafts (agentic)
 export const PRICE_TEAM_MONTHLY = process.env.STRIPE_PRICE_TEAM_MONTHLY || ''; // legacy
 // $5/mo "Test" tier — devmode-only smoke-test tier. Hidden from real users.
 export const PRICE_TEST_MONTHLY = process.env.STRIPE_PRICE_TEST_MONTHLY || '';

@@ -11,8 +11,8 @@ import { serviceClient } from '../../../lib/supabase';
  * Map a Stripe price ID to our internal plan label.
  *
  * Tier mapping (April 2026):
- *   STRIPE_PRICE_PLUS_MONTHLY ($19.99) → 'plus'  (agentic features)
- *   STRIPE_PRICE_PRO_MONTHLY  ($14.99) → 'pro'   (drafting features)
+ *   STRIPE_PRICE_PLUS_MONTHLY ($25) → 'plus'  (agentic features, 600 drafts/mo)
+ *   STRIPE_PRICE_PRO_MONTHLY  ($15) → 'pro'   (drafting features, 200 drafts/mo)
  *   STRIPE_PRICE_TEST_MONTHLY ($5)     → 'pro'   (devmode smoke-test, full Pro features)
  *   STRIPE_PRICE_TEAM_MONTHLY ($99)    → 'team'  (legacy, grandfathered)
  *   anything unknown                   → 'pro'   (defensive default + warning log)
@@ -20,7 +20,7 @@ import { serviceClient } from '../../../lib/supabase';
 function planFromPriceId(priceId: string): 'pro' | 'plus' | 'team' {
   if (priceId === process.env.STRIPE_PRICE_PLUS_MONTHLY) return 'plus';
   if (priceId === process.env.STRIPE_PRICE_TEAM_MONTHLY) return 'team';
-  // Pro ($14.99), Test ($5), grandfathered $39 Pro all map to plan='pro'.
+  // Pro ($15, legacy $14.99), Test ($5), grandfathered $39 Pro all map to plan='pro'.
   if (
     priceId !== process.env.STRIPE_PRICE_PRO_MONTHLY &&
     priceId !== process.env.STRIPE_PRICE_TEST_MONTHLY

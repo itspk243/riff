@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 //
 // One-shot Stripe setup. Idempotent — safe to re-run.
-// Creates: Pro product + price ($14.99/mo), Plus product + price ($19.99/mo),
+// Creates: Pro product + price ($15/mo), Plus product + price ($25/mo),
 // and a FOUNDER50 coupon (50% off for 3 months, max 100 redemptions).
 //
 // Usage:
@@ -105,20 +105,22 @@ async function findOrCreateCoupon() {
   console.log('Setting up Stripe products...\n');
 
   // Current pricing (rifflylabs.com landing + dashboard):
-  //   Pro  — $14.99/mo  (drafting features)
-  //   Plus — $19.99/mo  (agentic features: saved-search digest, profile assist)
+  //   Pro  — $15/mo, 200 drafts/month  (drafting features)
+  //   Plus — $25/mo, 600 drafts/month  (agentic features: saved-search digest, profile assist)
   // Team is grandfathered legacy ($99/mo). We still create it so the price id
-  // exists in env — but we don't surface it in the UI.
+  // exists in env — but we don't surface it in the UI. Note: priceId is
+  // versioned (v3, v2, etc.) every time we change the dollar amount, because
+  // Stripe doesn't allow editing live prices in place.
   const pro = await findOrCreateProductWithPrice({
-    riffId: 'riff_pro_monthly_v2',
+    riffId: 'riff_pro_monthly_v3',
     name: 'Riffly Pro',
-    unitAmount: 1499,
+    unitAmount: 1500,
   });
 
   const plus = await findOrCreateProductWithPrice({
-    riffId: 'riff_plus_monthly_v1',
+    riffId: 'riff_plus_monthly_v2',
     name: 'Riffly Plus',
-    unitAmount: 1999,
+    unitAmount: 2500,
   });
 
   const team = await findOrCreateProductWithPrice({

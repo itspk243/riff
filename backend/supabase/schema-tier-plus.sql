@@ -2,7 +2,7 @@
 -- Run via Supabase SQL editor. Idempotent — safe to re-run.
 
 -- The original schema constrains plan to ('free', 'pro', 'team').
--- We're adding 'plus' for the $19.99/mo tier with agentic features
+-- We're adding 'plus' for the $25/mo tier with agentic features (600 drafts/mo)
 -- (Active Profile Assist + Saved-Search Daily Digest).
 
 alter table public.users

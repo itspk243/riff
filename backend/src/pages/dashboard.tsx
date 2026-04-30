@@ -4,6 +4,7 @@
 import { useEffect, useState } from 'react';
 import Head from 'next/head';
 import SavedSearchesPanel from '../components/SavedSearchesPanel';
+import UsagePanel from '../components/UsagePanel';
 import OnboardingChecklist from '../components/OnboardingChecklist';
 import JobSpecsPanel from '../components/JobSpecsPanel';
 import VoiceFingerprintPanel from '../components/VoiceFingerprintPanel';
@@ -59,8 +60,8 @@ function planLabel(plan?: string): string {
 }
 
 function planPrice(plan?: string): string {
-  if (plan === 'plus') return '$19.99 / month';
-  if (plan === 'pro') return '$14.99 / month';
+  if (plan === 'plus') return '$25 / month';
+  if (plan === 'pro') return '$15 / month';
   if (plan === 'team') return '$99 / month · legacy';
   return 'Free · 5 drafts/week';
 }
@@ -739,16 +740,16 @@ export default function Dashboard() {
                 <div style={{ ...tierCardStyle, ...(me?.plan === 'pro' ? {} : tierCardHighlightStyle) }} className={me?.plan !== 'pro' ? 'riff-popular' : ''}>
                   {me?.plan !== 'pro' && me?.plan !== 'plus' && <div style={tierBadgeStyle}>Most popular</div>}
                   <div style={tierNameStyle}>Pro</div>
-                  <div style={tierPriceStyle}>$14.99<span style={tierMoStyle}>/mo</span></div>
+                  <div style={tierPriceStyle}>$15<span style={tierMoStyle}>/mo</span></div>
                   <div style={tierBlurbStyle}>Everything you need to run cold outreach at speed.</div>
                   <ul style={tierListStyle}>
-                    <li><strong>Unlimited drafts</strong></li>
+                    <li><strong>200 drafts / month</strong></li>
                     <li><strong>All 3 variants</strong> (cold opener + follow-up + breakup)</li>
+                    <li>Voice fingerprint (drafts in your dialect)</li>
                     <li>Saved pitch templates, synced across devices</li>
                     <li>Auto follow-up loop (knows when to remind you)</li>
                     <li>7 languages</li>
                     <li>Cross-machine reply analytics</li>
-                    <li>Priority generation queue</li>
                     <li>Email support</li>
                   </ul>
                   {me?.plan === 'pro' ? (
@@ -756,7 +757,7 @@ export default function Dashboard() {
                   ) : me?.plan === 'plus' ? (
                     <button onClick={() => startCheckout('pro')} style={ghostBtnStyle} className="riff-ghost-btn">Switch to Pro</button>
                   ) : (
-                    <button onClick={() => startCheckout('pro')} style={primaryBtnStyle} className="riff-btn">Start Pro · $14.99/mo</button>
+                    <button onClick={() => startCheckout('pro')} style={primaryBtnStyle} className="riff-btn">Start Pro · $15/mo</button>
                   )}
                 </div>
 
@@ -769,24 +770,25 @@ export default function Dashboard() {
                 <div style={{ ...tierCardStyle, ...tierCardPlusStyle }}>
                   {me?.plan !== 'plus' && <div style={{ ...tierBadgeStyle, ...tierBadgePlusStyle }}>Power users</div>}
                   <div style={tierNameStyle}>Plus</div>
-                  <div style={tierPriceStyle}>$19.99<span style={tierMoStyle}>/mo</span></div>
-                  <div style={tierBlurbStyle}>Pro + live fit-scoring as you browse. Agentic finder rolling out.</div>
+                  <div style={tierPriceStyle}>$25<span style={tierMoStyle}>/mo</span></div>
+                  <div style={tierBlurbStyle}>Pro + 3x more drafts + live fit-scoring as you browse.</div>
                   <ul style={tierListStyle}>
+                    <li><strong>600 drafts / month (3× Pro)</strong></li>
                     <li>Everything in Pro</li>
-                    <li><strong>Active Profile Assist</strong> — live fit-scoring against your job specs as you browse</li>
+                    <li><strong>Active Profile Assist</strong>: live fit-scoring against your job specs as you browse</li>
                     <li>Up to 5 active job specs</li>
-                    <li><strong>Saved-Search Daily Digest</strong> — auto-rank profiles in your saved LinkedIn searches</li>
+                    <li><strong>Saved-Search Daily Digest</strong>: auto-rank profiles in your saved LinkedIn searches</li>
                     <li>Up to 10 saved search watches</li>
                   </ul>
                   <div style={plusBetaNoteStyle}>
-                    Plus is in beta. Active Profile Assist and the Saved-Search Daily Digest are both live. Subscribe now to lock in $19.99/mo for life.
+                    Plus is in beta. Active Profile Assist and the Saved-Search Daily Digest are both live. Current subscribers stay at $25/mo as long as the subscription stays active.
                   </div>
                   {me?.plan === 'plus' ? (
                     <button disabled style={{ ...primaryBtnStyle, opacity: 0.6, cursor: 'default' }}>Current plan</button>
                   ) : me?.plan === 'pro' ? (
-                    <button onClick={() => startCheckout('plus')} style={primaryBtnStyle} className="riff-btn">Upgrade to Plus · +$5/mo</button>
+                    <button onClick={() => startCheckout('plus')} style={primaryBtnStyle} className="riff-btn">Upgrade to Plus · +$10/mo</button>
                   ) : (
-                    <button onClick={() => startCheckout('plus')} style={primaryBtnStyle} className="riff-btn">Start Plus · $19.99/mo</button>
+                    <button onClick={() => startCheckout('plus')} style={primaryBtnStyle} className="riff-btn">Start Plus · $25/mo</button>
                   )}
                 </div>
               </div>
@@ -804,6 +806,11 @@ export default function Dashboard() {
               </button>
             )}
           </section>
+
+          {/* Usage panel — drafts used vs cap, color-coded warning bar.
+              Renders first under the subscription card so the most
+              load-bearing number on the dashboard is immediately visible. */}
+          <UsagePanel token={token} plan={me?.plan} />
 
           {/* Voice fingerprint (Pro+ — the moat feature).
               Lets the user train Riffly on their writing samples so drafts

@@ -133,7 +133,7 @@ export default function JobSpecsPanel({ token, plan }: Props) {
             against your active specs in real time.
           </div>
           <div style={{ fontSize: 13, color: '#888' }}>
-            Plus tier · $19.99/mo · upgrade in the Subscription section above.
+            Plus tier · $25/mo (600 drafts/month) · upgrade in the Subscription section above.
           </div>
         </div>
       </section>
