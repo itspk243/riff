@@ -48,7 +48,6 @@ function bumpDailyCounter(): boolean {
 }
 
 const SAMPLE_PROFILE: GenerateRequest['profile'] = {
-  surface: 'linkedin_profile',
   profileUrl: 'https://linkedin.com/in/alex-chen-sample',
   name: 'Alex Chen',
   headline: 'Staff Engineer · Distributed Systems · Currently keeping FinTech APIs from falling over',
@@ -56,7 +55,7 @@ const SAMPLE_PROFILE: GenerateRequest['profile'] = {
   currentCompany: 'Loop',
   about:
     "Distributed systems and reliability work. The kind of engineer who reads a Jepsen post in their head when someone says 'eventually consistent.' Right now: building cross-region replay for a payments API at Loop. Previously: SRE work at two B2B fintechs. I write occasionally about the gap between systems theory and what happens when the pager goes off at 3 AM.",
-  recentPost: null,
+  capturedAt: new Date(0).toISOString(), // sample profile, deterministic timestamp
 };
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
