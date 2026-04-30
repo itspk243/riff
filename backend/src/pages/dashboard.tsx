@@ -4,6 +4,7 @@
 import { useEffect, useState } from 'react';
 import Head from 'next/head';
 import SavedSearchesPanel from '../components/SavedSearchesPanel';
+import OnboardingChecklist from '../components/OnboardingChecklist';
 
 interface MeResponse {
   ok: boolean;
@@ -628,6 +629,11 @@ export default function Dashboard() {
               </div>
             </div>
           </section>
+
+          {/* Onboarding checklist — auto-ticks as the user progresses,
+              self-dismisses once complete. Skips render entirely if the
+              user has clicked Dismiss. */}
+          <OnboardingChecklist token={token} plan={me?.plan} />
 
           {/* Usage stats */}
           <section style={sectionStyle}>
