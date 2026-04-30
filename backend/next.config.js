@@ -2,10 +2,14 @@
 const nextConfig = {
   reactStrictMode: true,
   async rewrites() {
-    // Serve the static landing page (public/index.html) at the root path.
-    // Without this, Next.js routing returns 404 at / because there's no pages/index.tsx.
+    // Serve the static landing page (public/index.html) at the root path,
+    // and the static legal pages at /privacy + /terms (they live as .html
+    // in /public, which Next.js does NOT auto-route without rewrites).
     return [
       { source: '/', destination: '/index.html' },
+      { source: '/privacy', destination: '/privacy.html' },
+      { source: '/terms', destination: '/terms.html' },
+      { source: '/pricing', destination: '/index.html#pricing' },
     ];
   },
   async headers() {

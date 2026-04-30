@@ -1088,7 +1088,7 @@
         <div class="hero-content">
           <div class="eyebrow">A Chrome extension for recruiters, founders, and operators who refuse to send templates</div>
           <h1>Cold messages that don't get deleted.</h1>
-          <p class="lede">Riffly is a Chrome extension that reads what they posted this week, the repos they pinned, the work in their About — and drafts an opener in <em>their</em> dialect, not yours. Fifteen seconds. Three variants. Manual send only — zero LinkedIn ban risk.</p>
+          <p class="lede">Riffly is a Chrome extension that reads what's already on the candidate's page — the work in their About, the repos they pinned, a recent post you can paste in — and drafts an opener in <em>their</em> dialect, not yours. Fifteen seconds. Three variants. Manual send only, so you stay in LinkedIn's read-only zone.</p>
           <div class="hero-cta">
             <a href="/signup" id="hero-cta" class="btn btn-lg btn-chrome">
               <svg class="chrome-logo-inline" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" style="width: 16px; height: 16px;">
@@ -1136,7 +1136,7 @@
               </div>
             </div>
             <div class="window-right">
-              <div class="window-section-label"><span class="live-dot"></span> Drafting live</div>
+              <div class="window-section-label">Sample draft</div>
               <div class="variant-tabs">
                 <span class="variant-tab active">Cold opener</span>
                 <span class="variant-tab">Follow-up</span>
@@ -1255,6 +1255,95 @@
     </div>
   </section>
 
+  <section id="vs-chatgpt" style="background: var(--surface); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);">
+    <div class="wrap" style="padding-top: clamp(48px, 8vw, 80px); padding-bottom: clamp(48px, 8vw, 80px);">
+      <h2>"Couldn't I just paste the profile into ChatGPT?"</h2>
+      <p class="sub">You could. Most people quietly do. Here's what's actually different when you stop.</p>
+
+      <div class="vs-grid">
+        <div class="vs-col">
+          <div class="vs-eyebrow">ChatGPT + copy-paste</div>
+          <ul class="vs-list">
+            <li>You manually paste whatever you remember to grab — usually just the headline. The model never sees the recent post or pinned repos.</li>
+            <li>The output reaches for the same template phrases ChatGPT reaches for in every other window: "I came across", "passion for", "great fit", "scaling challenges".</li>
+            <li>One draft. Want a follow-up? Open a new chat, re-paste, re-prompt. Want a breakup? Same again.</li>
+            <li>Three windows, one candidate, ten minutes. Repeat for the next forty.</li>
+          </ul>
+        </div>
+        <div class="vs-col vs-col-riff">
+          <div class="vs-eyebrow vs-eyebrow-riff">Riffly</div>
+          <ul class="vs-list">
+            <li>The extension reads what's already on screen — About, headline, current role, pinned repos — without you copy-pasting any of it.</li>
+            <li>The prompt bans 40+ corporate-template phrases by default. Output that drifts into them gets caught and rewritten before you see it.</li>
+            <li>Three variants per click — opener, follow-up, breakup. The full sequence is ready in fifteen seconds.</li>
+            <li>One click per candidate. Same ten minutes is now forty drafts.</li>
+          </ul>
+        </div>
+      </div>
+
+      <p style="text-align: center; margin: 28px 0 0; font-size: 14px; color: var(--muted);">
+        Same model class as ChatGPT. Different scaffolding around it — that's the whole product.
+      </p>
+    </div>
+  </section>
+
+  <style>
+    .vs-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+      max-width: 920px;
+      margin: 32px auto 0;
+    }
+    @media (max-width: 720px) {
+      .vs-grid { grid-template-columns: 1fr; }
+    }
+    .vs-col {
+      background: var(--bg);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 24px;
+    }
+    .vs-col-riff {
+      border-color: var(--ink);
+      background: #fff;
+    }
+    .vs-eyebrow {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      font-weight: 700;
+      color: var(--muted);
+      margin-bottom: 14px;
+    }
+    .vs-eyebrow-riff { color: var(--accent); }
+    .vs-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .vs-list li {
+      font-size: 14px;
+      line-height: 1.55;
+      color: var(--ink-2);
+      padding-left: 18px;
+      position: relative;
+    }
+    .vs-list li::before {
+      content: "·";
+      position: absolute;
+      left: 0;
+      top: -2px;
+      font-size: 22px;
+      color: var(--muted);
+      line-height: 1;
+    }
+    .vs-col-riff .vs-list li::before { color: var(--accent); }
+  </style>
+
   <section id="pricing">
     <div class="wrap">
       <h2>Pricing.</h2>
@@ -1294,7 +1383,7 @@
             <li><svg class="price-check" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,6 5,9 10,3"/></svg><strong style="white-space: nowrap;">Saved-Search Daily Digest</strong> — auto-rank profiles in tracked LinkedIn searches</li>
             <li><svg class="price-check" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,6 5,9 10,3"/></svg>Up to 10 saved searches</li>
           </ul>
-          <p class="plus-beta-note">Plus is in beta. Active Profile Assist and the Saved-Search Daily Digest are both live. Subscribe now and lock in $19.99/mo for life.</p>
+          <p class="plus-beta-note">Plus features (Active Profile Assist + Saved-Search Daily Digest) are live and shipping refinements weekly. Pricing may move as we learn what they're worth — current subscribers stay at $19.99/mo as long as they keep the subscription active.</p>
           <a href="/signup?plan=plus" data-plan="plus" class="btn btn-ghost plan-cta" style="width: 100%;">Get Plus</a>
         </div>
       </div>
@@ -1319,7 +1408,7 @@
         </details>
         <details>
           <summary>What happens after my 5 free drafts this week?</summary>
-          <p>The popup tells you you're at the limit and offers Pro for $14.99/mo. Free isn't a teaser — five drafts is enough to send to five real candidates and decide if the replies you're getting are different enough to be worth paying for. If they're not, don't pay.</p>
+          <p>The popup tells you you're at the limit and offers Pro for $14.99/mo. Five drafts is enough to send to five real candidates and decide if the replies you're getting are different enough to be worth paying for.</p>
         </details>
         <details>
           <summary>What happens to the candidate's profile data?</summary>
@@ -1366,8 +1455,8 @@
           <span class="who-dot"></span>
           <span class="who-name">Riffly — beta</span>
         </div>
-        <p>Riffly is in beta and we're tuning the prompt by hand. There are no fake testimonials on this page, no inflated user counts, no "trusted by" logos for companies that have never heard of us. We'd rather you try the five free drafts and decide than be talked into it.</p>
-        <p>If you hit something broken, mail <a href="mailto:support@rifflylabs.com?subject=Riffly%20feedback">our support inbox</a> and we'll see it within the hour. Feedback that lands in the prompt blacklist gets a thank-you reply — that's the loop.</p>
+        <p>We're a small team that got tired of cold messages reading like every other LinkedIn pitch — the "I came across your profile and was impressed by your background" Mad Libs that gets archived in three seconds. Riffly is what we built when we couldn't find a tool that didn't sound like one of them.</p>
+        <p>It's in beta and we're tuning the prompt by hand. We'd rather you try the five free drafts and decide than be talked into it. If you hit something broken, mail <a href="mailto:support@rifflylabs.com?subject=Riffly%20feedback">our support inbox</a> and we'll see it within the hour. Feedback that lands in the prompt blacklist gets a thank-you reply — that's the loop.</p>
       </div>
     </div>
   </section>
