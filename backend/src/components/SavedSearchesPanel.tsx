@@ -561,12 +561,12 @@ function formatRelative(iso: string | null): string {
 // ---------- styles (matched to dashboard.tsx style language) ----------
 
 const sectionStyle: React.CSSProperties = {
-  background: '#fff',
-  border: '1px solid #e5e5e7',
-  borderRadius: 16,
-  padding: 28,
-  maxWidth: 640,
-  margin: '0 auto 16px',
+  // Flat subsection — dashboard provides the outer card.
+  background: 'transparent',
+  padding: 0,
+  marginBottom: 28,
+  paddingBottom: 24,
+  borderBottom: '1px solid #f0f0f2',
 };
 
 const sectionTitleStyle: React.CSSProperties = {

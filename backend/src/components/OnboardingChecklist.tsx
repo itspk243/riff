@@ -167,12 +167,15 @@ export default function OnboardingChecklist({ token, plan }: Props) {
 // ---------- styles (matched to dashboard.tsx) ----------
 
 const cardStyle: React.CSSProperties = {
-  background: '#fff',
-  border: '1px solid #e5e5e7',
-  borderRadius: 16,
-  padding: 24,
-  maxWidth: 640,
-  margin: '0 auto 16px',
+  // Flat subsection style — the dashboard already wraps everything in one
+  // big bordered card. Stacking nested-bordered cards inside it created
+  // visual ladders. Now each panel reads as a clean section divided by a
+  // single bottom rule.
+  background: 'transparent',
+  padding: 0,
+  marginBottom: 28,
+  paddingBottom: 24,
+  borderBottom: '1px solid #f0f0f2',
 };
 
 const headRowStyle: React.CSSProperties = {

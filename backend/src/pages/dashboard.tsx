@@ -1000,8 +1000,13 @@ const pageStyle: React.CSSProperties = {
   fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
 };
 const cardStyle: React.CSSProperties = {
-  background: '#fff', border: '1px solid #e5e5e7', borderRadius: 16, padding: 36,
-  maxWidth: 640, margin: '0 auto',
+  background: '#fff', border: '1px solid #e5e5e7', borderRadius: 16, padding: 40,
+  // Bumped from 640 -> 920. The previous narrow column wasted huge amounts
+  // of horizontal space on desktop monitors and made the inner pricing
+  // grid + saved-search panels feel cramped. 920 still keeps prose
+  // readable (paragraphs in the Activity/Subscription subsections) while
+  // letting wider grids breathe.
+  maxWidth: 920, margin: '0 auto',
 };
 
 const topNavStyle: React.CSSProperties = {

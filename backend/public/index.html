@@ -422,10 +422,17 @@
     }
 
     .window-left {
-      padding: clamp(16px, 4vw, 24px);
+      padding: clamp(18px, 3.5vw, 26px);
       border-right: 1px solid var(--line);
       background: var(--bg);
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
     }
+
+    /* Override the legacy .field margin so the new flex-gap takes over.
+       Without this the gap doubles up. */
+    .window-left .field { margin: 0; }
 
     @media (max-width: 760px) {
       .window-left {
@@ -435,8 +442,12 @@
     }
 
     .window-right {
-      padding: clamp(16px, 4vw, 24px);
+      padding: clamp(18px, 3.5vw, 26px);
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
     }
+    .window-right .draft-card { margin: 0; }
 
     .window-section-label {
       font-size: 10.5px;
@@ -828,7 +839,8 @@
     .pricing {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
-      gap: 12px;
+      gap: 16px;
+      align-items: stretch;
     }
 
     @media (max-width: 720px) {
@@ -842,7 +854,10 @@
       border: 1px solid var(--line);
       border-radius: 10px;
       padding: 28px;
+      display: flex;
+      flex-direction: column;
     }
+    .price-card .plan-cta { margin-top: auto; }
 
     .price-card.featured {
       border-color: var(--ink);
@@ -1560,8 +1575,7 @@
     .demo-generate-btn {
       width: 100%;
       box-sizing: border-box;
-      margin-top: 12px;
-      padding: 10px 14px;
+      padding: 11px 14px;
       background: var(--accent);
       color: #fff;
       border: 1px solid var(--accent);
@@ -1575,7 +1589,6 @@
     .demo-generate-btn:hover { filter: brightness(1.1); }
     .demo-generate-btn:disabled { opacity: 0.6; cursor: wait; }
     .demo-status {
-      margin-top: 8px;
       font-size: 11.5px;
       color: var(--muted);
       min-height: 1.2em;
