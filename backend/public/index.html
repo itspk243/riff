@@ -11,9 +11,16 @@
   <meta property="og:title" content="Riffly — Cold messages that don't get deleted">
   <meta property="og:description" content="A Chrome extension that drafts personalized LinkedIn outreach grounded in the candidate's actual recent activity. No automation, no LinkedIn ban risk.">
   <meta property="og:site_name" content="Riffly">
+  <meta property="og:image" content="https://rifflylabs.com/og.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="Riffly — Cold messages that don't get deleted">
   <meta name="twitter:description" content="A Chrome extension that drafts personalized LinkedIn outreach grounded in the candidate's actual recent activity.">
+  <meta name="twitter:image" content="https://rifflylabs.com/og.png">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
   <title>Riffly — Personalized LinkedIn outreach drafts, no automation</title>
   <script type="application/ld+json">
   {
@@ -1869,10 +1876,16 @@
               draftText.classList.remove('typewriter');
               draftMeta.textContent = (resp.body.variant.text.split(/\s+/).length) + ' words · live · against ' + (resp.body.profile && resp.body.profile.name);
               resultLabel.textContent = 'Live draft (real Riffly output)';
-              status.textContent = 'That\'s a real Riffly generation. Sign up free to run it on whoever\'s actually in front of you.';
-              status.className = 'demo-status success';
-              // Hide the button now that the demo's been used.
-              btn.style.display = 'none';
+              var remaining = (typeof resp.body.remaining === 'number') ? resp.body.remaining : 0;
+              if (remaining > 0) {
+                btn.textContent = 'Try another tone — ' + remaining + ' left';
+                status.textContent = 'That\'s a real Riffly generation. Try a different tone or length to see the variant range.';
+                status.className = 'demo-status success';
+              } else {
+                btn.style.display = 'none';
+                status.textContent = 'That\'s your last demo run on this browser. Sign up free to keep generating against real candidates.';
+                status.className = 'demo-status success';
+              }
             } else {
               status.textContent = (resp.body && resp.body.error) || 'Demo failed. Try again or sign up to use the real extension.';
               status.className = 'demo-status error';

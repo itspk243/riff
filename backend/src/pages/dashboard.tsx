@@ -155,7 +155,9 @@ export default function Dashboard() {
     const t = window.localStorage.getItem('riff_token');
     setToken(t);
     if (!t) {
-      window.location.href = '/signup';
+      // Redirect to /signup. .replace() means the back button doesn't
+      // bounce them right back to this dead-loading state.
+      window.location.replace('/signup');
       return;
     }
 
@@ -485,9 +487,59 @@ export default function Dashboard() {
   }
 
   if (loading) {
+    // Two distinct loading states the user might be in:
+    //   1. They're authed and we're waiting on /api/me — brief flash, fine.
+    //   2. They're NOT authed and the useEffect is about to redirect to
+    //      /signup — but if redirect is slow (cold page cache, blocked
+    //      script, prerender), they'd otherwise stare at "Loading…" forever
+    //      (the bug the brutal review caught).
+    //
+    // We show different copy + a manual fallback link for the no-token
+    // case so the page never reads as "broken" even if the JS redirect
+    // misses for any reason.
+    const hasToken = typeof window !== 'undefined' && !!window.localStorage.getItem('riff_token');
     return (
       <main style={pageStyle}>
-        <div style={{ ...cardStyle, textAlign: 'center', color: '#777' }}>Loading…</div>
+        <div style={{ ...cardStyle, textAlign: 'center', maxWidth: 480, margin: '64px auto', padding: 32 }}>
+          {hasToken ? (
+            <>
+              <div style={{ fontSize: 14, color: '#666', marginBottom: 8 }}>Loading your dashboard…</div>
+              <div style={{ fontSize: 12, color: '#999' }}>If this takes longer than a few seconds, refresh the page.</div>
+            </>
+          ) : (
+            <>
+              <div style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 700, color: '#666', marginBottom: 8 }}>
+                Riffly
+              </div>
+              <div style={{ fontSize: 18, fontWeight: 600, marginBottom: 12, color: '#111' }}>
+                You need to sign in first.
+              </div>
+              <p style={{ fontSize: 14, color: '#666', marginBottom: 20, lineHeight: 1.5 }}>
+                Riffly's dashboard is for signed-in users only. Sign in or create a free account in one click.
+              </p>
+              <a
+                href="/signup"
+                style={{
+                  display: 'inline-block',
+                  padding: '10px 18px',
+                  background: '#111',
+                  color: '#fff',
+                  borderRadius: 6,
+                  fontSize: 13,
+                  fontWeight: 500,
+                  textDecoration: 'none',
+                }}
+              >
+                Sign in / Sign up →
+              </a>
+              <noscript>
+                <div style={{ fontSize: 12, color: '#888', marginTop: 16 }}>
+                  JavaScript is required to use the Riffly dashboard.
+                </div>
+              </noscript>
+            </>
+          )}
+        </div>
       </main>
     );
   }

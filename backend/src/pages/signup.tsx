@@ -101,6 +101,16 @@ export default function SignupPage() {
             </>
           ) : (
             <>
+              {/* Beta-disclosure banner — sets honest expectations BEFORE the
+                  user authenticates. Until the Chrome Web Store listing
+                  publishes, every signup is effectively private-beta. */}
+              <div style={betaBannerStyle}>
+                <strong style={{ color: '#b14a1a' }}>Private beta · Chrome Web Store listing in review.</strong>
+                <span style={{ color: '#555' }}>
+                  &nbsp;Sign in now to claim your spot — we'll email you the moment the extension publishes (usually 1–7 days). The dashboard is live; the extension installs on top.
+                </span>
+              </div>
+
               <h1 style={h1Style}>Sign in to Riffly.</h1>
               <p style={pStyle}>One click — we use Google so you don't have to remember another password.</p>
 
@@ -182,6 +192,16 @@ const brandStyle: React.CSSProperties = {
   color: '#0a0a0a', textDecoration: 'none', marginBottom: 28,
 };
 const dotStyle: React.CSSProperties = { width: 9, height: 9, background: '#0a0a0a', borderRadius: '50%' };
+const betaBannerStyle: React.CSSProperties = {
+  background: '#fdf6f3',
+  border: '1px solid #f0d8cd',
+  borderRadius: 8,
+  padding: '12px 14px',
+  marginBottom: 22,
+  fontSize: 13,
+  lineHeight: 1.5,
+  color: '#555',
+};
 const h1Style: React.CSSProperties = { margin: '0 0 12px', fontSize: 26, fontWeight: 800, letterSpacing: '-0.02em' };
 const pStyle: React.CSSProperties = { margin: '0 0 24px', fontSize: 15, color: '#555', lineHeight: 1.55 };
 const labelStyle: React.CSSProperties = { display: 'block', fontSize: 13, color: '#444', marginBottom: 16 };
