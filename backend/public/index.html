@@ -1155,32 +1155,38 @@
                 <div class="field-val" style="font-size: 13px; font-style: italic;">"Most teams overspend on K8s reserved capacity because nobody owns the cost line item."</div>
               </div>
               <div class="field">
-                <div class="field-label">Your pitch</div>
-                <div class="field-val" style="font-size: 13px;">Hiring a Staff Engineer for our payments infra team. Rebuilding cross-region replay. Series B, remote, $250–300K + equity.</div>
+                <div class="field-label">Your pitch <span style="color: var(--accent); font-weight: 600;">— editable, try it</span></div>
+                <textarea id="demo-pitch" class="demo-pitch-input" maxlength="240" rows="3" placeholder="One sentence — who you're hiring for, comp band, location.">Hiring a Staff Engineer for our payments infra team. Rebuilding cross-region replay. Series B, remote, $250–300K + equity.</textarea>
+                <div class="demo-pitch-counter"><span id="demo-pitch-count">0</span>/240</div>
               </div>
               <div class="field" style="margin-bottom: 0;">
                 <div class="field-label">Tone &amp; length</div>
-                <div class="field-val">
-                  <span class="pill">Direct</span>
-                  <span class="pill">Medium</span>
+                <div class="demo-pills">
+                  <button type="button" class="demo-pill demo-tone active" data-tone="direct">Direct</button>
+                  <button type="button" class="demo-pill demo-tone" data-tone="warm">Warm</button>
+                  <button type="button" class="demo-pill demo-tone" data-tone="cheeky">Cheeky</button>
+                  <span class="demo-pill-divider"></span>
+                  <button type="button" class="demo-pill demo-length active" data-length="medium">Medium</button>
+                  <button type="button" class="demo-pill demo-length" data-length="short">Short</button>
                 </div>
               </div>
             </div>
             <div class="window-right">
-              <div class="window-section-label">Sample draft</div>
+              <div class="window-section-label" id="demo-result-label">Sample draft</div>
               <div class="variant-tabs">
                 <span class="variant-tab active">Cold opener</span>
                 <span class="variant-tab">Follow-up</span>
                 <span class="variant-tab">Breakup</span>
               </div>
               <div class="draft-card">
-                <div class="draft-text typewriter">Alex — your post this week on K8s reserved capacity is the exact fight we're picking at Loop. <strong>We're rebuilding cross-region replay for our payments infra and "who owns the cost line item" is the question that keeps stalling the design review.</strong> Worth a 20-min trade of notes this week, even if just to compare scars?</div>
+                <div id="demo-draft-text" class="draft-text typewriter">Alex — your post this week on K8s reserved capacity is the exact fight we're picking at Loop. <strong>We're rebuilding cross-region replay for our payments infra and "who owns the cost line item" is the question that keeps stalling the design review.</strong> Worth a 20-min trade of notes this week, even if just to compare scars?</div>
                 <div class="draft-actions">
-                  <span class="draft-meta">62 words · 0.4s</span>
-                  <span class="draft-action-chip">Copy</span>
-                  <span class="draft-action-chip">Regenerate</span>
+                  <span id="demo-draft-meta" class="draft-meta">62 words · sample · click below to run live</span>
+                  <button type="button" id="demo-copy-btn" class="draft-action-chip">Copy</button>
                 </div>
               </div>
+              <button type="button" id="demo-generate-btn" class="demo-generate-btn">Generate live with my pitch →</button>
+              <div id="demo-status" class="demo-status" aria-live="polite"></div>
             </div>
           </div>
         </div>
@@ -1502,6 +1508,73 @@
     .mic-status { margin-top: 8px; font-size: 12.5px; color: var(--muted); min-height: 1.2em; }
     .mic-status.success { color: var(--green, #1a7a48); }
     .mic-status.error { color: var(--accent); }
+
+    /* Interactive landing demo — real generation against a sample profile */
+    .demo-pitch-input {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 8px 10px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      font-size: 13px;
+      font-family: inherit;
+      line-height: 1.5;
+      background: var(--bg);
+      color: var(--ink);
+      resize: vertical;
+      min-height: 60px;
+    }
+    .demo-pitch-input:focus { outline: none; border-color: var(--ink); }
+    .demo-pitch-counter { font-size: 11px; color: var(--muted); margin-top: 4px; text-align: right; }
+    .demo-pills {
+      display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
+      margin-top: 4px;
+    }
+    .demo-pill {
+      padding: 4px 10px;
+      border: 1px solid var(--line);
+      background: var(--bg);
+      color: var(--ink-2);
+      font-size: 11.5px;
+      font-weight: 500;
+      border-radius: 4px;
+      cursor: pointer;
+      font-family: inherit;
+      transition: background 100ms ease, border-color 100ms ease;
+    }
+    .demo-pill.active {
+      background: var(--ink); color: #fff; border-color: var(--ink);
+    }
+    .demo-pill:hover:not(.active) { background: var(--warm); }
+    .demo-pill-divider {
+      width: 1px; height: 18px; background: var(--line); margin: 0 4px;
+    }
+    .demo-generate-btn {
+      width: 100%;
+      box-sizing: border-box;
+      margin-top: 12px;
+      padding: 10px 14px;
+      background: var(--accent);
+      color: #fff;
+      border: 1px solid var(--accent);
+      border-radius: 6px;
+      font-size: 13.5px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+      transition: filter 100ms ease;
+    }
+    .demo-generate-btn:hover { filter: brightness(1.1); }
+    .demo-generate-btn:disabled { opacity: 0.6; cursor: wait; }
+    .demo-status {
+      margin-top: 8px;
+      font-size: 11.5px;
+      color: var(--muted);
+      min-height: 1.2em;
+      line-height: 1.4;
+    }
+    .demo-status.success { color: var(--accent); font-weight: 500; }
+    .demo-status.error { color: #b14a1a; }
   </style>
 
   <section id="pricing">
@@ -1649,9 +1722,9 @@
         </div>
 
         <div class="footer-col">
-          <div class="footer-col-title">Status</div>
-          <a href="https://github.com/itspk243/riff/commits/main" target="_blank" rel="noopener noreferrer">Changelog</a>
-          <span class="footer-text">All systems normal</span>
+          <div class="footer-col-title">Follow along</div>
+          <a href="https://www.instagram.com/riffly.labs" target="_blank" rel="noopener noreferrer">Instagram</a>
+          <span class="footer-text" style="font-size: 12px;">Screenshots, prompt nerdery, and what's shipped this week.</span>
         </div>
       </div>
 
@@ -1713,6 +1786,109 @@
     })();
 
     // (Typewriter reveal is CSS-only now — no JS hook needed.)
+
+    // Interactive demo on the hero. Calls /api/demo-generate which runs a
+    // REAL Riffly generation against the hardcoded sample profile + the
+    // visitor's pitch + tone/length. Cookie-rate-limited to one shot per
+    // browser. Replaces the static "Sample draft" with their real output.
+    (function () {
+      var pitchEl = document.getElementById('demo-pitch');
+      var counterEl = document.getElementById('demo-pitch-count');
+      var btn = document.getElementById('demo-generate-btn');
+      var status = document.getElementById('demo-status');
+      var draftText = document.getElementById('demo-draft-text');
+      var draftMeta = document.getElementById('demo-draft-meta');
+      var resultLabel = document.getElementById('demo-result-label');
+      var copyBtn = document.getElementById('demo-copy-btn');
+      if (!pitchEl || !btn) return;
+
+      function updateCount() {
+        counterEl.textContent = pitchEl.value.length;
+      }
+      pitchEl.addEventListener('input', updateCount);
+      updateCount();
+
+      // Tone and length pill selectors — single-select within group.
+      function bindGroup(selector) {
+        var pills = document.querySelectorAll(selector);
+        pills.forEach(function (p) {
+          p.addEventListener('click', function () {
+            pills.forEach(function (other) { other.classList.remove('active'); });
+            p.classList.add('active');
+          });
+        });
+      }
+      bindGroup('.demo-tone');
+      bindGroup('.demo-length');
+
+      copyBtn.addEventListener('click', function () {
+        var t = (draftText.textContent || '').trim();
+        if (!t || !navigator.clipboard) return;
+        navigator.clipboard.writeText(t).then(function () {
+          var orig = copyBtn.textContent;
+          copyBtn.textContent = 'Copied';
+          setTimeout(function () { copyBtn.textContent = orig; }, 1500);
+        });
+      });
+
+      btn.addEventListener('click', function () {
+        var pitch = (pitchEl.value || '').trim();
+        if (!pitch) {
+          status.textContent = 'Type a one-sentence pitch first.';
+          status.className = 'demo-status error';
+          pitchEl.focus();
+          return;
+        }
+        if (pitch.length > 240) {
+          status.textContent = 'Pitch is too long for the demo. Sign up free for unlimited.';
+          status.className = 'demo-status error';
+          return;
+        }
+        var tone = (document.querySelector('.demo-tone.active') || {}).getAttribute &&
+                   document.querySelector('.demo-tone.active').getAttribute('data-tone') || 'direct';
+        var length = (document.querySelector('.demo-length.active') || {}).getAttribute &&
+                     document.querySelector('.demo-length.active').getAttribute('data-length') || 'medium';
+
+        btn.disabled = true;
+        var oldLabel = btn.textContent;
+        btn.textContent = 'Generating real draft…';
+        status.textContent = 'Riffly is reading the sample profile and writing against your pitch. This is the actual product, not a mock.';
+        status.className = 'demo-status';
+
+        fetch('/api/demo-generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pitch: pitch, tone: tone, length: length })
+        })
+          .then(function (r) { return r.json().then(function (j) { return { status: r.status, body: j }; }); })
+          .then(function (resp) {
+            btn.disabled = false;
+            btn.textContent = oldLabel;
+            if (resp.body && resp.body.ok && resp.body.variant) {
+              draftText.textContent = resp.body.variant.text;
+              draftText.classList.remove('typewriter');
+              draftMeta.textContent = (resp.body.variant.text.split(/\s+/).length) + ' words · live · against ' + (resp.body.profile && resp.body.profile.name);
+              resultLabel.textContent = 'Live draft (real Riffly output)';
+              status.textContent = 'That\'s a real Riffly generation. Sign up free to run it on whoever\'s actually in front of you.';
+              status.className = 'demo-status success';
+              // Hide the button now that the demo's been used.
+              btn.style.display = 'none';
+            } else {
+              status.textContent = (resp.body && resp.body.error) || 'Demo failed. Try again or sign up to use the real extension.';
+              status.className = 'demo-status error';
+              if (resp.body && (resp.body.alreadyUsed || resp.body.dailyCapHit)) {
+                btn.style.display = 'none';
+              }
+            }
+          })
+          .catch(function () {
+            btn.disabled = false;
+            btn.textContent = oldLabel;
+            status.textContent = 'Network error. Try again in a moment.';
+            status.className = 'demo-status error';
+          });
+      });
+    })();
 
     // Mobile install-capture form. Only mobile users can see it (CSS gates
     // by viewport width), so we always wire — JS doesn't double-check.
