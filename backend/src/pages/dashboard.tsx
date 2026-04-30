@@ -3,6 +3,7 @@
 
 import { useEffect, useState } from 'react';
 import Head from 'next/head';
+import SavedSearchesPanel from '../components/SavedSearchesPanel';
 
 interface MeResponse {
   ok: boolean;
@@ -760,12 +761,12 @@ export default function Dashboard() {
                     <li>Everything in Pro</li>
                     <li><strong>Active Profile Assist</strong> — live fit-scoring against your job specs as you browse</li>
                     <li>Up to 5 active job specs</li>
-                    <li><strong>Saved-Search Daily Digest</strong> <span style={comingSoonPillStyle}>Coming soon</span> — auto-rank profiles in your saved searches</li>
-                    <li>Up to 10 saved search watches <span style={comingSoonPillStyle}>Coming soon</span></li>
+                    <li><strong>Saved-Search Daily Digest</strong> — auto-rank profiles in your saved LinkedIn searches</li>
+                    <li>Up to 10 saved search watches</li>
                     <li>Pre-generated drafts for high-confidence matches <span style={comingSoonPillStyle}>Coming soon</span></li>
                   </ul>
                   <div style={plusBetaNoteStyle}>
-                    Plus is in beta. Active Profile Assist is live; Saved-Search Daily Digest ships in the next wave. Subscribe now to lock in $19.99/mo for life.
+                    Plus is in beta. Active Profile Assist and the Saved-Search Daily Digest are both live. Subscribe now to lock in $19.99/mo for life.
                   </div>
                   {me?.plan === 'plus' ? (
                     <button disabled style={{ ...primaryBtnStyle, opacity: 0.6, cursor: 'default' }}>Current plan</button>
@@ -790,6 +791,12 @@ export default function Dashboard() {
               </button>
             )}
           </section>
+
+          {/* Saved-Search Daily Digest (Plus tier).
+              Self-contained: fetches its own /api/saved-searches and
+              /api/saved-searches/digest, manages its own form state, shows
+              an upgrade-locked card for Free/Pro users. */}
+          <SavedSearchesPanel token={token} plan={me?.plan} />
 
           {/* Extension setup — Chrome Web Store flow.
               Three steps once the listing is live: Add to Chrome, pin,
