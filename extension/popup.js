@@ -1,6 +1,6 @@
 // Riffly popup logic.
-// Profile read → categorize → adapt templates → generate → render → reply tracking → stats.
-// Auth is a paste-token model: user copies token from riff.app/dashboard.
+// Profile read, categorize, adapt templates, generate, render, reply tracking, stats.
+// Auth is a paste-token model: user copies token from rifflylabs.com/dashboard.
 
 const $ = (sel) => document.querySelector(sel);
 const STORAGE_KEYS = {
@@ -776,7 +776,7 @@ function showUpgradeHint(message) {
   // Insert as the last card-following node so it sits under the variants.
   const hint = document.createElement('div');
   hint.className = 'upgrade-hint';
-  hint.innerHTML = `${escapeHtml(message)} <a href="https://riff-sandy.vercel.app/dashboard" target="_blank">Upgrade →</a>`;
+  hint.innerHTML = `${escapeHtml(message)} <a href="https://rifflylabs.com/dashboard" target="_blank">Upgrade</a>`;
   results.appendChild(hint);
 }
 

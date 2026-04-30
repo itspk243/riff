@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Riffly — Personalized Outreach Drafts",
+  "name": "Riffly: Personalized Outreach Drafts",
   "version": "1.0.0",
-  "description": "Turn a candidate's profile (LinkedIn, GitHub, Wellfound) into a personalized cold-message draft. Drafting assistant only — no automation.",
+  "description": "Turn any LinkedIn, GitHub, or Wellfound profile into a personalized cold message. Drafting assistant. Never automated.",
   "homepage_url": "https://rifflylabs.com",
   "icons": {
     "16": "icons/icon-16.png",
@@ -55,7 +55,7 @@
   ],
   "action": {
     "default_popup": "popup.html",
-    "default_title": "Riffly — Draft outreach",
+    "default_title": "Riffly: draft outreach",
     "default_icon": {
       "16": "icons/icon-16.png",
       "32": "icons/icon-32.png",
