@@ -172,6 +172,73 @@
       text-decoration: none;
     }
 
+    .reads-like {
+      margin: 14px 0 18px;
+      padding: 12px 16px;
+      background: var(--warm);
+      border-left: 3px solid var(--accent);
+      border-radius: 4px;
+      font-size: 14.5px;
+      font-style: italic;
+      color: var(--ink-2);
+      line-height: 1.5;
+    }
+
+    .share-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+      margin-top: 24px;
+      padding-top: 22px;
+      border-top: 1px solid var(--line);
+    }
+    .share-row-label {
+      font-size: 11px;
+      color: var(--muted);
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      width: 100%;
+      margin-bottom: 4px;
+    }
+    .share-btn {
+      padding: 9px 16px;
+      background: var(--surface);
+      color: var(--ink);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      font-size: 13.5px;
+      font-weight: 500;
+      cursor: pointer;
+      font-family: inherit;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+    }
+    .share-btn:hover { background: var(--warm); border-color: var(--ink); }
+    .share-btn.primary {
+      background: var(--ink);
+      color: #fff;
+      border-color: var(--ink);
+    }
+    .share-btn.primary:hover { background: var(--accent); border-color: var(--accent); }
+    .share-btn.copied {
+      background: #1a7a48 !important;
+      color: #fff !important;
+      border-color: #1a7a48 !important;
+    }
+
+    .empty-msg {
+      margin-top: 0;
+      padding: 12px 16px;
+      background: var(--warm);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      font-size: 13.5px;
+      color: var(--ink-2);
+    }
+
     .examples { margin-top: 14px; }
     .examples-label { font-size: 12px; color: var(--muted); margin-bottom: 8px; }
     .example-chip {
@@ -288,6 +355,19 @@
       { p: /\bsorry to bother\b/gi, why: "Same. Don't apologize for the email." },
       { p: /\bgiven your (background|experience|work)\b/gi, why: "Generic. Quote something specific instead." },
       { p: /\buniquely (positioned|qualified)\b/gi, why: "Empty flattery. Show why." },
+      // More preambles + closer clichés (2026 expansion)
+      { p: /\bI'?d love to (chat|connect|hop on a call|hop on a quick call)\b/gi, why: "Premature warmth. Earn the chat first." },
+      { p: /\bI'?d love to\b/gi, why: "Soft preamble. Lead with the ask." },
+      { p: /\blooking forward to connecting\b/gi, why: "Closer cliché. Says nothing." },
+      { p: /\bI noticed (that you|you)\b/gi, why: "Generic preamble. Quote the specific thing." },
+      { p: /\bhappy to (jump on|chat|connect|share)\b/gi, why: "Premature offer. Earn it first." },
+      { p: /\bI'?d be happy to\b/gi, why: "Filler. Cut." },
+      { p: /\b(does|would) this make sense\b/gi, why: "Asking permission to pitch. Just pitch." },
+      { p: /\blet me know your thoughts\b/gi, why: "Closer cliché. Be specific about what you want." },
+      { p: /\b(cutting-edge|next-gen|industry-leading)\b/gi, why: "Marketing fluff. Show, don't claim." },
+      { p: /\b(transformative|game[\s-]?chang(er|ing))\b/gi, why: "Empty hype. Specific outcomes only." },
+      { p: /\bif you'?re open to (it|chatting|a (quick )?chat|a call)\b/gi, why: "Permission preamble. Cut." },
+      { p: /\bany chance you'?d be (open|interested|available)\b/gi, why: "Apologetic preamble. Bad opening." },
       // Closings
       { p: /\blooking forward to hearing from you\b/gi, why: "Closes ~80% of cold messages. Forgettable." },
       { p: /\bbest regards\b/gi, why: "Stiff. Try 'Thanks' or your name only." },
@@ -297,7 +377,9 @@
       { p: /\[role\]/gi, why: "Unfilled template literal." },
       { p: /\[your name\]/gi, why: "Unfilled template literal." },
       { p: /\{\{[^}]+\}\}/g, why: "Mail-merge placeholder leaked through." },
-      { p: /<[a-z][^>]*>/gi, why: "HTML / placeholder tag in plain text." },
+      // Stricter HTML detection: real lowercase tag names only, capped to prevent
+      // ReDoS and to skip false positives on things like <3 or condition < 5.
+      { p: /<[a-z][a-z0-9]{0,15}(\s[^>]{0,500})?>/g, why: "HTML / placeholder tag in plain text." },
     ];
 
     function escapeHtml(s) {
@@ -352,59 +434,152 @@
         findings.push({ phrase: m.phrase, why: m.why });
       }
 
-      // Verdict.
-      let verdict, verdictClass, verdictSub;
+      // Score 0–10. 0 clichés = 10. Each cliché knocks ~1 point. Capped at 0.
+      const score = Math.max(0, 10 - cliches);
+
+      // Verdict — savagely tiered. Short, quotable, screenshot-friendly.
+      let verdict, verdictClass, verdictSub, readsLike;
       if (cliches === 0) {
-        verdict = 'No template phrases detected.';
+        verdict = '10/10 — clean.';
         verdictClass = 'ok';
-        verdictSub = "It's not the obvious mistakes. If your reply rate's still low, the problem is probably content (you're not saying anything specific to them) rather than language.";
-      } else if (cliches <= 2) {
-        verdict = `${cliches} cliché${cliches === 1 ? '' : 's'} found. Salvageable.`;
+        verdictSub = "No template phrases. If your reply rate is still trash, the problem isn't your language — it's that you didn't actually read their profile. We can't help with that part.";
+        readsLike = "Reads like: a human who actually paid attention.";
+      } else if (cliches === 1) {
+        verdict = '9/10 — one slip.';
+        verdictClass = 'ok';
+        verdictSub = "Cut the highlight. You're one substitution away from clean.";
+        readsLike = null;
+      } else if (cliches === 2) {
+        verdict = '8/10 — minor crimes.';
         verdictClass = 'ouch';
-        verdictSub = "Mostly clean. Cut the highlighted phrases, replace each with a specific reference to the candidate's actual work, and you're 80% there.";
-      } else if (cliches <= 5) {
-        verdict = `${cliches} clichés. This reads as a template.`;
+        verdictSub = "Two clichés. Mostly clean. Replace the highlights with something specific to them and you're 80% there.";
+        readsLike = "Reads like: a real human having a slightly off Tuesday.";
+      } else if (cliches <= 4) {
+        verdict = `${score}/10 — this is a template.`;
         verdictClass = 'ouch';
-        verdictSub = "If a candidate gets 50 of these a week, yours is one of them. Strip every highlight and rewrite from a specific observation about them.";
+        verdictSub = "If a candidate gets 50 of these a week, yours is one of them. The fix isn't editing — it's starting over from a specific observation about them.";
+        readsLike = "Reads like: a Lemlist sequence on its third A/B test.";
+      } else if (cliches <= 6) {
+        verdict = `${score}/10 — Mad Lib detected.`;
+        verdictClass = 'ouch';
+        verdictSub = "Indistinguishable from every other cold pitch in their inbox. They're not even reading the second sentence.";
+        readsLike = "Reads like: a recruiter who took the $99 LinkedIn course in 2019.";
+      } else if (cliches <= 9) {
+        verdict = `${score}/10 — outreach malpractice.`;
+        verdictClass = 'ouch';
+        verdictSub = "More clichés than original ideas. This message is a hostage situation for the English language.";
+        readsLike = "Reads like: ChatGPT, on autopilot, in 2023, while half-asleep.";
       } else {
-        verdict = `${cliches} clichés. This is a Mad Lib.`;
+        verdict = `0/10 — we're impressed.`;
         verdictClass = 'ouch';
-        verdictSub = "This message is indistinguishable from every other cold pitch sitting in their inbox. The only way to fix it is to throw it out and write something grounded in what they actually do.";
+        verdictSub = "Genuine, museum-grade cold-outreach malpractice. Send this to your LinkedIn coach and ask for a refund.";
+        readsLike = "Reads like: someone copy-pasted the entire 'recruiter cliché bingo' card.";
       }
 
-      return { html, wordCount, cliches, clichePer100, findings, verdict, verdictClass, verdictSub };
+      return { html, wordCount, cliches, clichePer100, score, findings, verdict, verdictClass, verdictSub, readsLike };
     }
 
-    function render(text) {
-      if (!text || !text.trim()) return;
-      const r = roast(text);
+    // Build the text that gets put in clipboard / X / LinkedIn share.
+    function buildShareText(r) {
+      const url = 'rifflylabs.com/roast';
+      if (r.cliches === 0) {
+        return `My LinkedIn cold message scored 10/10 on Riffly's Roast — zero clichés. The recruiter equivalent of being told I'm "not bad." Try yours: ${url}`;
+      } else if (r.cliches === 1) {
+        return `My LinkedIn cold message scored ${r.score}/10 on Riffly's Roast (1 cliché flagged). Try yours: ${url}`;
+      } else if (r.cliches <= 4) {
+        const phrases = r.findings.slice(0, 3).map(f => `"${f.phrase}"`).join(', ');
+        return `My LinkedIn cold message scored ${r.score}/10 on Riffly's Roast — flagged for ${phrases}. Try yours: ${url}`;
+      } else {
+        const phrases = r.findings.slice(0, 3).map(f => `"${f.phrase}"`).join(', ');
+        return `Verdict: "${r.verdict}" on Riffly's Roast — ${r.cliches} clichés including ${phrases}. Try yours: ${url}`;
+      }
+    }
+
+    function render(rawText) {
       const result = document.getElementById('result');
       result.style.display = 'block';
+
+      // Empty input — nudge instead of silence.
+      if (!rawText || !rawText.trim()) {
+        result.innerHTML = '<div class="empty-msg">Paste a cold message into the box first, then click Roast it.</div>';
+        result.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        return;
+      }
+
+      // Length cap — protects browser from 50K-character pastes hanging the regex pass.
+      let text = rawText;
+      let truncated = false;
+      if (text.length > 3000) {
+        text = text.slice(0, 3000);
+        truncated = true;
+      }
+
+      const r = roast(text);
+      const shareText = buildShareText(r);
+      const shareUrl = 'https://rifflylabs.com/roast';
+      const tweetUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`;
+      const linkedinUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(shareUrl)}`;
+
       result.innerHTML = `
         <div class="verdict ${r.verdictClass}">${escapeHtml(r.verdict)}</div>
         <div class="verdict-sub">${escapeHtml(r.verdictSub)}</div>
+        ${r.readsLike ? `<div class="reads-like">${escapeHtml(r.readsLike)}</div>` : ''}
         <div class="stats-row">
+          <div class="stat-card">
+            <div class="stat-num">${r.score}</div>
+            <div class="stat-label">Score / 10</div>
+          </div>
           <div class="stat-card">
             <div class="stat-num">${r.cliches}</div>
             <div class="stat-label">Clichés</div>
           </div>
           <div class="stat-card">
-            <div class="stat-num">${r.wordCount}</div>
-            <div class="stat-label">Words</div>
-          </div>
-          <div class="stat-card">
             <div class="stat-num">${r.clichePer100}</div>
-            <div class="stat-label">Per 100 words</div>
+            <div class="stat-label">Cringe density</div>
           </div>
         </div>
         <div class="highlighted">${r.html}</div>
+        ${truncated ? '<div class="empty-msg" style="margin-top:14px;">Capped at the first 3000 characters — no real cold message is that long anyway.</div>' : ''}
         ${r.findings.length > 0 ? `
           <div class="findings">
             <div class="findings-title">What got flagged and why</div>
             ${r.findings.map(f => `<div class="finding-item"><span class="phrase">"${escapeHtml(f.phrase)}"</span> — ${escapeHtml(f.why)}</div>`).join('')}
           </div>
         ` : ''}
+        <div class="share-row">
+          <div class="share-row-label">Share this verdict</div>
+          <button class="share-btn primary" id="share-copy" type="button">Copy verdict</button>
+          <a class="share-btn" href="${tweetUrl}" target="_blank" rel="noopener">Post on X</a>
+          <a class="share-btn" href="${linkedinUrl}" target="_blank" rel="noopener">Share on LinkedIn</a>
+        </div>
       `;
+
+      // Wire up the copy button — re-rendered every roast, so re-bind every time.
+      const copyBtn = document.getElementById('share-copy');
+      if (copyBtn) {
+        copyBtn.addEventListener('click', async () => {
+          try {
+            await navigator.clipboard.writeText(shareText);
+          } catch {
+            // Fallback for browsers without clipboard API permission.
+            const ta = document.createElement('textarea');
+            ta.value = shareText;
+            ta.style.position = 'fixed';
+            ta.style.opacity = '0';
+            document.body.appendChild(ta);
+            ta.select();
+            try { document.execCommand('copy'); } catch {}
+            document.body.removeChild(ta);
+          }
+          copyBtn.textContent = '✓ Copied — paste anywhere';
+          copyBtn.classList.add('copied');
+          setTimeout(() => {
+            copyBtn.textContent = 'Copy verdict';
+            copyBtn.classList.remove('copied');
+          }, 2400);
+        });
+      }
+
       result.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 
