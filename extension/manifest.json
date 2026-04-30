@@ -1,9 +1,9 @@
 {
   "manifest_version": 3,
   "name": "Riffly — Personalized Outreach Drafts",
-  "version": "0.9.1",
+  "version": "0.9.2",
   "description": "Turn a candidate's profile (LinkedIn, GitHub, Wellfound) into a personalized cold-message draft. Drafting assistant only — no automation.",
-  "permissions": ["activeTab", "storage"],
+  "permissions": ["activeTab", "storage", "alarms"],
   "host_permissions": [
     "https://www.linkedin.com/*",
     "https://linkedin.com/*",

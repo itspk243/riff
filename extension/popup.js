@@ -1285,6 +1285,10 @@ async function runScan({ tab, base, token, match, btn, resultsDiv, force }) {
   btn.disabled = false;
   btn.textContent = 'Scan again';
 
+  // Refresh the overdue badge — this scan likely just decremented the count.
+  // Best-effort; we don't await or surface failures.
+  try { chrome.runtime.sendMessage({ type: 'RIFF_REFRESH_BADGE' }); } catch {}
+
   // Cadence rate limit — silent for auto-triggers, surfaced for manual.
   if (scanData && scanData.rateLimited) {
     if (force) {

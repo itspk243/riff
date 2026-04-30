@@ -98,6 +98,73 @@ async function getValidAccessToken() {
   return (await refreshAccessToken()) || access;
 }
 
+// ---------- Saved-search overdue badge ----------
+//
+// Plus tier: when a tracked LinkedIn search is past its scan cadence, surface
+// it on the action icon as a small number badge ("3" → 3 searches need
+// attention). Click → popup opens (existing behavior). When user is on the
+// matching LinkedIn URL, the popup auto-fires a scan. Either way, the badge
+// closes the loop without relying on email.
+//
+// Cadence intervals — must match backend CADENCE_INTERVAL_MS in
+// /api/saved-searches/scan.ts.
+const CADENCE_MS = {
+  manual: Number.POSITIVE_INFINITY,   // never reminds — user opt-out
+  on_visit: Number.POSITIVE_INFINITY, // visit triggers it; nothing to remind
+  thrice_daily: 8 * 60 * 60 * 1000,
+  daily: 24 * 60 * 60 * 1000,
+  weekly: 7 * 24 * 60 * 60 * 1000,
+};
+
+async function computeOverdueAndSetBadge() {
+  try {
+    const me = await apiCall('/api/me', { method: 'GET' });
+    if (!me || !me.ok) {
+      // Not signed in or backend unreachable — clear badge silently.
+      await chrome.action.setBadgeText({ text: '' });
+      return;
+    }
+    if (me.plan !== 'plus' && me.plan !== 'team') {
+      await chrome.action.setBadgeText({ text: '' });
+      return;
+    }
+    const saved = await apiCall('/api/saved-searches', { method: 'GET' });
+    if (!saved || !saved.ok || !Array.isArray(saved.searches)) {
+      await chrome.action.setBadgeText({ text: '' });
+      return;
+    }
+    let overdue = 0;
+    for (const s of saved.searches) {
+      const cadence = s.scan_cadence || 'manual';
+      const interval = CADENCE_MS[cadence];
+      if (!isFinite(interval)) continue;
+      const last = s.last_scanned_at ? new Date(s.last_scanned_at).getTime() : 0;
+      const elapsed = Date.now() - last;
+      if (elapsed >= interval) overdue++;
+    }
+    if (overdue > 0) {
+      await chrome.action.setBadgeText({ text: String(overdue) });
+      await chrome.action.setBadgeBackgroundColor({ color: '#b14a1a' }); // riffly accent
+    } else {
+      await chrome.action.setBadgeText({ text: '' });
+    }
+  } catch (e) {
+    // Best-effort; keep the previous badge (or none) on error.
+  }
+}
+
+// Alarm-driven hourly refresh + on-startup refresh.
+chrome.runtime.onInstalled.addListener(() => {
+  chrome.alarms.create('riff_overdue_check', { periodInMinutes: 60, delayInMinutes: 1 });
+});
+chrome.runtime.onStartup?.addListener(() => {
+  chrome.alarms.create('riff_overdue_check', { periodInMinutes: 60, delayInMinutes: 1 });
+  computeOverdueAndSetBadge();
+});
+chrome.alarms.onAlarm.addListener((alarm) => {
+  if (alarm.name === 'riff_overdue_check') computeOverdueAndSetBadge();
+});
+
 const USE_STUB = false; // flip to true to bypass backend (offline UI testing)
 
 async function callBackend(payload) {
@@ -258,6 +325,13 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   }
   if (msg.type === 'RIFF_TEMPLATES_DELETE') {
     apiCall(`/api/templates/${encodeURIComponent(msg.payload.id)}`, { method: 'DELETE' }).then(sendResponse);
+    return true;
+  }
+
+  // Refresh the overdue-scan badge on demand. Popup pings this after a
+  // successful scan so the badge decrements immediately.
+  if (msg.type === 'RIFF_REFRESH_BADGE') {
+    computeOverdueAndSetBadge().then(() => sendResponse({ ok: true }));
     return true;
   }
 
