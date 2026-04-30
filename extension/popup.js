@@ -651,6 +651,31 @@ $('#purpose').addEventListener('change', () => {
   refreshTemplates($('#purpose').value, currentCategory);
 });
 
+// Show "Direct · Medium · EN" subtext on the advanced-options summary so the
+// user knows the current style without expanding it.
+function refreshAdvancedSummaryMeta() {
+  const meta = $('#advanced-summary-meta');
+  if (!meta) return;
+  const tone = $('#tone').value;
+  const length = $('#length').value;
+  const lang = $('#language') ? $('#language').value.toUpperCase() : 'EN';
+  const post = $('#post').value.trim();
+  const pieces = [
+    tone.charAt(0).toUpperCase() + tone.slice(1),
+    length === 'short' ? 'Short' : 'Medium',
+    lang,
+  ];
+  if (post) pieces.push('+ post');
+  meta.textContent = pieces.join(' · ');
+}
+['tone', 'length', 'language', 'post'].forEach(id => {
+  const el = document.getElementById(id);
+  if (el) el.addEventListener('change', refreshAdvancedSummaryMeta);
+  if (el && el.tagName === 'TEXTAREA') el.addEventListener('input', refreshAdvancedSummaryMeta);
+});
+// Also call once on load so it's filled from defaults.
+setTimeout(refreshAdvancedSummaryMeta, 0);
+
 $('#template').addEventListener('change', (e) => {
   const idx = parseInt(e.target.value, 10);
   if (Number.isNaN(idx)) return; // Custom — leave pitch alone
@@ -916,6 +941,42 @@ function isLinkedInSearchUrl(url) {
   return !!url && /^https:\/\/www\.linkedin\.com\/search\/results\/(people|all)\b/.test(url);
 }
 
+// Cadence intervals in ms — must match backend CADENCE_INTERVAL_MS.
+const POPUP_CADENCE_MS = {
+  manual: Number.POSITIVE_INFINITY,
+  on_visit: 0,
+  thrice_daily: 8 * 60 * 60 * 1000,
+  daily: 24 * 60 * 60 * 1000,
+  weekly: 7 * 24 * 60 * 60 * 1000,
+};
+const POPUP_CADENCE_LABEL = {
+  manual: 'Manual only',
+  on_visit: 'Every visit',
+  thrice_daily: '3× daily',
+  daily: 'Daily',
+  weekly: 'Weekly',
+};
+
+// Returns either null (eligible to scan now) or a short string describing
+// when the next scan is allowed (e.g. "in 4 hr").
+function nextScanWaitLabel(search) {
+  const cadence = search.scan_cadence || 'manual';
+  if (cadence === 'on_visit') return null;
+  if (cadence === 'manual') return 'manual only';
+  const interval = POPUP_CADENCE_MS[cadence];
+  const last = search.last_scanned_at ? new Date(search.last_scanned_at).getTime() : 0;
+  if (!last) return null;
+  const elapsed = Date.now() - last;
+  if (elapsed >= interval) return null;
+  const remaining = interval - elapsed;
+  const min = Math.ceil(remaining / 60000);
+  if (min < 60) return `in ${min} min`;
+  const hr = Math.ceil(min / 60);
+  if (hr < 24) return `in ${hr} hr`;
+  const d = Math.ceil(hr / 24);
+  return `in ${d} day${d === 1 ? '' : 's'}`;
+}
+
 // Match the active tab URL against the list of saved searches. We compare
 // origin + path (ignoring query/hash) — LinkedIn appends session-specific
 // query params that we don't want to cause false misses.
@@ -991,129 +1052,282 @@ async function renderSavedSearchScan() {
   root.innerHTML = '';
 
   if (!match) {
-    // No saved search for this URL — offer to add it.
-    const wrap = document.createElement('div');
-    wrap.className = 'search-scan-card';
-    wrap.innerHTML = `
-      <div class="search-scan-title">This search isn't tracked yet</div>
-      <div class="search-scan-sub">Add it from your dashboard to start auto-ranking results in your daily digest.</div>
-    `;
-    const addBtn = document.createElement('button');
-    addBtn.type = 'button';
-    addBtn.className = 'search-scan-secondary';
-    addBtn.textContent = 'Open dashboard';
-    addBtn.addEventListener('click', () => {
-      chrome.tabs.create({ url: `${base}/dashboard` });
+    // No saved search for this URL — inline name+cadence form, URL auto-detected.
+    renderAddSearchForm(root, tab.url, base, riff_token, async () => {
+      // After successful add, re-render with the now-tracked match.
+      await renderSavedSearchScan();
     });
-    wrap.appendChild(addBtn);
-    root.appendChild(wrap);
     return;
   }
 
-  // Match found — render the scan button + result area.
+  // Match found — render the cadence-aware scan card.
+  const cadence = match.scan_cadence || 'manual';
+  const waitLabel = nextScanWaitLabel(match);
+  const eligible = waitLabel === null;
+
   const wrap = document.createElement('div');
   wrap.className = 'search-scan-card';
   wrap.innerHTML = `
     <div class="search-scan-title">Tracking: ${escapeHtml(match.name)}</div>
-    <div class="search-scan-sub">Scan visible profile cards and score them against your active job specs.</div>
+    <div class="search-scan-sub">
+      Cadence: <strong>${escapeHtml(POPUP_CADENCE_LABEL[cadence] || cadence)}</strong>
+      ${waitLabel ? ` · next auto-scan ${escapeHtml(waitLabel)}` : ''}
+    </div>
   `;
+
+  // Cadence picker chip row.
+  const cadenceRow = document.createElement('div');
+  cadenceRow.className = 'search-scan-cadence-row';
+  const cadenceLabel = document.createElement('label');
+  cadenceLabel.className = 'search-scan-cadence-label';
+  cadenceLabel.textContent = 'Auto-scan:';
+  const cadenceSel = document.createElement('select');
+  cadenceSel.className = 'search-scan-cadence-select';
+  for (const key of Object.keys(POPUP_CADENCE_LABEL)) {
+    const opt = document.createElement('option');
+    opt.value = key;
+    opt.textContent = POPUP_CADENCE_LABEL[key];
+    if (key === cadence) opt.selected = true;
+    cadenceSel.appendChild(opt);
+  }
+  cadenceSel.addEventListener('change', async () => {
+    const newCadence = cadenceSel.value;
+    cadenceSel.disabled = true;
+    try {
+      const res = await fetch(`${base}/api/saved-searches/${match.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${riff_token}`,
+        },
+        body: JSON.stringify({ scan_cadence: newCadence }),
+      });
+      const data = await res.json();
+      if (!data || !data.ok) {
+        showToast((data && data.error) || 'Could not update cadence.', 'error');
+        cadenceSel.value = cadence;
+      } else {
+        // Re-render the card so the "next auto-scan" sublabel updates.
+        await renderSavedSearchScan();
+      }
+    } catch {
+      showToast('Network error updating cadence.', 'error');
+      cadenceSel.value = cadence;
+    } finally {
+      cadenceSel.disabled = false;
+    }
+  });
+  cadenceLabel.appendChild(cadenceSel);
+  cadenceRow.appendChild(cadenceLabel);
+  wrap.appendChild(cadenceRow);
+
   const btn = document.createElement('button');
   btn.type = 'button';
   btn.className = 'search-scan-primary';
-  btn.textContent = 'Scan visible profiles';
+  btn.textContent = match.last_scanned_at ? 'Scan again now' : 'Scan visible profiles';
   const resultsDiv = document.createElement('div');
   resultsDiv.className = 'search-scan-results';
   wrap.appendChild(btn);
   wrap.appendChild(resultsDiv);
   root.appendChild(wrap);
 
-  btn.addEventListener('click', async () => {
-    btn.disabled = true;
-    btn.textContent = 'Reading profiles…';
-    resultsDiv.innerHTML = '';
+  btn.addEventListener('click', () => runScan({ tab, base, token: riff_token, match, btn, resultsDiv, force: true }));
 
-    // 1) Ask content.js for visible profile cards.
-    let extracted;
-    try {
-      extracted = await new Promise((resolve) => {
-        chrome.tabs.sendMessage(tab.id, { type: 'RIFF_EXTRACT_SEARCH_RESULTS' }, (resp) => {
-          resolve(resp);
-        });
-      });
-    } catch (e) {
-      btn.disabled = false;
-      btn.textContent = 'Scan visible profiles';
-      resultsDiv.textContent = 'Could not read this page. Refresh and try again.';
+  // Auto-trigger if cadence is on_visit OR if we're past the interval AND not manual.
+  if (cadence === 'on_visit' || (eligible && cadence !== 'manual')) {
+    runScan({ tab, base, token: riff_token, match, btn, resultsDiv, force: false });
+  }
+}
+
+// Inline name-only "Add this search" form for untracked LinkedIn search URLs.
+// URL is auto-detected from the active tab.
+function renderAddSearchForm(root, currentUrl, base, token, onAdded) {
+  root.innerHTML = '';
+  const wrap = document.createElement('div');
+  wrap.className = 'search-scan-card';
+  wrap.innerHTML = `
+    <div class="search-scan-title">Track this LinkedIn search?</div>
+    <div class="search-scan-sub">Riffly will rank everyone in this search against your active job specs.</div>
+  `;
+
+  const nameInput = document.createElement('input');
+  nameInput.type = 'text';
+  nameInput.className = 'search-scan-name-input';
+  nameInput.placeholder = 'Name this search (e.g. "Bay Area staff backend")';
+  nameInput.maxLength = 80;
+  wrap.appendChild(nameInput);
+
+  const cadenceLabel = document.createElement('label');
+  cadenceLabel.className = 'search-scan-cadence-label';
+  cadenceLabel.textContent = 'Auto-scan:';
+  const cadenceSel = document.createElement('select');
+  cadenceSel.className = 'search-scan-cadence-select';
+  for (const key of Object.keys(POPUP_CADENCE_LABEL)) {
+    const opt = document.createElement('option');
+    opt.value = key;
+    opt.textContent = POPUP_CADENCE_LABEL[key];
+    if (key === 'manual') opt.selected = true;
+    cadenceSel.appendChild(opt);
+  }
+  cadenceLabel.appendChild(cadenceSel);
+  wrap.appendChild(cadenceLabel);
+
+  const btnRow = document.createElement('div');
+  btnRow.className = 'search-scan-btn-row';
+  const addBtn = document.createElement('button');
+  addBtn.type = 'button';
+  addBtn.className = 'search-scan-primary';
+  addBtn.textContent = 'Track this search';
+  const dashBtn = document.createElement('button');
+  dashBtn.type = 'button';
+  dashBtn.className = 'search-scan-secondary';
+  dashBtn.textContent = 'Open dashboard';
+  dashBtn.addEventListener('click', () => {
+    chrome.tabs.create({ url: `${base}/dashboard` });
+  });
+  btnRow.appendChild(addBtn);
+  btnRow.appendChild(dashBtn);
+  wrap.appendChild(btnRow);
+
+  addBtn.addEventListener('click', async () => {
+    const name = nameInput.value.trim();
+    if (!name) {
+      nameInput.focus();
+      showToast('Give this search a name first.', 'error');
       return;
     }
-    if (!extracted || !extracted.ok || !Array.isArray(extracted.profiles) || extracted.profiles.length === 0) {
-      btn.disabled = false;
-      btn.textContent = 'Scan visible profiles';
-      resultsDiv.textContent = (extracted && extracted.error) || 'No profile cards detected. Scroll the search results into view, then try again.';
-      return;
-    }
-
-    // 2) POST to /api/saved-searches/scan.
-    btn.textContent = `Scoring ${extracted.profiles.length} profiles…`;
-    let scanData;
+    addBtn.disabled = true;
+    addBtn.textContent = 'Adding…';
     try {
-      const res = await fetch(`${base}/api/saved-searches/scan`, {
+      const res = await fetch(`${base}/api/saved-searches`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${riff_token}`,
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          saved_search_id: match.id,
-          profiles: extracted.profiles,
+          name,
+          search_url: currentUrl,
+          scan_cadence: cadenceSel.value,
         }),
       });
-      scanData = await res.json();
+      const data = await res.json();
+      if (!data || !data.ok) {
+        addBtn.disabled = false;
+        addBtn.textContent = 'Track this search';
+        showToast((data && data.error) || 'Could not add this search.', 'error');
+        return;
+      }
+      showToast(`Tracking "${name}"`, 'info');
+      if (typeof onAdded === 'function') await onAdded();
     } catch (e) {
-      btn.disabled = false;
-      btn.textContent = 'Scan visible profiles';
-      resultsDiv.textContent = 'Network error contacting Riffly. Try again in a moment.';
-      return;
+      addBtn.disabled = false;
+      addBtn.textContent = 'Track this search';
+      showToast('Network error contacting Riffly. Try again.', 'error');
     }
-
-    btn.disabled = false;
-    btn.textContent = 'Scan again';
-
-    if (!scanData || !scanData.ok) {
-      resultsDiv.textContent = (scanData && scanData.error) || 'Scan failed. Try again.';
-      return;
-    }
-
-    if (!scanData.results || scanData.results.length === 0) {
-      resultsDiv.textContent = `Scored ${scanData.scanned || 0} profiles but none returned a match. Try scrolling for more results, then scan again.`;
-      return;
-    }
-
-    // 3) Render top results inline (top 5).
-    const topN = scanData.results.slice(0, 5);
-    const list = document.createElement('ol');
-    list.className = 'search-scan-list';
-    for (const r of topN) {
-      const li = document.createElement('li');
-      const score = r.best ? r.best.result.score : 0;
-      const reasoning = r.best ? r.best.result.reasoning : '';
-      const scoreClass = score >= 70 ? 'score-high' : score >= 40 ? 'score-mid' : 'score-low';
-      li.innerHTML = `
-        <div class="search-scan-row">
-          <span class="search-scan-score ${scoreClass}">${score}</span>
-          ${r.profileUrl ? `<a href="${escapeAttr(r.profileUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(r.candidateName || 'Unnamed')}</a>` : `<span>${escapeHtml(r.candidateName || 'Unnamed')}</span>`}
-        </div>
-        ${reasoning ? `<div class="search-scan-reason">${escapeHtml(reasoning)}</div>` : ''}
-      `;
-      list.appendChild(li);
-    }
-    resultsDiv.innerHTML = '';
-    const summary = document.createElement('div');
-    summary.className = 'search-scan-summary';
-    summary.textContent = `Top ${topN.length} of ${scanData.scored || topN.length} matches · also visible in your dashboard digest.`;
-    resultsDiv.appendChild(summary);
-    resultsDiv.appendChild(list);
   });
+
+  root.appendChild(wrap);
+  setTimeout(() => nameInput.focus(), 30);
+}
+
+// Performs the actual scrape + scan POST. Used by both the "Scan again" button
+// (force=true → bypass cadence rate-limit) and the cadence auto-trigger
+// (force=false → backend may 429 if interval not yet elapsed).
+async function runScan({ tab, base, token, match, btn, resultsDiv, force }) {
+  btn.disabled = true;
+  btn.textContent = 'Reading profiles…';
+  resultsDiv.innerHTML = '';
+
+  let extracted;
+  try {
+    extracted = await new Promise((resolve) => {
+      chrome.tabs.sendMessage(tab.id, { type: 'RIFF_EXTRACT_SEARCH_RESULTS' }, (resp) => {
+        resolve(resp);
+      });
+    });
+  } catch (e) {
+    btn.disabled = false;
+    btn.textContent = 'Scan visible profiles';
+    resultsDiv.textContent = 'Could not read this page. Refresh and try again.';
+    return;
+  }
+  if (!extracted || !extracted.ok || !Array.isArray(extracted.profiles) || extracted.profiles.length === 0) {
+    btn.disabled = false;
+    btn.textContent = 'Scan visible profiles';
+    resultsDiv.textContent = (extracted && extracted.error) || 'No profile cards detected. Scroll the search results into view, then try again.';
+    return;
+  }
+
+  btn.textContent = `Scoring ${extracted.profiles.length} profiles…`;
+  let scanData;
+  try {
+    const res = await fetch(`${base}/api/saved-searches/scan`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        saved_search_id: match.id,
+        profiles: extracted.profiles,
+        force: !!force,
+      }),
+    });
+    scanData = await res.json();
+  } catch (e) {
+    btn.disabled = false;
+    btn.textContent = 'Scan visible profiles';
+    resultsDiv.textContent = 'Network error contacting Riffly. Try again in a moment.';
+    return;
+  }
+
+  btn.disabled = false;
+  btn.textContent = 'Scan again';
+
+  // Cadence rate limit — silent for auto-triggers, surfaced for manual.
+  if (scanData && scanData.rateLimited) {
+    if (force) {
+      resultsDiv.textContent = scanData.error || 'Rate limited. Try again later.';
+    } else {
+      resultsDiv.innerHTML = `<div class="search-scan-summary">Auto-scan throttled by cadence. Click "Scan again now" to force a fresh scan.</div>`;
+    }
+    return;
+  }
+
+  if (!scanData || !scanData.ok) {
+    resultsDiv.textContent = (scanData && scanData.error) || 'Scan failed. Try again.';
+    return;
+  }
+
+  if (!scanData.results || scanData.results.length === 0) {
+    resultsDiv.textContent = `Scored ${scanData.scanned || 0} profiles but none returned a match. Try scrolling for more results, then scan again.`;
+    return;
+  }
+
+  const topN = scanData.results.slice(0, 5);
+  const list = document.createElement('ol');
+  list.className = 'search-scan-list';
+  for (const r of topN) {
+    const li = document.createElement('li');
+    const score = r.best ? r.best.result.score : 0;
+    const reasoning = r.best ? r.best.result.reasoning : '';
+    const scoreClass = score >= 70 ? 'score-high' : score >= 40 ? 'score-mid' : 'score-low';
+    li.innerHTML = `
+      <div class="search-scan-row">
+        <span class="search-scan-score ${scoreClass}">${score}</span>
+        ${r.profileUrl ? `<a href="${escapeAttr(r.profileUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(r.candidateName || 'Unnamed')}</a>` : `<span>${escapeHtml(r.candidateName || 'Unnamed')}</span>`}
+      </div>
+      ${reasoning ? `<div class="search-scan-reason">${escapeHtml(reasoning)}</div>` : ''}
+    `;
+    list.appendChild(li);
+  }
+  resultsDiv.innerHTML = '';
+  const summary = document.createElement('div');
+  summary.className = 'search-scan-summary';
+  summary.textContent = `Top ${topN.length} of ${scanData.scored || topN.length} matches · also visible in your dashboard digest.`;
+  resultsDiv.appendChild(summary);
+  resultsDiv.appendChild(list);
 }
 
 function escapeHtml(s) {

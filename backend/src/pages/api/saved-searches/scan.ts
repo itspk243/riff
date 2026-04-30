@@ -23,6 +23,18 @@ import type { ProfileSnapshot, JobSpec, ScoreResult } from '../../../lib/types';
 
 const MAX_PROFILES_PER_SCAN = 25;
 
+// Cadence → minimum elapsed milliseconds before another auto-scan is allowed.
+// `manual` blocks all auto-scans (must pass force=true). `on_visit` allows
+// every call. The auto-trigger paths (popup auto-fire) are the ones rate-
+// limited; the dashboard "Scan now" button passes force=true.
+const CADENCE_INTERVAL_MS: Record<string, number> = {
+  manual: Number.POSITIVE_INFINITY,
+  on_visit: 0,
+  thrice_daily: 8 * 60 * 60 * 1000,
+  daily: 24 * 60 * 60 * 1000,
+  weekly: 7 * 24 * 60 * 60 * 1000,
+};
+
 interface ScanResultRow {
   profileUrl: string;
   candidateName: string;
@@ -49,9 +61,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     });
   }
 
-  const { saved_search_id, profiles } = (req.body || {}) as {
+  const { saved_search_id, profiles, force } = (req.body || {}) as {
     saved_search_id?: string;
     profiles?: ProfileSnapshot[];
+    force?: boolean;
   };
   if (!saved_search_id) return res.status(400).json({ ok: false, error: 'saved_search_id required' });
   if (!Array.isArray(profiles) || profiles.length === 0) {
@@ -69,13 +82,34 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   // Confirm the saved search belongs to this user.
   const { data: search } = await supabase
     .from('saved_searches')
-    .select('id, name')
+    .select('id, name, scan_cadence, last_scanned_at')
     .eq('id', saved_search_id)
     .eq('user_id', user.id)
     .eq('archived', false)
     .maybeSingle();
   if (!search) {
     return res.status(404).json({ ok: false, error: 'saved search not found' });
+  }
+
+  // Cadence enforcement — bypass with force=true (dashboard "Scan now" button).
+  if (!force) {
+    const cadence = (search as any).scan_cadence || 'manual';
+    const interval = CADENCE_INTERVAL_MS[cadence] ?? Number.POSITIVE_INFINITY;
+    const last = (search as any).last_scanned_at ? new Date((search as any).last_scanned_at).getTime() : 0;
+    const elapsed = Date.now() - last;
+    if (interval !== 0 && elapsed < interval) {
+      const nextScanAt = new Date(last + interval).toISOString();
+      return res.status(429).json({
+        ok: false,
+        error:
+          cadence === 'manual'
+            ? 'This search is set to manual. Trigger from the dashboard.'
+            : `Next scan available at ${nextScanAt}.`,
+        nextScanAt,
+        cadence,
+        rateLimited: true,
+      });
+    }
   }
 
   // Pull active job specs once.

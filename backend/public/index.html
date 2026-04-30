@@ -643,24 +643,6 @@
       font-style: italic;
     }
 
-    .cohort-note {
-      margin: -8px auto 28px;
-      padding: 12px 16px;
-      max-width: 720px;
-      font-size: 14px;
-      line-height: 1.55;
-      color: var(--ink);
-      background: var(--warm);
-      border: 1px solid var(--line);
-      border-radius: 6px;
-      text-align: center;
-    }
-
-    .cohort-note strong {
-      color: var(--accent);
-      font-weight: 700;
-    }
-
     .founder-card {
       max-width: 720px;
       margin: 0 auto;
@@ -1114,12 +1096,12 @@
                 <circle cx="12" cy="12" r="3" fill="currentColor"/>
                 <path d="M12 2 L18 8 L12 14" fill="currentColor" opacity="0.8"/>
               </svg>
-              Add to Chrome — Free <span class="arrow">→</span>
+              Get started — Free <span class="arrow">→</span>
             </a>
             <a href="#how" class="btn btn-ghost btn-lg">Watch it work</a>
           </div>
           <div class="hero-meta">
-            No card<span class="hero-meta-dot"></span>5 drafts a week, free<span class="hero-meta-dot"></span>Built on Claude Sonnet 4.6
+            No card<span class="hero-meta-dot"></span>5 drafts a week, free<span class="hero-meta-dot"></span>You always edit before sending
           </div>
         </div>
 
@@ -1277,7 +1259,6 @@
     <div class="wrap">
       <h2>Pricing.</h2>
       <p class="sub">Free is a real test, not a teaser. Pro is for the people who already know they want to use this every day. Plus is for the operator turning cold outreach into a process.</p>
-      <p class="cohort-note"><strong>Founding-cohort lock-in:</strong> the first 50 paid users keep their price for as long as their subscription stays active — even if we raise prices for everyone else.</p>
       <div class="pricing">
         <div class="price-card">
           <div class="price-name">Free</div>
@@ -1371,7 +1352,7 @@
             <circle cx="12" cy="12" r="3" fill="currentColor"/>
             <path d="M12 2 L18 8 L12 14" fill="currentColor" opacity="0.8"/>
           </svg>
-          Add to Chrome — Free
+          Get started — Free
         </a>
       </div>
     </div>
@@ -1386,7 +1367,7 @@
           <span class="who-name">Riffly — beta</span>
         </div>
         <p>Riffly is in beta and we're tuning the prompt by hand. There are no fake testimonials on this page, no inflated user counts, no "trusted by" logos for companies that have never heard of us. We'd rather you try the five free drafts and decide than be talked into it.</p>
-        <p>If you hit something broken, mail <a href="mailto:pksruly@gmail.com?subject=Riffly%20feedback">our support inbox</a> and we'll see it within the hour. Feedback that lands in the prompt blacklist gets a thank-you reply — that's the loop.</p>
+        <p>If you hit something broken, mail <a href="mailto:support@rifflylabs.com?subject=Riffly%20feedback">our support inbox</a> and we'll see it within the hour. Feedback that lands in the prompt blacklist gets a thank-you reply — that's the loop.</p>
       </div>
     </div>
   </section>
@@ -1401,7 +1382,7 @@
         <div class="links">
           <a href="/privacy">Privacy</a>
           <a href="/terms">Terms</a>
-          <a href="mailto:pksruly@gmail.com?subject=Riffly%20feedback">Tell us what's broken</a>
+          <a href="mailto:support@rifflylabs.com?subject=Riffly%20feedback">Tell us what's broken</a>
         </div>
       </div>
     </div>
@@ -1425,7 +1406,7 @@
           cta.setAttribute('href', '/dashboard');
         }
 
-        // Hero "Add to Chrome" → "Open dashboard"
+        // Hero "Get started" → "Open dashboard"
         var hero = document.getElementById('hero-cta');
         if (hero) {
           hero.innerHTML = 'Open dashboard <span class="arrow">→</span>';

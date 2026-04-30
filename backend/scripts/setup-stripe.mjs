@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 //
 // One-shot Stripe setup. Idempotent — safe to re-run.
-// Creates: Pro product + price ($39/mo), Team product + price ($99/mo),
-// and a FOUNDER50 coupon (50% off forever, max 100 redemptions).
+// Creates: Pro product + price ($14.99/mo), Plus product + price ($19.99/mo),
+// and a FOUNDER50 coupon (50% off for 3 months, max 100 redemptions).
 //
 // Usage:
 //   STRIPE_SECRET_KEY=sk_test_... node backend/scripts/setup-stripe.mjs
@@ -104,15 +104,26 @@ async function findOrCreateCoupon() {
 (async () => {
   console.log('Setting up Stripe products...\n');
 
+  // Current pricing (rifflylabs.com landing + dashboard):
+  //   Pro  — $14.99/mo  (drafting features)
+  //   Plus — $19.99/mo  (agentic features: saved-search digest, profile assist)
+  // Team is grandfathered legacy ($99/mo). We still create it so the price id
+  // exists in env — but we don't surface it in the UI.
   const pro = await findOrCreateProductWithPrice({
-    riffId: 'riff_pro_monthly_v1',
-    name: 'Riff Pro',
-    unitAmount: 3900,
+    riffId: 'riff_pro_monthly_v2',
+    name: 'Riffly Pro',
+    unitAmount: 1499,
+  });
+
+  const plus = await findOrCreateProductWithPrice({
+    riffId: 'riff_plus_monthly_v1',
+    name: 'Riffly Plus',
+    unitAmount: 1999,
   });
 
   const team = await findOrCreateProductWithPrice({
     riffId: 'riff_team_monthly_v1',
-    name: 'Riff Team',
+    name: 'Riffly Team (legacy)',
     unitAmount: 9900,
   });
 
@@ -120,6 +131,7 @@ async function findOrCreateCoupon() {
 
   console.log('\n✓ Done. Add these to .env.local and Vercel env vars:\n');
   console.log(`STRIPE_PRICE_PRO_MONTHLY=${pro.priceId}`);
+  console.log(`STRIPE_PRICE_PLUS_MONTHLY=${plus.priceId}`);
   console.log(`STRIPE_PRICE_TEAM_MONTHLY=${team.priceId}`);
-  console.log('\nWebhook secret comes later — after Vercel deploy gives us a public URL.');
+  console.log('\nWebhook secret comes next — run setup-stripe-webhook.mjs once Vercel is live.');
 })().catch(e => { console.error(e); process.exit(1); });

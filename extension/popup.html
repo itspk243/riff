@@ -73,40 +73,6 @@
       </select>
     </label>
 
-    <label>Pitch template <span id="template-hint" class="small muted"></span>
-      <select id="template">
-        <option value="">Custom — write your own</option>
-      </select>
-    </label>
-
-    <div class="row-2">
-      <label>Tone
-        <select id="tone">
-          <option value="warm">Warm</option>
-          <option value="direct" selected>Direct</option>
-          <option value="cheeky">Cheeky</option>
-        </select>
-      </label>
-      <label>Length
-        <select id="length">
-          <option value="short">Short · 50w</option>
-          <option value="medium" selected>Medium · 80w</option>
-        </select>
-      </label>
-    </div>
-
-    <label>Language
-      <select id="language">
-        <option value="en" selected>English</option>
-        <option value="de">Deutsch</option>
-        <option value="fr">Français</option>
-        <option value="es">Español</option>
-        <option value="pt">Português</option>
-        <option value="it">Italiano</option>
-        <option value="nl">Nederlands</option>
-      </select>
-    </label>
-
     <label>Your pitch (1-2 sentences)
       <textarea id="pitch" placeholder="e.g. Hiring a Staff Engineer for payments infra. $250K + equity, fully remote, Series B."></textarea>
     </label>
@@ -115,9 +81,54 @@
          Auto-renders once we have a logged-in user. -->
     <section id="templates-bar"></section>
 
-    <label>Optional: paste a recent post URL or text
-      <textarea id="post" placeholder="(optional — adds deeper personalization)"></textarea>
-    </label>
+    <!-- Collapsed by default. Holds template picker, tone, length,
+         language, and the optional "recent post" field. ~80% of users
+         keep defaults, so this hides the noise. -->
+    <details id="advanced-options">
+      <summary>
+        <span class="adv-summary-text">Tweak style &amp; context</span>
+        <span class="adv-summary-meta" id="advanced-summary-meta"></span>
+      </summary>
+      <div class="advanced-body">
+        <label>Pitch template <span id="template-hint" class="small muted"></span>
+          <select id="template">
+            <option value="">Custom — write your own</option>
+          </select>
+        </label>
+
+        <div class="row-2">
+          <label>Tone
+            <select id="tone">
+              <option value="warm">Warm</option>
+              <option value="direct" selected>Direct</option>
+              <option value="cheeky">Cheeky</option>
+            </select>
+          </label>
+          <label>Length
+            <select id="length">
+              <option value="short">Short · 50w</option>
+              <option value="medium" selected>Medium · 80w</option>
+            </select>
+          </label>
+        </div>
+
+        <label>Language
+          <select id="language">
+            <option value="en" selected>English</option>
+            <option value="de">Deutsch</option>
+            <option value="fr">Français</option>
+            <option value="es">Español</option>
+            <option value="pt">Português</option>
+            <option value="it">Italiano</option>
+            <option value="nl">Nederlands</option>
+          </select>
+        </label>
+
+        <label>Recent post URL or text <span class="small muted">(optional)</span>
+          <textarea id="post" placeholder="Paste a recent post for deeper personalization."></textarea>
+        </label>
+      </div>
+    </details>
 
     <button id="generate" disabled>Generate <span class="kbd-hint">⌘↵</span></button>
   </section>

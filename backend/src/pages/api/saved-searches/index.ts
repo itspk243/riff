@@ -15,6 +15,10 @@ import { hasSavedSearchDigest, maxWatches } from '../../../lib/capabilities';
 
 const LINKEDIN_URL_RE = /^https:\/\/[a-z0-9.-]*linkedin\.com\//i;
 
+// Allowed scan cadence values — matches the CHECK constraint on
+// saved_searches.scan_cadence in schema-saved-searches-cadence.sql.
+const ALLOWED_CADENCES = new Set(['manual', 'on_visit', 'thrice_daily', 'daily', 'weekly']);
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   // CORS — extension calls from chrome-extension://
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -47,7 +51,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (req.method === 'GET') {
     const { data, error } = await supabase
       .from('saved_searches')
-      .select('id, name, search_url, archived, created_at, updated_at, last_scanned_at')
+      .select('id, name, search_url, archived, scan_cadence, created_at, updated_at, last_scanned_at')
       .eq('user_id', user.id)
       .eq('archived', false)
       .order('updated_at', { ascending: false })
@@ -61,9 +65,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   if (req.method === 'POST') {
-    const { name, search_url } = (req.body || {}) as {
+    const { name, search_url, scan_cadence } = (req.body || {}) as {
       name?: string;
       search_url?: string;
+      scan_cadence?: string;
     };
     if (!name || !search_url) {
       return res.status(400).json({ ok: false, error: 'name and search_url are required' });
@@ -77,6 +82,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (!LINKEDIN_URL_RE.test(search_url)) {
       return res.status(400).json({ ok: false, error: 'search_url must be a https://...linkedin.com/... URL' });
     }
+    const cadence = scan_cadence && ALLOWED_CADENCES.has(scan_cadence) ? scan_cadence : 'manual';
 
     // Enforce per-plan watch cap.
     const cap = maxWatches(user.plan);
@@ -98,8 +104,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         user_id: user.id,
         name: name.trim(),
         search_url: search_url.trim(),
+        scan_cadence: cadence,
       })
-      .select('id, name, search_url, archived, created_at, updated_at, last_scanned_at')
+      .select('id, name, search_url, archived, scan_cadence, created_at, updated_at, last_scanned_at')
       .single();
     if (error) return res.status(500).json({ ok: false, error: error.message });
     return res.status(200).json({ ok: true, search: data });

@@ -7,6 +7,7 @@ import { getUserFromBearer, serviceClient } from '../../../lib/supabase';
 import { hasSavedSearchDigest } from '../../../lib/capabilities';
 
 const LINKEDIN_URL_RE = /^https:\/\/[a-z0-9.-]*linkedin\.com\//i;
+const ALLOWED_CADENCES = new Set(['manual', 'on_visit', 'thrice_daily', 'daily', 'weekly']);
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -35,6 +36,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       name: string;
       search_url: string;
       archived: boolean;
+      scan_cadence: string;
     }>;
     const update: Record<string, any> = {};
     if (typeof body.name === 'string') {
@@ -51,6 +53,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       update.search_url = body.search_url.trim();
     }
     if (typeof body.archived === 'boolean') update.archived = body.archived;
+    if (typeof body.scan_cadence === 'string') {
+      if (!ALLOWED_CADENCES.has(body.scan_cadence)) {
+        return res.status(400).json({ ok: false, error: `scan_cadence must be one of: ${Array.from(ALLOWED_CADENCES).join(', ')}` });
+      }
+      update.scan_cadence = body.scan_cadence;
+    }
     if (Object.keys(update).length === 0) {
       return res.status(400).json({ ok: false, error: 'no updatable fields provided' });
     }
@@ -61,7 +69,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .update(update)
       .eq('id', id)
       .eq('user_id', user.id) // ownership guard
-      .select('id, name, search_url, archived, created_at, updated_at, last_scanned_at')
+      .select('id, name, search_url, archived, scan_cadence, created_at, updated_at, last_scanned_at')
       .maybeSingle();
     if (error) return res.status(500).json({ ok: false, error: error.message });
     if (!data) return res.status(404).json({ ok: false, error: 'saved search not found' });

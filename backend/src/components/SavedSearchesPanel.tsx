@@ -15,15 +15,34 @@ import { useEffect, useState } from 'react';
 
 type Plan = 'free' | 'pro' | 'plus' | 'team';
 
+type Cadence = 'manual' | 'on_visit' | 'thrice_daily' | 'daily' | 'weekly';
+
 interface SavedSearch {
   id: string;
   name: string;
   search_url: string;
   archived: boolean;
+  scan_cadence?: Cadence;
   created_at: string;
   updated_at: string;
   last_scanned_at: string | null;
 }
+
+const CADENCE_LABEL: Record<Cadence, string> = {
+  manual: 'Manual only',
+  on_visit: 'Every visit',
+  thrice_daily: '3× daily',
+  daily: 'Daily',
+  weekly: 'Weekly',
+};
+
+const CADENCE_INTERVAL_HRS: Record<Cadence, number> = {
+  manual: Number.POSITIVE_INFINITY,
+  on_visit: 0,
+  thrice_daily: 8,
+  daily: 24,
+  weekly: 24 * 7,
+};
 
 interface DigestCandidate {
   candidate_url: string | null;
@@ -73,7 +92,9 @@ export default function SavedSearchesPanel({ token, plan }: Props) {
   const [showForm, setShowForm] = useState(false);
   const [formName, setFormName] = useState('');
   const [formUrl, setFormUrl] = useState('');
+  const [formCadence, setFormCadence] = useState<Cadence>('manual');
   const [submitting, setSubmitting] = useState(false);
+  const [savingCadenceId, setSavingCadenceId] = useState<string | null>(null);
 
   const isPlus = plan === 'plus' || plan === 'team';
 
@@ -130,7 +151,11 @@ export default function SavedSearchesPanel({ token, plan }: Props) {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ name: formName.trim(), search_url: formUrl.trim() }),
+        body: JSON.stringify({
+          name: formName.trim(),
+          search_url: formUrl.trim(),
+          scan_cadence: formCadence,
+        }),
       });
       const data = await res.json();
       if (!data.ok) {
@@ -139,12 +164,45 @@ export default function SavedSearchesPanel({ token, plan }: Props) {
         setSearches((prev) => (prev ? [data.search, ...prev] : [data.search]));
         setFormName('');
         setFormUrl('');
+        setFormCadence('manual');
         setShowForm(false);
       }
     } catch (e: any) {
       setError(e.message || 'Network error');
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  async function updateCadence(id: string, cadence: Cadence) {
+    if (!token) return;
+    setSavingCadenceId(id);
+    setError(null);
+    // Optimistic update.
+    setSearches((prev) =>
+      prev ? prev.map((s) => (s.id === id ? { ...s, scan_cadence: cadence } : s)) : prev
+    );
+    try {
+      const res = await fetch(`/api/saved-searches/${id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ scan_cadence: cadence }),
+      });
+      const data = await res.json();
+      if (!data.ok) {
+        setError(data.error || 'Failed to update cadence');
+      } else if (data.search) {
+        setSearches((prev) =>
+          prev ? prev.map((s) => (s.id === id ? { ...s, ...data.search } : s)) : prev
+        );
+      }
+    } catch (e: any) {
+      setError(e.message || 'Network error');
+    } finally {
+      setSavingCadenceId(null);
     }
   }
 
@@ -252,6 +310,22 @@ export default function SavedSearchesPanel({ token, plan }: Props) {
                   <span>
                     Last scan: <strong>{formatRelative(s.last_scanned_at)}</strong>
                   </span>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                    Cadence:
+                    <select
+                      value={s.scan_cadence || 'manual'}
+                      onChange={(e) => updateCadence(s.id, e.target.value as Cadence)}
+                      disabled={savingCadenceId === s.id}
+                      style={inlineSelectStyle}
+                    >
+                      {(Object.keys(CADENCE_LABEL) as Cadence[]).map((c) => (
+                        <option key={c} value={c}>{CADENCE_LABEL[c]}</option>
+                      ))}
+                    </select>
+                  </span>
+                  {nextScanLabel(s) && (
+                    <span>Next: <strong>{nextScanLabel(s)}</strong></span>
+                  )}
                   {entry && (
                     <span>
                       Top {entry.top.length} of {entry.total_in_window} scored in last 7 days
@@ -327,6 +401,24 @@ export default function SavedSearchesPanel({ token, plan }: Props) {
                 required
                 style={inputStyle}
               />
+              <span style={{ fontSize: 11, color: '#888', fontWeight: 400 }}>
+                Tip: easier to add searches directly from the Riffly extension while you're on a LinkedIn search page.
+              </span>
+            </label>
+            <label style={labelStyle}>
+              Scan cadence
+              <select
+                value={formCadence}
+                onChange={(e) => setFormCadence(e.target.value as Cadence)}
+                style={inputStyle}
+              >
+                {(Object.keys(CADENCE_LABEL) as Cadence[]).map((c) => (
+                  <option key={c} value={c}>{CADENCE_LABEL[c]}</option>
+                ))}
+              </select>
+              <span style={{ fontSize: 11, color: '#888', fontWeight: 400 }}>
+                How often the extension is allowed to auto-scan this search. You can always force a scan from the dashboard.
+              </span>
             </label>
             <div style={{ display: 'flex', gap: 8 }}>
               <button type="submit" disabled={submitting} style={primaryBtnStyle}>
@@ -348,6 +440,23 @@ export default function SavedSearchesPanel({ token, plan }: Props) {
 function truncateUrl(url: string, max = 70): string {
   if (url.length <= max) return url;
   return url.slice(0, max - 1) + '…';
+}
+
+function nextScanLabel(s: SavedSearch): string | null {
+  const cadence = (s.scan_cadence || 'manual') as Cadence;
+  if (cadence === 'manual' || cadence === 'on_visit') return null;
+  const intervalMs = CADENCE_INTERVAL_HRS[cadence] * 60 * 60 * 1000;
+  const last = s.last_scanned_at ? Date.parse(s.last_scanned_at) : 0;
+  if (!last) return 'now';
+  const next = last + intervalMs;
+  const ms = next - Date.now();
+  if (ms <= 0) return 'now';
+  const min = Math.ceil(ms / 60000);
+  if (min < 60) return `in ${min} min`;
+  const hr = Math.ceil(min / 60);
+  if (hr < 24) return `in ${hr} hr`;
+  const d = Math.ceil(hr / 24);
+  return `in ${d} day${d === 1 ? '' : 's'}`;
 }
 
 function formatRelative(iso: string | null): string {
@@ -528,6 +637,16 @@ const inputStyle: React.CSSProperties = {
   borderRadius: 6,
   fontSize: 13,
   fontFamily: 'inherit',
+};
+
+const inlineSelectStyle: React.CSSProperties = {
+  padding: '2px 6px',
+  border: '1px solid #ddd',
+  borderRadius: 4,
+  fontSize: 11.5,
+  fontFamily: 'inherit',
+  background: '#fff',
+  cursor: 'pointer',
 };
 
 const primaryBtnStyle: React.CSSProperties = {
