@@ -281,6 +281,18 @@ export function buildUserMessage(req: GenerateRequest): string {
     lines.push(`language: English`);
   }
 
+  // Voice fingerprint — when the Pro+ user has trained Riffly on their
+  // writing samples, this hint tells the model to match their cadence.
+  // Without this, the prompt's default tone/length controls still apply
+  // — the fingerprint just biases the output toward the user's
+  // observed habits (sentence length, contractions, signoff style).
+  if (req.voiceHint) {
+    lines.push('');
+    lines.push('# Match this writer\'s voice');
+    lines.push(req.voiceHint);
+    lines.push('Match cadence, sentence length, and register. Do NOT copy specific phrases verbatim — that\'s plagiarism, not voice cloning. The blacklist above still wins over voice fidelity.');
+  }
+
   lines.push('');
   lines.push('Generate the three variants now. Return ONLY the JSON object — no prose, no markdown fences.');
 

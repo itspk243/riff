@@ -6,10 +6,11 @@
 // In local development you can set ALLOW_ANON=true and skip the header.
 
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { getUserFromBearer } from '../../lib/supabase';
+import { getUserFromBearer, serviceClient } from '../../lib/supabase';
 import { checkQuota, recordUsage, bumpGlobalCounter, decrementGlobalCounter } from '../../lib/quota';
 import { generateVariants } from '../../lib/llm';
 import { hasAllVariants } from '../../lib/capabilities';
+import { fingerprintAsPromptHint, type VoiceFingerprint } from '../../lib/voice-fingerprint';
 import type { GenerateRequest, GenerateResponse } from '../../lib/types';
 
 const ALLOW_ANON = process.env.ALLOW_ANON === 'true';
@@ -63,6 +64,29 @@ export default async function handler(
       ok: false,
       error: "We've hit today's global generation cap. Try again in a few hours; if this persists, email support@rifflylabs.com.",
     });
+  }
+
+  // Voice fingerprint injection (Pro+ moat feature). If the user has trained
+  // Riffly on writing samples, append a one-paragraph style hint to the
+  // request. The client never sets voiceHint — only the server, after
+  // looking up the trusted fingerprint row.
+  if (user) {
+    try {
+      const supabase = serviceClient();
+      const { data: fp } = await supabase
+        .from('user_voice_fingerprints')
+        .select('*')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      if (fp) {
+        const hint = fingerprintAsPromptHint(fp as VoiceFingerprint);
+        if (hint) (body as GenerateRequest).voiceHint = hint;
+      }
+    } catch (e) {
+      // Best-effort — voice cloning is a polish layer, never block generation
+      // because the fingerprint lookup failed.
+      console.warn('voice fingerprint fetch failed', e);
+    }
   }
 
   // Generate

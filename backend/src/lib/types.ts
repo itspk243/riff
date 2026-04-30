@@ -28,6 +28,9 @@ export interface GenerateRequest {
   recentPost?: string | null;
   purpose?: Purpose;
   language?: Language; // defaults to 'en' when omitted
+  // Server-injected (NOT from client) — derived from user_voice_fingerprints
+  // when the Pro+ user has trained Riffly on their writing samples.
+  voiceHint?: string | null;
 }
 
 export type VariantType = 'cold_opener' | 'follow_up' | 'breakup';

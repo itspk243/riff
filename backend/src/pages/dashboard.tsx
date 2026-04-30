@@ -6,6 +6,7 @@ import Head from 'next/head';
 import SavedSearchesPanel from '../components/SavedSearchesPanel';
 import OnboardingChecklist from '../components/OnboardingChecklist';
 import JobSpecsPanel from '../components/JobSpecsPanel';
+import VoiceFingerprintPanel from '../components/VoiceFingerprintPanel';
 
 interface MeResponse {
   ok: boolean;
@@ -803,6 +804,11 @@ export default function Dashboard() {
               </button>
             )}
           </section>
+
+          {/* Voice fingerprint (Pro+ — the moat feature).
+              Lets the user train Riffly on their writing samples so drafts
+              come out in their dialect. Free users see a locked card. */}
+          <VoiceFingerprintPanel token={token} plan={me?.plan} />
 
           {/* Job specs (Plus tier — Active Profile Assist).
               Renders before saved-search digest because specs power the
