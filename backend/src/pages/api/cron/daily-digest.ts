@@ -47,11 +47,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const supabase = serviceClient();
   const sinceIso = new Date(Date.now() - WINDOW_HOURS * 60 * 60 * 1000).toISOString();
 
-  // Pull all Plus / Team users with a non-null email.
+  // Optional `?hour=N` override for manual testing — when present, filter
+  // recipients to that exact UTC hour. Otherwise use the current UTC hour.
+  // This means the cron must invoke once per hour to cover all 24 buckets.
+  // (Vercel Hobby is daily-only — wire an hourly external pinger or upgrade
+  //  to Pro to actually fire all hours.)
+  const hourOverride = parseInt(String(req.query.hour ?? ''), 10);
+  const targetHour = Number.isFinite(hourOverride) && hourOverride >= 0 && hourOverride <= 23
+    ? hourOverride
+    : new Date().getUTCHours();
+
+  // Pull Plus / Team users whose digest_send_hour_utc matches this hour.
   const { data: users, error: usersErr } = await supabase
     .from('users')
-    .select('id, email')
-    .in('plan', ['plus', 'team']);
+    .select('id, email, digest_send_hour_utc')
+    .in('plan', ['plus', 'team'])
+    .eq('digest_send_hour_utc', targetHour);
   if (usersErr) {
     return res.status(500).json({ ok: false, error: usersErr.message });
   }
@@ -89,6 +100,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   return res.status(200).json({
     ok: true,
+    targetHourUtc: targetHour,
     windowHours: WINDOW_HOURS,
     totalUsers: recipients.length,
     sent: results.filter((r) => r.status === 'sent').length,

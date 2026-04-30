@@ -95,6 +95,8 @@ export default function SavedSearchesPanel({ token, plan }: Props) {
   const [formCadence, setFormCadence] = useState<Cadence>('manual');
   const [submitting, setSubmitting] = useState(false);
   const [savingCadenceId, setSavingCadenceId] = useState<string | null>(null);
+  const [digestHour, setDigestHour] = useState<number>(8);
+  const [savingDigestHour, setSavingDigestHour] = useState<boolean>(false);
 
   const isPlus = plan === 'plus' || plan === 'team';
 
@@ -107,13 +109,16 @@ export default function SavedSearchesPanel({ token, plan }: Props) {
       setLoading(true);
       setError(null);
       try {
-        const [searchesRes, digestRes] = await Promise.all([
+        const [searchesRes, digestRes, prefsRes] = await Promise.all([
           fetch('/api/saved-searches', { headers: { Authorization: `Bearer ${token}` } }).then((r) =>
             r.json() as Promise<SearchesResponse>
           ),
           fetch('/api/saved-searches/digest?days=7&top=5', {
             headers: { Authorization: `Bearer ${token}` },
           }).then((r) => r.json() as Promise<DigestResponse>),
+          fetch('/api/preferences', { headers: { Authorization: `Bearer ${token}` } }).then((r) =>
+            r.json() as Promise<{ ok: boolean; digest_send_hour_utc?: number }>
+          ),
         ]);
         if (cancelled) return;
         if (searchesRes.ok) {
@@ -126,6 +131,9 @@ export default function SavedSearchesPanel({ token, plan }: Props) {
         if (digestRes.ok) {
           setDigest(digestRes.digest || []);
         }
+        if (prefsRes.ok && typeof prefsRes.digest_send_hour_utc === 'number') {
+          setDigestHour(prefsRes.digest_send_hour_utc);
+        }
       } catch (e: any) {
         if (!cancelled) setError(e.message || 'Network error');
       } finally {
@@ -137,6 +145,33 @@ export default function SavedSearchesPanel({ token, plan }: Props) {
       cancelled = true;
     };
   }, [token]);
+
+  async function updateDigestHour(hour: number) {
+    if (!token) return;
+    const previous = digestHour;
+    setDigestHour(hour); // optimistic
+    setSavingDigestHour(true);
+    try {
+      const res = await fetch('/api/preferences', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ digest_send_hour_utc: hour }),
+      });
+      const data = await res.json();
+      if (!data.ok) {
+        setDigestHour(previous);
+        setError(data.error || 'Failed to save digest time');
+      }
+    } catch (e: any) {
+      setDigestHour(previous);
+      setError(e.message || 'Network error');
+    } finally {
+      setSavingDigestHour(false);
+    }
+  }
 
   async function addSearch(e: React.FormEvent) {
     e.preventDefault();
@@ -263,12 +298,33 @@ export default function SavedSearchesPanel({ token, plan }: Props) {
         </div>
       </div>
 
-      <p style={{ fontSize: 13, color: '#666', margin: '4px 0 18px', lineHeight: 1.55 }}>
+      <p style={{ fontSize: 13, color: '#666', margin: '4px 0 14px', lineHeight: 1.55 }}>
         Add the URL of any LinkedIn people-search you want to track. When the
         Riffly extension is open on that search, it scrapes visible profile
         cards and scores them against your active job specs. Top matches
         appear below — refreshed every time you re-visit the search.
       </p>
+
+      {/* Per-user email-digest send time. Stored in users.digest_send_hour_utc;
+          cron filters recipients by current UTC hour so the cron must invoke
+          hourly (Vercel Hobby caps at daily — wire an external pinger or
+          upgrade for full coverage). */}
+      <div id="digest-prefs" style={prefsRowStyle}>
+        <span style={{ fontSize: 12.5, color: '#444' }}>
+          Email me my digest at
+        </span>
+        <select
+          value={digestHour}
+          onChange={(e) => updateDigestHour(parseInt(e.target.value, 10))}
+          disabled={savingDigestHour}
+          style={hourSelectStyle}
+        >
+          {Array.from({ length: 24 }, (_, h) => (
+            <option key={h} value={h}>{formatHour(h)}</option>
+          ))}
+        </select>
+        <span style={{ fontSize: 11, color: '#888' }}>UTC</span>
+      </div>
 
       {error && (
         <div style={errorBoxStyle}>{error}</div>
@@ -440,6 +496,14 @@ export default function SavedSearchesPanel({ token, plan }: Props) {
 function truncateUrl(url: string, max = 70): string {
   if (url.length <= max) return url;
   return url.slice(0, max - 1) + '…';
+}
+
+function formatHour(h: number): string {
+  // 0 → "12 AM", 8 → "8 AM", 13 → "1 PM"
+  if (h === 0) return '12 AM';
+  if (h < 12) return `${h} AM`;
+  if (h === 12) return '12 PM';
+  return `${h - 12} PM`;
 }
 
 function nextScanLabel(s: SavedSearch): string | null {
@@ -637,6 +701,28 @@ const inputStyle: React.CSSProperties = {
   borderRadius: 6,
   fontSize: 13,
   fontFamily: 'inherit',
+};
+
+const prefsRowStyle: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: 8,
+  padding: '10px 12px',
+  background: '#fafaf7',
+  border: '1px solid #ececec',
+  borderRadius: 8,
+  marginBottom: 16,
+  flexWrap: 'wrap',
+};
+
+const hourSelectStyle: React.CSSProperties = {
+  padding: '4px 8px',
+  border: '1px solid #ddd',
+  borderRadius: 5,
+  fontSize: 12.5,
+  fontFamily: 'inherit',
+  background: '#fff',
+  cursor: 'pointer',
 };
 
 const inlineSelectStyle: React.CSSProperties = {
