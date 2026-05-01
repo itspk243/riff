@@ -6,6 +6,7 @@
   "homepage_url": "https://rifflylabs.com",
   "icons": {
     "16": "icons/icon-16.png",
+    "24": "icons/icon-24.png",
     "32": "icons/icon-32.png",
     "48": "icons/icon-48.png",
     "128": "icons/icon-128.png"
@@ -14,13 +15,15 @@
   "host_permissions": [
     "https://www.linkedin.com/*",
     "https://linkedin.com/*",
-    "https://github.com/*",
     "https://wellfound.com/*",
     "https://www.wellfound.com/*",
     "https://angel.co/*",
     "https://rifflylabs.com/*",
     "https://*.rifflylabs.com/*"
   ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'"
+  },
   "background": {
     "service_worker": "background.js"
   },
@@ -58,6 +61,7 @@
     "default_title": "Riffly: draft outreach",
     "default_icon": {
       "16": "icons/icon-16.png",
+      "24": "icons/icon-24.png",
       "32": "icons/icon-32.png",
       "48": "icons/icon-48.png",
       "128": "icons/icon-128.png"

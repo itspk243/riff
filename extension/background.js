@@ -239,7 +239,7 @@ function stubResponse(payload) {
     variants: [
       {
         type: 'cold_opener',
-        text: `Hi ${firstName}, your work on ${hookFromHeadline} caught my attention — particularly given the angle on ${role || 'your current role'}. ${pitch} Curious if it'd be worth a 15-minute conversation this week?`
+        text: `Hi ${firstName}, your work on ${hookFromHeadline} stood out, mostly because of how you've framed the ${role || 'role'} side. ${pitch} Worth a 15-minute conversation this week?`
       },
       {
         type: 'follow_up',
