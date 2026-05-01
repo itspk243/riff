@@ -42,43 +42,53 @@ Turn any LinkedIn, GitHub, or Wellfound profile into a personalized cold-message
 ### Description (16,000 char max — paste the whole block below)
 
 ```
-Riffly drafts cold outreach that doesn't read like every other "I came across your profile" message in their inbox.
+Riffly writes the cold LinkedIn message you keep putting off, in your voice, fast.
 
-Open a candidate's LinkedIn, GitHub, or Wellfound profile, click the Riffly icon, and get three personalized message variants grounded in what they actually wrote — not a Mad Lib of "great fit" and "exciting opportunity."
+You open a candidate's profile on LinkedIn, GitHub, or Wellfound. Click the Riffly icon in your toolbar. Riffly reads what's on the page (their bio, their pinned post, their last shipped repo) and writes three message variants for you. Pick one, edit it, send it yourself. The keyboard is yours.
 
-You review every draft before you send it. Riffly never auto-sends, never connects to your LinkedIn account, and never queues messages in the background. It's a writing assistant — the keyboard is still yours.
+Riffly does not send anything for you. Not ever. It's a writing tool, not a sequencer. Your LinkedIn account never gets touched, never gets logged into, never gets automated against. You stay safely in the read-only zone where LinkedIn doesn't ban you.
 
 WHO IT'S FOR
-Technical recruiters at startups who refuse to send templates. Founders who hate the cold-email tone. Anyone tired of getting back the same generic pitch they got from the last fifteen recruiters.
+
+Technical recruiters at startups who refuse to send templates. Founders who hate the cold-email tone. Anyone who's been on the receiving end of fifteen "I came across your profile and was impressed by your background" messages in one week and decided they'd rather not be the sixteenth.
 
 WHAT IT DOES
-• Reads the profile in front of you (only the profile you're currently viewing — never crawls in the background)
-• Generates 3 message variants tuned to your pitch, tone (warm / direct / playful), and length
-• Refuses to use the cliché phrases that get cold messages archived ("leverage," "great fit," "circle back," "world-class," and ~30 more)
-• Saves your job specs so it knows what you're hiring for across visits
-• Optional: train it on 5–10 of your past messages so drafts come out in your own voice (Pro)
-• Optional: track saved searches and get a daily email digest of new high-fit candidates (Plus)
+
+It reads the profile you're already looking at, only that one, only when you click.
+
+It writes three message variants tuned to your pitch, your tone (warm, direct, or cheeky), and your length.
+
+It won't write the phrases that get cold messages archived. "Leverage." "Great fit." "Circle back." "World-class." About thirty more it refuses to put in your mouth.
+
+Your active job specs get saved so it remembers what you're hiring for next visit.
+
+If you're on Pro, you can train it on five or six of your real past messages and the drafts start sounding like you wrote them.
+
+If you're on Plus, you can track saved LinkedIn searches and get a once-a-day email of new candidates who fit.
 
 WHAT IT DOESN'T DO
-• No automation. Riffly never sends, queues, or schedules messages.
-• No LinkedIn login. Riffly doesn't store your credentials or run as your account.
-• No background scraping. We only read the profile page you've actively opened.
-• No selling your data. Profile snapshots and drafts are kept for 30 days for debugging only, then deleted.
 
-LINKEDIN COMPLIANCE NOTES
-• Sales Navigator and LinkedIn Recruiter pages are profile-detail surfaces users navigate to manually. Riffly reads the rendered DOM passively, only when invoked, and never automates any LinkedIn action.
-• The Plus-tier "scan visible profiles" feature on saved-search pages is triggered only by an explicit user click. Riffly never auto-scrolls, never paginates, and never traverses search results in the background.
+No automation, ever. Riffly will never send a message on your behalf, never queue one for later, never crawl pages you haven't opened, and never log into your LinkedIn account. Profile snapshots and drafts get kept for thirty days so we can debug edge cases, then deleted. We don't sell your data and we have no ad tech in the extension.
+
+A NOTE ON LINKEDIN COMPLIANCE
+
+Sales Navigator and LinkedIn Recruiter pages are profile pages users navigate to themselves. Riffly reads the rendered DOM passively, only when invoked. The Plus tier "scan visible profiles" feature on saved-search results is triggered only by an explicit user click; we never auto-scroll, paginate, or traverse search results in the background.
 
 PRICING
-• Free — 5 drafts a week, all features unlocked. No credit card.
-• Pro ($15/mo) — 200 drafts a month, voice fingerprint, draft history.
-• Plus ($25/mo) — 600 drafts a month plus saved-search tracking, daily candidate digest, active profile fit-scoring.
+
+Free is five drafts a week, all features unlocked, no credit card needed.
+
+Pro is $15 a month for 200 drafts, plus voice fingerprint and draft history.
+
+Plus is $25 a month for 600 drafts, plus saved-search tracking, daily candidate digest, and live profile fit-scoring as you browse.
 
 PRIVACY
-We use Anthropic's Claude API to generate drafts. Your profile snapshot and pitch are sent there, processed, and returned. Full privacy policy at rifflylabs.com/privacy. Sub-processors, retention, and your rights all listed.
+
+Riffly uses Anthropic's Claude API to draft messages. Your profile snapshot and your pitch are sent there, processed, and the response comes back. Full privacy policy with sub-processors, retention, and your rights at rifflylabs.com/privacy.
 
 QUESTIONS
-contactus@rifflylabs.com — usually replied within a day.
+
+Email contactus@rifflylabs.com. We usually reply within a day.
 ```
 
 ### Category

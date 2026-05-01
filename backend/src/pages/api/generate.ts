@@ -34,6 +34,26 @@ export default async function handler(
     return res.status(400).json({ ok: false, error: 'Missing required fields' });
   }
 
+  // Surface kill switch — env-controlled, no redeploy needed beyond setting
+  // the var in Vercel and triggering a redeploy. If LinkedIn ever sends a
+  // C&D about Sales Nav / Recruiter, we set
+  //   RIFF_DISABLED_SURFACES=sales_navigator,linkedin_recruiter
+  // and the affected surfaces start returning a clean 403 within minutes,
+  // letting us reply to LinkedIn legal that we've already complied without
+  // shipping a new extension version through Web Store review.
+  const disabledSurfaces = (process.env.RIFF_DISABLED_SURFACES || '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+  if (body.profile.surface && disabledSurfaces.includes(body.profile.surface)) {
+    const human = body.profile.surface.replace(/_/g, ' ');
+    return res.status(403).json({
+      ok: false,
+      error: `Riffly is temporarily not available on this surface (${human}). Open a public LinkedIn profile (linkedin.com/in/...) or a GitHub or Wellfound profile to draft a message.`,
+      surfaceDisabled: true,
+    });
+  }
+
   // Auth + quota
   let user = await getUserFromBearer(req.headers.authorization);
   if (!user) {

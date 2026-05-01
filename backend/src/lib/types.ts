@@ -64,6 +64,13 @@ export interface GenerateResponse {
   upgradeMessage?: string;
   /** Rich quota snapshot for dashboard + extension warning bars. */
   usage?: UsageSnapshot;
+  /**
+   * True when the request was rejected because RIFF_DISABLED_SURFACES is set
+   * in env and the profile.surface matched. Lets the extension popup show a
+   * surface-specific nudge ("not available on this LinkedIn surface")
+   * instead of a generic error.
+   */
+  surfaceDisabled?: boolean;
 }
 
 // Plans are ranked by capability:
