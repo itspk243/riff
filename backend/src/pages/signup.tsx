@@ -266,14 +266,11 @@ export default function SignupPage() {
               </label>
               <label style={labelStyle}>
                 Password
-                <input
-                  type="password"
+                <PasswordInput
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  required
                   autoComplete="current-password"
                   placeholder="••••••••"
-                  style={inputStyle}
                   disabled={state === 'busy'}
                 />
               </label>
@@ -309,29 +306,23 @@ export default function SignupPage() {
               </label>
               <label style={labelStyle}>
                 Password (8+ characters)
-                <input
-                  type="password"
+                <PasswordInput
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  required
                   minLength={8}
                   autoComplete="new-password"
                   placeholder="••••••••"
-                  style={inputStyle}
                   disabled={state === 'busy'}
                 />
               </label>
               <label style={labelStyle}>
                 Confirm password
-                <input
-                  type="password"
+                <PasswordInput
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  required
                   minLength={8}
                   autoComplete="new-password"
                   placeholder="••••••••"
-                  style={inputStyle}
                   disabled={state === 'busy'}
                 />
               </label>
@@ -447,6 +438,55 @@ function SuccessShell({ title, children }: { title: string; children: React.Reac
   );
 }
 
+// Reusable password field with a tiny Show / Hide toggle. Each instance keeps
+// its own visibility state so the signup-mode "Password" and "Confirm password"
+// fields can be revealed independently. tabIndex={-1} keeps the toggle out of
+// the keyboard tab order so Tab still moves between form fields normally.
+function PasswordInput({
+  value,
+  onChange,
+  placeholder,
+  autoComplete,
+  disabled,
+  autoFocus,
+  minLength,
+}: {
+  value: string;
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  placeholder?: string;
+  autoComplete?: string;
+  disabled?: boolean;
+  autoFocus?: boolean;
+  minLength?: number;
+}) {
+  const [show, setShow] = useState(false);
+  return (
+    <div style={{ position: 'relative', marginTop: 6 }}>
+      <input
+        type={show ? 'text' : 'password'}
+        value={value}
+        onChange={onChange}
+        required
+        minLength={minLength}
+        autoComplete={autoComplete}
+        autoFocus={autoFocus}
+        placeholder={placeholder}
+        disabled={disabled}
+        style={{ ...inputStyle, marginTop: 0, paddingRight: 64 }}
+      />
+      <button
+        type="button"
+        onClick={() => setShow(!show)}
+        tabIndex={-1}
+        aria-label={show ? 'Hide password' : 'Show password'}
+        style={showHideButtonStyle}
+      >
+        {show ? 'Hide' : 'Show'}
+      </button>
+    </div>
+  );
+}
+
 function GoogleLogo() {
   return (
     <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink: 0 }}>
@@ -521,4 +561,9 @@ const linkStyle: React.CSSProperties = { color: '#0a0a0a' };
 const linkButtonStyle: React.CSSProperties = {
   background: 'none', border: 'none', padding: 0, color: '#0a0a0a',
   textDecoration: 'underline', cursor: 'pointer', font: 'inherit',
+};
+const showHideButtonStyle: React.CSSProperties = {
+  position: 'absolute', right: 4, top: '50%', transform: 'translateY(-50%)',
+  background: 'none', border: 'none', padding: '6px 10px',
+  fontSize: 12, color: '#555', cursor: 'pointer', fontFamily: 'inherit',
 };

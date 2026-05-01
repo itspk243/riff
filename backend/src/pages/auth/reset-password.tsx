@@ -101,30 +101,22 @@ export default function ResetPassword() {
               <form onSubmit={handleSubmit}>
                 <label style={labelStyle}>
                   New password (8+ characters)
-                  <input
-                    type="password"
+                  <PasswordInput
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    required
-                    minLength={8}
                     autoComplete="new-password"
                     autoFocus
                     placeholder="••••••••"
-                    style={inputStyle}
                     disabled={state === 'busy'}
                   />
                 </label>
                 <label style={labelStyle}>
                   Confirm new password
-                  <input
-                    type="password"
+                  <PasswordInput
                     value={confirm}
                     onChange={(e) => setConfirm(e.target.value)}
-                    required
-                    minLength={8}
                     autoComplete="new-password"
                     placeholder="••••••••"
-                    style={inputStyle}
                     disabled={state === 'busy'}
                   />
                 </label>
@@ -140,6 +132,58 @@ export default function ResetPassword() {
     </>
   );
 }
+
+// Reusable password field with a Show / Hide toggle. Same shape as the one in
+// /signup; duplicated rather than extracted to keep this page self-contained
+// and avoid an extra component file for two uses.
+function PasswordInput({
+  value,
+  onChange,
+  placeholder,
+  autoComplete,
+  disabled,
+  autoFocus,
+}: {
+  value: string;
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  placeholder?: string;
+  autoComplete?: string;
+  disabled?: boolean;
+  autoFocus?: boolean;
+}) {
+  const [show, setShow] = useState(false);
+  return (
+    <div style={{ position: 'relative', marginTop: 6 }}>
+      <input
+        type={show ? 'text' : 'password'}
+        value={value}
+        onChange={onChange}
+        required
+        minLength={8}
+        autoComplete={autoComplete}
+        autoFocus={autoFocus}
+        placeholder={placeholder}
+        disabled={disabled}
+        style={{ ...inputStyle, marginTop: 0, paddingRight: 64 }}
+      />
+      <button
+        type="button"
+        onClick={() => setShow(!show)}
+        tabIndex={-1}
+        aria-label={show ? 'Hide password' : 'Show password'}
+        style={showHideButtonStyle}
+      >
+        {show ? 'Hide' : 'Show'}
+      </button>
+    </div>
+  );
+}
+
+const showHideButtonStyle: React.CSSProperties = {
+  position: 'absolute', right: 4, top: '50%', transform: 'translateY(-50%)',
+  background: 'none', border: 'none', padding: '6px 10px',
+  fontSize: 12, color: '#555', cursor: 'pointer', fontFamily: 'inherit',
+};
 
 const pageStyle: React.CSSProperties = {
   minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
