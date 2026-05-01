@@ -30,7 +30,7 @@ interface MeResponse {
   };
 }
 
-const FREE_WEEKLY_LIMIT = 5;
+const FREE_WEEKLY_LIMIT = 3;
 
 // Chrome Web Store listing URL — the only way users get the extension once
 // we go public. Set NEXT_PUBLIC_CHROME_STORE_URL in Vercel once the listing
@@ -63,7 +63,7 @@ function planPrice(plan?: string): string {
   if (plan === 'plus') return '$25 / month';
   if (plan === 'pro') return '$15 / month';
   if (plan === 'team') return '$99 / month · legacy';
-  return 'Free · 5 drafts/week';
+  return 'Free · 3 drafts/week';
 }
 
 export default function Dashboard() {
@@ -722,7 +722,7 @@ export default function Dashboard() {
                   <div style={tierPriceStyle}>$0</div>
                   <div style={tierBlurbStyle}>Try it before paying.</div>
                   <ul style={tierListStyle}>
-                    <li>5 drafts per week</li>
+                    <li>3 drafts per week (+3 bonus when you share a roast)</li>
                     <li>Cold opener variant only</li>
                     <li>All profile sources (LinkedIn, GitHub, Wellfound)</li>
                     <li>Local reply stats</li>

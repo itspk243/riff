@@ -153,35 +153,101 @@ async function computeOverdueAndSetBadge() {
   }
 }
 
-// Alarm-driven hourly refresh + on-startup refresh + side-panel wiring.
+// Alarm-driven hourly refresh + on-startup refresh + surface-mode wiring.
 //
-// Side-panel behavior: clicking the toolbar icon toggles the side panel
-// open/close. The same popup.html serves both popup mode (legacy fallback)
-// and side-panel mode — the popup HTML and JS don't care which surface
-// they're rendered in. The big UX win for cold-message drafting: the panel
-// stays open next to the candidate's profile while the recruiter reads,
-// drafts, and sends, instead of vanishing on outside-click like the popup.
+// Surface mode (popup vs side-panel) is user-selectable in the footer of
+// popup.html. The selection is stored at chrome.storage.local.riff_surface_mode
+// = 'popup' | 'sidebar' (default 'sidebar'). On install/startup we re-assert
+// the chosen behavior so it survives Chrome restarts.
+//
+//   sidebar mode: action.setPopup('') + sidePanel.setPanelBehavior({open:true})
+//                 → icon click toggles the persistent side panel
+//   popup mode:   action.setPopup('popup.html') + sidePanel.setPanelBehavior({open:false})
+//                 → icon click opens classic transient popup
+//
+// The same popup.html/popup.js serves both surfaces — popup.css adapts the
+// width based on what the script detects at load time.
+
+async function applySurfaceMode() {
+  const { riff_surface_mode } = await chrome.storage.local.get('riff_surface_mode');
+  const mode = riff_surface_mode === 'popup' ? 'popup' : 'sidebar';
+  try {
+    if (mode === 'popup') {
+      await chrome.action.setPopup({ popup: 'popup.html' });
+      if (chrome.sidePanel && chrome.sidePanel.setPanelBehavior) {
+        await chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: false });
+      }
+    } else {
+      // Empty popup string disables the popup so the icon click falls through
+      // to whatever sidePanel.setPanelBehavior decided (open the panel).
+      await chrome.action.setPopup({ popup: '' });
+      if (chrome.sidePanel && chrome.sidePanel.setPanelBehavior) {
+        await chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
+      }
+    }
+  } catch (e) {
+    console.warn('applySurfaceMode failed:', e);
+  }
+}
+
 chrome.runtime.onInstalled.addListener(() => {
   chrome.alarms.create('riff_overdue_check', { periodInMinutes: 60, delayInMinutes: 1 });
-  // Make icon-click open the side panel (instead of nothing — we removed
-  // default_popup so the icon would have no behavior without this).
-  if (chrome.sidePanel && chrome.sidePanel.setPanelBehavior) {
-    chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true })
-      .catch((e) => console.warn('sidePanel.setPanelBehavior failed:', e));
-  }
+  applySurfaceMode();
 });
 chrome.runtime.onStartup?.addListener(() => {
   chrome.alarms.create('riff_overdue_check', { periodInMinutes: 60, delayInMinutes: 1 });
   computeOverdueAndSetBadge();
-  // Re-assert side-panel behavior on every startup in case user did something
-  // weird with chrome://extensions settings between sessions.
-  if (chrome.sidePanel && chrome.sidePanel.setPanelBehavior) {
-    chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true })
-      .catch(() => {});
-  }
+  applySurfaceMode();
 });
 chrome.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name === 'riff_overdue_check') computeOverdueAndSetBadge();
+});
+
+// ---------- SPA navigation broadcaster ----------
+//
+// LinkedIn / Wellfound / GitHub all use client-side routing. Clicking from
+// one profile to another doesn't trigger a full page load, so the popup's
+// initial extract becomes stale. We listen for any URL change on a supported
+// surface and broadcast a RIFF_PROFILE_NAV runtime message; the popup/sidebar
+// listens for it and re-extracts. In popup mode this is a no-op (popup is
+// closed on tab switch); in sidebar mode it's the whole point — the panel
+// auto-updates as the recruiter clicks through profiles.
+const PROFILE_URL_RE = new RegExp(
+  '^https://(' +
+    'www\\.linkedin\\.com/(in|sales/lead|talent/profile|search/results)/' +
+    '|github\\.com/[^/?#]+/?(?:[?#].*)?$' +
+    '|(?:www\\.)?wellfound\\.com/(?:u|profile|p)/' +
+    '|angel\\.co/u/' +
+  ')'
+);
+
+function broadcastProfileNav(tabId, url) {
+  // Best-effort fan-out. Any surface (popup, side-panel, or both) that has
+  // popup.js loaded receives this and re-extracts. We catch errors because
+  // sendMessage rejects when no listeners are subscribed.
+  try {
+    chrome.runtime.sendMessage(
+      { type: 'RIFF_PROFILE_NAV', payload: { tabId, url } },
+      () => { void chrome.runtime.lastError; }
+    );
+  } catch {}
+}
+
+chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+  // Only fire when the URL itself changed (covers pushState SPA nav) and
+  // only for supported profile surfaces.
+  if (!changeInfo.url) return;
+  if (!PROFILE_URL_RE.test(changeInfo.url)) return;
+  if (!tab || !tab.active) return; // Avoid waking the panel for background tabs.
+  broadcastProfileNav(tabId, changeInfo.url);
+});
+
+// User switched tabs — also a profile-change event from the sidebar's POV.
+chrome.tabs.onActivated.addListener(async ({ tabId }) => {
+  try {
+    const tab = await chrome.tabs.get(tabId);
+    if (tab && tab.url) broadcastProfileNav(tabId, tab.url);
+  } catch {}
 });
 
 const USE_STUB = false; // flip to true to bypass backend (offline UI testing)
@@ -386,6 +452,24 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   // successful scan so the badge decrements immediately.
   if (msg.type === 'RIFF_REFRESH_BADGE') {
     computeOverdueAndSetBadge().then(() => sendResponse({ ok: true }));
+    return true;
+  }
+
+  // Read or update the surface mode (popup vs sidebar). Footer toggle in
+  // popup.html sends RIFF_SET_SURFACE_MODE, then immediately reflects the
+  // new state. The change takes effect on the NEXT toolbar-icon click.
+  if (msg.type === 'RIFF_GET_SURFACE_MODE') {
+    chrome.storage.local.get('riff_surface_mode').then(({ riff_surface_mode }) => {
+      sendResponse({ ok: true, mode: riff_surface_mode === 'popup' ? 'popup' : 'sidebar' });
+    });
+    return true;
+  }
+  if (msg.type === 'RIFF_SET_SURFACE_MODE') {
+    const mode = msg.payload && msg.payload.mode === 'popup' ? 'popup' : 'sidebar';
+    chrome.storage.local.set({ riff_surface_mode: mode })
+      .then(() => applySurfaceMode())
+      .then(() => sendResponse({ ok: true, mode }))
+      .catch((e) => sendResponse({ ok: false, error: String(e && e.message || e) }));
     return true;
   }
 

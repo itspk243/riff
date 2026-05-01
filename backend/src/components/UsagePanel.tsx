@@ -29,6 +29,8 @@ interface Props {
 
 export default function UsagePanel({ token, plan }: Props) {
   const [usage, setUsage] = useState<UsageSnapshot | null>(null);
+  const [roastShareUsed, setRoastShareUsed] = useState(false);
+  const [bonusDrafts, setBonusDrafts] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -41,8 +43,11 @@ export default function UsagePanel({ token, plan }: Props) {
         const res = await fetch('/api/usage', { headers: { Authorization: `Bearer ${token}` } });
         const data = await res.json();
         if (cancelled) return;
-        if (data.ok && data.usage) setUsage(data.usage);
-        else setError(data.error || 'Could not load usage');
+        if (data.ok && data.usage) {
+          setUsage(data.usage);
+          setRoastShareUsed(!!data.roastShareUsed);
+          setBonusDrafts(typeof data.bonusDrafts === 'number' ? data.bonusDrafts : 0);
+        } else setError(data.error || 'Could not load usage');
       } catch (e: any) {
         if (!cancelled) setError(e.message || 'Network error');
       } finally {
@@ -93,7 +98,11 @@ export default function UsagePanel({ token, plan }: Props) {
 
   // Show upgrade nudge when Pro users get within 20% of their cap, or any time blocked.
   const showProUpgrade = usage.plan === 'pro' && (tier === 'amber' || tier === 'red' || tier === 'blocked');
-  const showPlusFreeUpgrade = usage.plan === 'free' && tier !== 'green';
+  // Free user is running low and hasn't claimed the one-time +3 roast-share bonus.
+  // Show this BEFORE the Pro upgrade CTA so the user has a free recovery path first.
+  const showShareForBonus = usage.plan === 'free' && tier !== 'green' && !roastShareUsed;
+  // Free user is running low AND already burned the bonus → push toward Pro.
+  const showPlusFreeUpgrade = usage.plan === 'free' && tier !== 'green' && roastShareUsed;
 
   return (
     <section style={sectionStyle} id="usage-panel">
@@ -122,6 +131,12 @@ export default function UsagePanel({ token, plan }: Props) {
         )}
       </div>
 
+      {bonusDrafts > 0 && (
+        <div style={{ fontSize: 12, color: '#666', marginTop: 6 }}>
+          Includes <strong>+{bonusDrafts}</strong> bonus draft{bonusDrafts === 1 ? '' : 's'} from sharing a roast.
+        </div>
+      )}
+
       {showProUpgrade && (
         <div style={ctaCardStyle}>
           <div style={{ fontSize: 13.5, color: '#444', marginBottom: 8 }}>
@@ -129,6 +144,16 @@ export default function UsagePanel({ token, plan }: Props) {
             plus voice fingerprint and active profile assist.
           </div>
           <a href="#subscription" style={ctaBtnStyle}>Upgrade to Plus →</a>
+        </div>
+      )}
+
+      {showShareForBonus && (
+        <div style={ctaCardStyle}>
+          <div style={{ fontSize: 13.5, color: '#444', marginBottom: 8 }}>
+            <strong>Out of drafts? Share a roast and get +3 free.</strong>{' '}
+            One-time bonus, no card needed. Then Pro is $15/mo for 200 drafts if you keep going.
+          </div>
+          <a href="/roast" style={ctaBtnStyle}>Earn 3 bonus drafts →</a>
         </div>
       )}
 

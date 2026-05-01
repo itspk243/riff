@@ -76,7 +76,7 @@ Sales Navigator and LinkedIn Recruiter pages are profile pages users navigate to
 
 PRICING
 
-Free is five drafts a week, all features unlocked, no credit card needed.
+Free is three drafts a week, all features unlocked, no credit card needed. Share a roast on rifflylabs.com/roast and we'll add three more.
 
 Pro is $15 a month for 200 drafts, plus voice fingerprint and draft history.
 

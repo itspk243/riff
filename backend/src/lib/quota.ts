@@ -20,7 +20,7 @@ import { serviceClient } from './supabase';
 import type { UserRow, Plan } from './types';
 import { isPaidPlan } from './capabilities';
 
-export const FREE_WEEKLY_LIMIT = 5;
+export const FREE_WEEKLY_LIMIT = 3;
 export const MONTHLY_LIMIT_PRO = 200;
 export const MONTHLY_LIMIT_PLUS = 600;
 export const MONTHLY_LIMIT_TEAM = 600;
@@ -174,7 +174,7 @@ export async function checkQuota(user: UserRow): Promise<QuotaResult> {
         ok: false,
         reason: bonus > 0
           ? `Weekly limit reached (${effectiveLimit} drafts including ${bonus} bonus). Upgrade to Pro for 200 drafts/month.`
-          : 'Free-tier weekly limit reached (5 drafts/week). Upgrade to Pro for 200 drafts/month.',
+          : 'Free-tier weekly limit reached (3 drafts/week). Share a roast at rifflylabs.com/roast to earn 3 bonus drafts, or upgrade to Pro for 200/month.',
         reasonShort: 'Free weekly limit',
         ...base,
       };

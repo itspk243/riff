@@ -16,6 +16,10 @@ interface UsageApiResponse {
   blocked?: boolean;
   reason?: string;
   error?: string;
+  /** True if the user has already burned their one-time +3 roast-share bonus. */
+  roastShareUsed?: boolean;
+  /** Total unconsumed bonus drafts on the user's account (added to limit). */
+  bonusDrafts?: number;
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse<UsageApiResponse>) {
@@ -47,5 +51,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
     },
     blocked: !quota.ok,
     reason: quota.ok ? undefined : (quota as any).reason,
+    // True if the user has already burned their one-time +3 roast share
+    // bonus. UsagePanel uses this to decide whether to show the
+    // "share a roast for +3" CTA or just the upgrade-to-Pro CTA.
+    roastShareUsed: !!user.roast_shared_at,
+    bonusDrafts: user.bonus_drafts || 0,
   });
 }

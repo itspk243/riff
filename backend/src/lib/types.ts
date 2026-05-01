@@ -79,7 +79,7 @@ export interface GenerateResponse {
 }
 
 // Plans are ranked by capability:
-//   free  → trial (5 drafts/week, cold opener only)
+//   free  → trial (3 drafts/week, +3 bonus on first roast share, cold opener only)
 //   pro   → 200 drafts/month, all 3 variants, templates, follow-up loop ($15/mo)
 //   plus  → 600 drafts/month, Pro + Active Profile Assist + Saved-Search Digest ($25/mo)
 //   team  → legacy, kept for grandfathered subscribers ($99/mo, no longer offered to new customers)

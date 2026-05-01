@@ -55,9 +55,18 @@
 
 html, body { margin: 0; padding: 0; }
 
+/* Default body width is the popup-mode width (Chrome popups need an
+   explicit width, otherwise they collapse to min-content). The
+   data-surface="sidebar" attribute is set by popup.js when it detects
+   it's running inside chrome.sidePanel — that switches the body to
+   100% so it grows/shrinks with the user-resizable panel.
+
+   The min-width: 320px floor ensures the form is still usable if the
+   user squishes the sidebar narrower than the popup width. */
 body {
   font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, sans-serif;
   width: 380px;
+  min-width: 320px;
   padding: 16px 16px 14px;
   color: var(--ink);
   background: var(--bg);
@@ -65,6 +74,31 @@ body {
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   animation: popupIn 220ms cubic-bezier(.22,.61,.36,1);
+}
+
+body[data-surface="sidebar"] {
+  width: 100%;
+  max-width: 100%;
+  /* Cap line length on very wide panels — readability collapses past ~640px
+     for the variant-text content. The form stays centered with extra side
+     padding on a wide panel. */
+  padding: 18px clamp(16px, 4vw, 32px) 14px;
+}
+
+/* Center the inner content column on very wide sidebars so we don't get
+   two-thousand-character variant lines. Wrap in main-column scope. */
+body[data-surface="sidebar"] > header,
+body[data-surface="sidebar"] > section,
+body[data-surface="sidebar"] > footer {
+  max-width: 640px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Below ~360px (skinny sidebar) collapse the row-2 grid so tone+length
+   stack instead of squishing. */
+@media (max-width: 360px) {
+  .row-2 { grid-template-columns: 1fr; }
 }
 
 /* ---------- Header ---------- */
@@ -453,6 +487,36 @@ footer {
 }
 footer .small {
   font-size: 11px; color: var(--muted);
+}
+
+/* Surface-mode toggle — small footer pill row. Tells the user which mode
+   they're in and lets them switch with one click. New mode takes effect
+   on the NEXT toolbar-icon click; the popup explains that with a toast. */
+.surface-toggle {
+  display: inline-flex; align-items: center; gap: 5px;
+  margin-top: 8px;
+  padding: 3px;
+  background: var(--warm);
+  border-radius: 100px;
+  border: 1px solid var(--line);
+}
+.surface-btn {
+  padding: 4px 11px;
+  background: transparent;
+  border: none;
+  border-radius: 100px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 120ms ease, color 120ms ease;
+}
+.surface-btn:hover { color: var(--ink-2); }
+.surface-btn.active {
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 0 1px 2px rgba(17,17,16,0.06);
 }
 
 /* ---------- Saved pitch chips ---------- */

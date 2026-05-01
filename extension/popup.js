@@ -1452,17 +1452,115 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Runs independently of profile load (different active-tab branch).
   renderSavedSearchScan();
 
-  // Side-panel mode: re-load the profile whenever this surface becomes
-  // visible after a tab switch. In popup mode this is a no-op (the popup
-  // closes on tab switch). In side-panel mode, the panel persists across
-  // tab switches, so without this the user sees stale profile data after
-  // navigating from one candidate to the next.
-  document.addEventListener('visibilitychange', async () => {
-    if (document.visibilityState !== 'visible') return;
+  // ---------- Surface detection (popup vs sidebar) ----------
+  // Sidebar panels are typically wider than the 380px popup width. We use
+  // that to set data-surface on body so popup.css can switch to the
+  // responsive layout. Re-check on resize because the user can drag the
+  // sidebar narrower or wider.
+  function detectSurface() {
+    const isSidebar = window.innerWidth >= 410; // popup body = 380; sidebar always wider
+    document.body.dataset.surface = isSidebar ? 'sidebar' : 'popup';
+  }
+  detectSurface();
+  window.addEventListener('resize', detectSurface);
+
+  // ---------- SPA auto-update ----------
+  // Three triggers cause us to re-extract the profile from the active tab:
+  //   1. visibilitychange — sidebar becomes visible after a tab switch
+  //      (popup mode: no-op, popup closes on tab switch)
+  //   2. RIFF_PROFILE_NAV runtime message — background.js broadcasts when
+  //      the active tab navigates to a new profile (covers LinkedIn's SPA
+  //      pushState navigation, where no full page load happens)
+  //   3. URL polling fallback — every 2s, compare active tab URL to the
+  //      last URL we extracted from. Catches edge cases where neither
+  //      visibilitychange nor onUpdated fire (rare, but cheap insurance).
+  // Seed with the current URL so the very first poll tick after init does
+  // NOT double-extract what loadProfile() already extracted at line 1450.
+  let lastExtractedUrl = null;
+  {
+    const _seedTab = await getActiveTab();
+    if (_seedTab && _seedTab.url) lastExtractedUrl = _seedTab.url;
+  }
+
+  async function reExtractIfNeeded(reason) {
+    const tab = await getActiveTab();
+    if (!tab || !tab.url) return;
+    if (tab.url === lastExtractedUrl) return; // unchanged — skip
+    if (!isSupportedProfile(tab.url)) {
+      // Navigated AWAY from a profile (e.g., to LinkedIn feed). Reset to hint state.
+      const stateBox = $('#profile-state');
+      const card = $('#profile-card');
+      if (stateBox && card) {
+        stateBox.classList.remove('hidden');
+        stateBox.querySelector('.hint').textContent =
+          'Open a candidate profile (LinkedIn, GitHub, or Wellfound) and reopen Riffly.';
+        card.classList.add('hidden');
+        $('#generate').disabled = true;
+      }
+      lastExtractedUrl = tab.url;
+      return;
+    }
+    // Small delay so LinkedIn's React tree has time to render the new profile
+    // (otherwise we extract the previous candidate's name on top of the new
+    // candidate's photo). 600ms is conservative — trial-and-error suggested 350ms
+    // is enough for LinkedIn but Wellfound is slower.
+    if (reason === 'nav') await new Promise(r => setTimeout(r, 600));
     profile = await loadProfile();
+    if (profile) lastExtractedUrl = tab.url;
     renderSavedSearchScan();
     refreshUsageChip();
+  }
+
+  // (1) visibilitychange — sidebar becomes visible
+  document.addEventListener('visibilitychange', async () => {
+    if (document.visibilityState !== 'visible') return;
+    await reExtractIfNeeded('visibility');
   });
+
+  // (2) Runtime message from background's chrome.tabs.onUpdated listener.
+  chrome.runtime.onMessage.addListener((msg) => {
+    if (!msg || msg.type !== 'RIFF_PROFILE_NAV') return false;
+    reExtractIfNeeded('nav');
+    return false;
+  });
+
+  // (3) Polling fallback. 2.5s cadence is invisible to the user but cheap
+  // (just one tabs.query). Stop polling if the page is hidden — saves CPU
+  // when the sidebar is collapsed or the popup is closed.
+  setInterval(() => {
+    if (document.visibilityState !== 'visible') return;
+    reExtractIfNeeded('poll');
+  }, 2500);
+
+  // ---------- Surface-mode footer toggle ----------
+  // Reflect current mode in the toggle pills, and let the user switch.
+  // The change persists in chrome.storage and applies on the NEXT toolbar
+  // click (background.js calls action.setPopup + sidePanel.setPanelBehavior).
+  (async () => {
+    const sidebarBtn = $('#surface-btn-sidebar');
+    const popupBtn = $('#surface-btn-popup');
+    if (!sidebarBtn || !popupBtn) return;
+    chrome.runtime.sendMessage({ type: 'RIFF_GET_SURFACE_MODE' }, (resp) => {
+      const mode = (resp && resp.mode) || 'sidebar';
+      sidebarBtn.classList.toggle('active', mode === 'sidebar');
+      popupBtn.classList.toggle('active', mode === 'popup');
+    });
+    function setMode(mode) {
+      chrome.runtime.sendMessage({ type: 'RIFF_SET_SURFACE_MODE', payload: { mode } }, (resp) => {
+        if (!resp || !resp.ok) return;
+        sidebarBtn.classList.toggle('active', mode === 'sidebar');
+        popupBtn.classList.toggle('active', mode === 'popup');
+        showToast(
+          mode === 'sidebar'
+            ? 'Switched to sidebar. Click the Riffly icon to open the side panel.'
+            : 'Switched to popup. Click the Riffly icon to open the popup.',
+          'info'
+        );
+      });
+    }
+    sidebarBtn.addEventListener('click', () => setMode('sidebar'));
+    popupBtn.addEventListener('click', () => setMode('popup'));
+  })();
 
   $('#generate').addEventListener('click', () => {
     if (!profile) return;
