@@ -8,6 +8,11 @@ export interface ProfileSnapshot {
   currentRole: string;
   currentCompany: string;
   capturedAt: string;
+  // Which surface the content script parsed from. Used by /api/generate's
+  // RIFF_DISABLED_SURFACES kill switch to selectively block Sales Nav /
+  // Recruiter parsing without redeploying the extension. Optional because
+  // older clients didn't send it; defaults to 'unknown' on the server side.
+  surface?: 'linkedin_profile' | 'sales_navigator' | 'linkedin_recruiter' | 'github' | 'wellfound' | 'unknown';
   // ---- Day-2 enrichment (optional; popup falls back gracefully when missing)
   // Auto-extracted by content.js from the candidate's profile page.
   recentPosts?: string[]; // up to 3 most-recent post snippets
