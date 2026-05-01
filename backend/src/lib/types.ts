@@ -70,6 +70,12 @@ export interface GenerateResponse {
   /** Rich quota snapshot for dashboard + extension warning bars. */
   usage?: UsageSnapshot;
   /**
+   * True if the user has already burned their one-time +3 roast-share bonus.
+   * Returned on 402 quota-exceeded responses so the extension's inline upgrade
+   * hint can decide whether to show "Share a roast for +3" or hide it.
+   */
+  roastShareUsed?: boolean;
+  /**
    * True when the request was rejected because RIFF_DISABLED_SURFACES is set
    * in env and the profile.surface matched. Lets the extension popup show a
    * surface-specific nudge ("not available on this LinkedIn surface")
