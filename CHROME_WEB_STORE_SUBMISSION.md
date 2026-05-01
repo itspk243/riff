@@ -65,6 +65,10 @@ WHAT IT DOESN'T DO
 • No background scraping. We only read the profile page you've actively opened.
 • No selling your data. Profile snapshots and drafts are kept for 30 days for debugging only, then deleted.
 
+LINKEDIN COMPLIANCE NOTES
+• Sales Navigator and LinkedIn Recruiter pages are profile-detail surfaces users navigate to manually. Riffly reads the rendered DOM passively, only when invoked, and never automates any LinkedIn action.
+• The Plus-tier "scan visible profiles" feature on saved-search pages is triggered only by an explicit user click. Riffly never auto-scrolls, never paginates, and never traverses search results in the background.
+
 PRICING
 • Free — 5 drafts a week, all features unlocked. No credit card.
 • Pro ($15/mo) — 200 drafts a month, voice fingerprint, draft history.

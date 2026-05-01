@@ -268,7 +268,17 @@ function renderUsageChip(usage) {
   chip.textContent = label;
   chip.title = `${usage.used} / ${usage.limit} used this ${usage.windowKind === 'weekly' ? 'week' : 'month'}` +
     (usage.resetsLabel ? ` · resets ${usage.resetsLabel}` : '');
-  chip.style.cssText = `display: inline-flex; align-items: center; padding: 2px 8px; margin-right: 6px; border-radius: 12px; font-size: 11px; font-weight: 600; background: ${c.bg}; color: ${c.fg}; border: 1px solid ${c.border};`;
+  // amber/red/blocked tiers turn the chip into a one-click upgrade CTA.
+  // Free → Pro, Pro → Plus, Plus → no upgrade target (just wait for reset).
+  const upgradeTarget = (usage.plan === 'plus' || usage.plan === 'team')
+    ? null
+    : (usage.plan === 'pro' ? 'plus' : 'pro');
+  const isUrgent = tier === 'amber' || tier === 'red' || tier === 'blocked';
+  const clickable = isUrgent && !!upgradeTarget;
+  chip.style.cssText = `display: inline-flex; align-items: center; padding: 2px 8px; margin-right: 6px; border-radius: 12px; font-size: 11px; font-weight: 600; background: ${c.bg}; color: ${c.fg}; border: 1px solid ${c.border}; cursor: ${clickable ? 'pointer' : 'help'};`;
+  chip.onclick = clickable
+    ? () => chrome.tabs.create({ url: `https://rifflylabs.com/dashboard?upgrade=${upgradeTarget}` })
+    : null;
   chip.classList.remove('hidden');
 }
 
