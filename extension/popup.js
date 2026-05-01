@@ -9,6 +9,20 @@ const STORAGE_KEYS = {
   events: 'riff_events',
 };
 
+// Platform-aware keyboard hint. Mac shows ⌘, everything else shows Ctrl.
+// userAgentData is the modern API; navigator.platform is the fallback for
+// older Chromes (we require Chrome 114+, so userAgentData is usually
+// present, but the fallback keeps it safe).
+const IS_MAC = (() => {
+  try {
+    if (navigator.userAgentData && navigator.userAgentData.platform) {
+      return /mac/i.test(navigator.userAgentData.platform);
+    }
+  } catch {}
+  return /Mac|iPod|iPhone|iPad/.test(navigator.platform || '');
+})();
+const KBD_GENERATE = IS_MAC ? '⌘↵' : 'Ctrl+↵';
+
 // ---------- helpers ----------
 
 function getStorage(keys) {
@@ -992,7 +1006,7 @@ function generate(profile) {
     generateBtn.classList.remove('loading');
     // Restore label WITH the keyboard-shortcut hint chip (the original
     // popup.html markup includes it, but textContent assignments wipe it).
-    generateBtn.innerHTML = 'Generate <span class="kbd-hint">⌘↵</span>';
+    generateBtn.innerHTML = `Generate <span class="kbd-hint">${KBD_GENERATE}</span>`;
     // Even on error, the rich `usage` snapshot may be present (e.g. on 402
     // we still know exactly how many drafts the user has used / has left).
     updateUsageChipFromResponse(resp);
@@ -1204,6 +1218,7 @@ function renderVariants(variants, ctx) {
 
     const copyBtn = document.createElement('button');
     copyBtn.textContent = 'Copy';
+    copyBtn.setAttribute('aria-label', `Copy variant ${idx + 1} (${v.type.replace(/_/g, ' ')}) to clipboard`);
     copyBtn.addEventListener('click', async () => {
       try {
         await navigator.clipboard.writeText(v.text);
@@ -1230,6 +1245,7 @@ function renderVariants(variants, ctx) {
     const sentBtn = document.createElement('button');
     sentBtn.textContent = 'Mark sent';
     sentBtn.title = 'Click to mark this draft as sent. Click again to undo.';
+    sentBtn.setAttribute('aria-label', `Mark variant ${idx + 1} as sent. Click again to undo.`);
     sentBtn.addEventListener('click', async () => {
       const candidate_url = pinnedProfile.profileUrl;
       const sentEventId = `${eventId}-sent`;
@@ -1254,6 +1270,7 @@ function renderVariants(variants, ctx) {
     const replyBtn = document.createElement('button');
     replyBtn.textContent = 'Mark replied';
     replyBtn.title = 'Click to mark that the candidate replied. Click again to undo.';
+    replyBtn.setAttribute('aria-label', `Mark variant ${idx + 1} as replied. Click again to undo.`);
     replyBtn.addEventListener('click', async () => {
       const candidate_url = pinnedProfile.profileUrl;
       const replyEventId = `${eventId}-replied`;
@@ -1803,6 +1820,12 @@ function escapeAttr(s) {
 // ---------- init ----------
 
 document.addEventListener('DOMContentLoaded', async () => {
+  // Update the static keyboard hint in popup.html with the right key for
+  // the user's OS. The default in HTML is ⌘↵; Windows/Linux users see
+  // Ctrl+↵ instead. Tiny but the kind of thing a power user notices.
+  const initialKbd = $('#generate-kbd');
+  if (initialKbd) initialKbd.textContent = KBD_GENERATE;
+
   await refreshAuthUI();
   await renderStats();
   // Initialize templates list with default purpose + 'other' category

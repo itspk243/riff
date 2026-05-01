@@ -22,6 +22,19 @@
 
 * { box-sizing: border-box; }
 
+/* Respect the user's OS-level "reduce motion" setting (WCAG 2.3.3).
+   Kills the slide-in / shimmer / pulse animations that would otherwise
+   trigger vestibular disorders. Transitions on hover stay because they're
+   short and color-only. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 @keyframes popupIn {
   from { opacity: 0; transform: translateY(-4px) scale(0.985); }
   to   { opacity: 1; transform: translateY(0)    scale(1);     }

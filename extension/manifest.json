@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Riffly: Personalized Outreach Drafts",
-  "version": "1.2.6",
+  "version": "1.2.7",
   "description": "Turn any LinkedIn, GitHub, or Wellfound profile into a personalized cold message. Drafting assistant. Never automated.",
   "homepage_url": "https://rifflylabs.com",
   "minimum_chrome_version": "114",

@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+
+# Don't index API endpoints or auth callback URLs.
+Disallow: /api/
+Disallow: /auth/
+
+Sitemap: https://rifflylabs.com/sitemap.xml

@@ -66,6 +66,29 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const supabase = serviceClient();
 
+  // Idempotency: Stripe retries webhooks aggressively. Without a dedup
+  // record we'd re-process the same event.id N times — re-running plan
+  // updates, re-firing notification emails, etc. Insert into
+  // webhook_events with ON CONFLICT DO NOTHING; if the row already
+  // exists we return 200 immediately. The webhook_events table is in
+  // schema-webhook-events.sql.
+  {
+    const { error: dedupeErr } = await supabase
+      .from('webhook_events')
+      .insert({ id: event.id, type: event.type });
+    if (dedupeErr) {
+      // Unique-constraint violation == we've seen this event before.
+      // Postgres error code 23505. Anything else is a real DB problem
+      // and we surface it so Stripe retries.
+      if ((dedupeErr as any).code === '23505') {
+        console.log(`webhook: skipping already-processed event ${event.id} (${event.type})`);
+        return res.status(200).json({ ok: true, deduped: true });
+      }
+      console.error('webhook: dedupe insert failed', dedupeErr);
+      return res.status(500).send('Dedupe write failed');
+    }
+  }
+
   try {
     switch (event.type) {
       case 'checkout.session.completed': {
