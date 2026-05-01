@@ -722,7 +722,7 @@ export default function Dashboard() {
                   <div style={tierPriceStyle}>$0</div>
                   <div style={tierBlurbStyle}>Try it before paying.</div>
                   <ul style={tierListStyle}>
-                    <li>3 drafts per week (+3 bonus when you share a roast)</li>
+                    <li>3 drafts per week (+3 one-time bonus on first roast share)</li>
                     <li>Cold opener variant only</li>
                     <li>All profile sources (LinkedIn, GitHub, Wellfound)</li>
                     <li>Local reply stats</li>

@@ -525,11 +525,13 @@
         return;
       }
 
-      // Length cap — protects browser from 50K-character pastes hanging the regex pass.
+      // Length cap — protects browser from 50K-character pastes hanging the
+      // regex pass, and matches the permalink cap below so a shared link
+      // shows the recipient the SAME verdict the sharer got.
       let text = rawText;
       let truncated = false;
-      if (text.length > 3000) {
-        text = text.slice(0, 3000);
+      if (text.length > 2000) {
+        text = text.slice(0, 2000);
         truncated = true;
       }
 

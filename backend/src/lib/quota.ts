@@ -174,7 +174,7 @@ export async function checkQuota(user: UserRow): Promise<QuotaResult> {
         ok: false,
         reason: bonus > 0
           ? `Weekly limit reached (${effectiveLimit} drafts including ${bonus} bonus). Upgrade to Pro for 200 drafts/month.`
-          : 'Free-tier weekly limit reached (3 drafts/week). Share a roast at rifflylabs.com/roast to earn 3 bonus drafts, or upgrade to Pro for 200/month.',
+          : 'Free-tier weekly limit reached (3 drafts/week). Share your first roast at rifflylabs.com/roast for a one-time +3 bonus, or upgrade to Pro for 200 drafts/month.',
         reasonShort: 'Free weekly limit',
         ...base,
       };

@@ -19,7 +19,7 @@ Everything you need to copy-paste into chrome.google.com/webstore/devconsole. Re
 1. Click **+ Add new item**
 2. Drag-drop this file:
    ```
-   /Users/srulypikarsky/Library/Application Support/Claude/local-agent-mode-sessions/c5d3e72f-4128-4455-83db-7a63d2d5137f/2b9c6cb2-ad91-4933-b2ad-87f14f87e4e6/local_1eb4b77c-5296-415c-9154-cc2ebf0da1dd/outputs/riff/riffly-extension-1.0.0.zip
+   /Users/srulypikarsky/Library/Application Support/Claude/local-agent-mode-sessions/c5d3e72f-4128-4455-83db-7a63d2d5137f/2b9c6cb2-ad91-4933-b2ad-87f14f87e4e6/local_1eb4b77c-5296-415c-9154-cc2ebf0da1dd/outputs/riff/riffly-extension-1.2.1.zip
    ```
 3. Wait for the manifest validation (should pass — we patched it).
 
@@ -120,7 +120,8 @@ Generate personalized outreach message drafts from a viewed candidate profile.
 | `activeTab` | Read the currently open profile page when the user clicks the Riffly icon. Required for the core drafting feature. |
 | `storage` | Save user preferences (tone, length, language, signature) and cache job specs locally so the user doesn't re-enter them every visit. |
 | `alarms` | Power the background "overdue saved-search" badge that shows on the toolbar when tracked candidate searches need to be re-scanned. |
-| Host permissions on linkedin.com, github.com, wellfound.com, angel.co | Read the profile content when the user is viewing one of these sites and clicks the Riffly icon. Riffly does NOT crawl or scrape in the background — it only runs when invoked by the user on the active tab. |
+| `sidePanel` | Render Riffly as a Chrome side panel (Chrome 114+). Lets the recruiter keep the drafting UI open next to the candidate profile while reading and writing. Falls back to classic popup mode via a user-toggle in the footer. |
+| Host permissions on linkedin.com, github.com, wellfound.com, angel.co | Read the profile content when the user is viewing one of these sites and clicks the Riffly icon. Also required for the side-panel auto-update feature: when a recruiter clicks from one profile to another (LinkedIn / GitHub use SPA pushState routing, no full page reload), Riffly listens on `chrome.tabs.onUpdated` to re-extract — and that event only populates the URL field for hosts in `host_permissions`. Riffly does NOT crawl, scrape, or pre-fetch in the background — it only reads when the user explicitly invokes it on the active tab. |
 | Host permission on rifflylabs.com | Allow the dashboard at rifflylabs.com/dashboard to communicate with the extension (e.g., to push job-spec updates from the web dashboard back to the extension). |
 
 ### Data collection disclosure

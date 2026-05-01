@@ -150,8 +150,8 @@ export default function UsagePanel({ token, plan }: Props) {
       {showShareForBonus && (
         <div style={ctaCardStyle}>
           <div style={{ fontSize: 13.5, color: '#444', marginBottom: 8 }}>
-            <strong>Out of drafts? Share a roast and get +3 free.</strong>{' '}
-            One-time bonus, no card needed. Then Pro is $15/mo for 200 drafts if you keep going.
+            <strong>Out of drafts? Share your first roast for +3.</strong>{' '}
+            One-time bonus, no card needed. After that, Pro is $15/mo for 200 drafts.
           </div>
           <a href="/roast" style={ctaBtnStyle}>Earn 3 bonus drafts →</a>
         </div>

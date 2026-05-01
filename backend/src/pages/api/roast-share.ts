@@ -21,6 +21,7 @@ interface RoastShareResponse {
   awarded?: number;          // number of bonus drafts granted on this call (0 if already shared before)
   totalBonus?: number;       // user's total bonus_drafts after the award
   alreadyShared?: boolean;   // true if this isn't the first share
+  anonymous?: boolean;       // true if the caller wasn't signed in
   error?: string;
 }
 
@@ -33,9 +34,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
 
   const user = await getUserFromBearer(req.headers.authorization);
   if (!user) {
-    // Not signed in — no bonus to award. We return ok so the /roast page
-    // doesn't surface an error to anonymous sharers.
-    return res.status(200).json({ ok: true, awarded: 0, alreadyShared: false });
+    // Not signed in — no bonus to award and no account to credit. Return
+    // 401 to be consistent with /api/me and /api/usage, with anonymous:true
+    // so the /roast page can branch (it already only calls this endpoint
+    // when signed in, so this is for direct API callers and future code).
+    return res.status(401).json({
+      ok: false,
+      error: 'Sign in to claim your share bonus.',
+      anonymous: true,
+    });
   }
 
   const supabase = serviceClient();

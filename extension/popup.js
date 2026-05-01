@@ -1524,13 +1524,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     return false;
   });
 
-  // (3) Polling fallback. 2.5s cadence is invisible to the user but cheap
-  // (just one tabs.query). Stop polling if the page is hidden — saves CPU
-  // when the sidebar is collapsed or the popup is closed.
+  // (3) Polling fallback. 5s cadence balances responsiveness against
+  // battery — chrome.tabs.onUpdated catches almost all SPA nav, this is
+  // just defensive insurance. Stops when the page is hidden so we don't
+  // burn cycles on a collapsed sidebar.
   setInterval(() => {
     if (document.visibilityState !== 'visible') return;
     reExtractIfNeeded('poll');
-  }, 2500);
+  }, 5000);
 
   // ---------- Surface-mode footer toggle ----------
   // Reflect current mode in the toggle pills, and let the user switch.
