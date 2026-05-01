@@ -1447,10 +1447,22 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Initialize templates list with default purpose + 'other' category
   refreshTemplates('hire', 'other');
 
-  const profile = await loadProfile();
+  let profile = await loadProfile();
   // Plus tier — surface saved-search scan UI when on a tracked search URL.
   // Runs independently of profile load (different active-tab branch).
   renderSavedSearchScan();
+
+  // Side-panel mode: re-load the profile whenever this surface becomes
+  // visible after a tab switch. In popup mode this is a no-op (the popup
+  // closes on tab switch). In side-panel mode, the panel persists across
+  // tab switches, so without this the user sees stale profile data after
+  // navigating from one candidate to the next.
+  document.addEventListener('visibilitychange', async () => {
+    if (document.visibilityState !== 'visible') return;
+    profile = await loadProfile();
+    renderSavedSearchScan();
+    refreshUsageChip();
+  });
 
   $('#generate').addEventListener('click', () => {
     if (!profile) return;

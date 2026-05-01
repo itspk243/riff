@@ -1,9 +1,10 @@
 {
   "manifest_version": 3,
   "name": "Riffly: Personalized Outreach Drafts",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Turn any LinkedIn, GitHub, or Wellfound profile into a personalized cold message. Drafting assistant. Never automated.",
   "homepage_url": "https://rifflylabs.com",
+  "minimum_chrome_version": "114",
   "icons": {
     "16": "icons/icon-16.png",
     "24": "icons/icon-24.png",
@@ -11,7 +12,7 @@
     "48": "icons/icon-48.png",
     "128": "icons/icon-128.png"
   },
-  "permissions": ["activeTab", "storage", "alarms"],
+  "permissions": ["activeTab", "storage", "alarms", "sidePanel"],
   "host_permissions": [
     "https://www.linkedin.com/*",
     "https://linkedin.com/*",
@@ -57,7 +58,6 @@
     }
   ],
   "action": {
-    "default_popup": "popup.html",
     "default_title": "Riffly: draft outreach",
     "default_icon": {
       "16": "icons/icon-16.png",
@@ -66,5 +66,8 @@
       "48": "icons/icon-48.png",
       "128": "icons/icon-128.png"
     }
+  },
+  "side_panel": {
+    "default_path": "popup.html"
   }
 }

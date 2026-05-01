@@ -153,13 +153,32 @@ async function computeOverdueAndSetBadge() {
   }
 }
 
-// Alarm-driven hourly refresh + on-startup refresh.
+// Alarm-driven hourly refresh + on-startup refresh + side-panel wiring.
+//
+// Side-panel behavior: clicking the toolbar icon toggles the side panel
+// open/close. The same popup.html serves both popup mode (legacy fallback)
+// and side-panel mode — the popup HTML and JS don't care which surface
+// they're rendered in. The big UX win for cold-message drafting: the panel
+// stays open next to the candidate's profile while the recruiter reads,
+// drafts, and sends, instead of vanishing on outside-click like the popup.
 chrome.runtime.onInstalled.addListener(() => {
   chrome.alarms.create('riff_overdue_check', { periodInMinutes: 60, delayInMinutes: 1 });
+  // Make icon-click open the side panel (instead of nothing — we removed
+  // default_popup so the icon would have no behavior without this).
+  if (chrome.sidePanel && chrome.sidePanel.setPanelBehavior) {
+    chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true })
+      .catch((e) => console.warn('sidePanel.setPanelBehavior failed:', e));
+  }
 });
 chrome.runtime.onStartup?.addListener(() => {
   chrome.alarms.create('riff_overdue_check', { periodInMinutes: 60, delayInMinutes: 1 });
   computeOverdueAndSetBadge();
+  // Re-assert side-panel behavior on every startup in case user did something
+  // weird with chrome://extensions settings between sessions.
+  if (chrome.sidePanel && chrome.sidePanel.setPanelBehavior) {
+    chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true })
+      .catch(() => {});
+  }
 });
 chrome.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name === 'riff_overdue_check') computeOverdueAndSetBadge();
