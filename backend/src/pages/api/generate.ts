@@ -142,12 +142,22 @@ export default async function handler(
     return res.status(500).json({ ok: false, error: 'Generation failed. Try again in a moment.' });
   }
 
-  // Record usage (best-effort, don't block response). We log the FULL variants
-  // count generated, not what we returned — accurate cost accounting.
+  // Record usage. Awaited so per-user quotas converge with real consumption
+  // even under transient Supabase failures (recordUsage retries once
+  // internally before giving up). On Vercel serverless, fire-and-forget
+  // here would let the function exit before the write lands, producing
+  // silent quota drift. Adds at most ~400ms to the response in the rare
+  // retry case; the 99% path is one fast insert.
   if (user) {
-    recordUsage(user.id, variants.length).catch(err =>
-      console.error('recordUsage failed', err)
-    );
+    try {
+      await recordUsage(user.id, variants.length);
+    } catch (err) {
+      // Both attempts failed. The structured log inside recordUsage
+      // already captured the context for offline backfill. We don't
+      // block the user's response on it — they got their drafts,
+      // they shouldn't be punished for our DB hiccup.
+      console.error('recordUsage failed after retries', err);
+    }
   }
 
   // Variant gating: free tier sees only the cold_opener. All paid tiers see all three.

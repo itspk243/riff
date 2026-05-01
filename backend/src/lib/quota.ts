@@ -114,12 +114,50 @@ export async function getUsageThisMonth(userId: string): Promise<number> {
   return count || 0;
 }
 
-export async function recordUsage(userId: string, variants: number) {
+// Insert one row into the `usage` table. Retries once on transient failure
+// (Supabase blips usually clear within ~400ms). On permanent failure logs a
+// structured `recordUsage:permanent_failure` event with full context so the
+// row can be backfilled from server logs if needed. Throws so the caller
+// can decide what to do; current callers await it before sending the
+// response so per-user quotas converge with real consumption.
+//
+// This was previously fire-and-forget. On Vercel serverless that meant
+// the function could be killed mid-flight after the response was sent,
+// and any transient Supabase failure produced silent under-counting.
+// A user could then exceed their plan limit because the count never
+// actually moved up.
+export async function recordUsage(userId: string, variants: number): Promise<void> {
   const supabase = serviceClient();
-  await supabase.from('usage').insert({
-    user_id: userId,
-    variants,
-  });
+  const insertOnce = async () => {
+    const { error } = await supabase.from('usage').insert({
+      user_id: userId,
+      variants,
+    });
+    if (error) throw error;
+  };
+  try {
+    await insertOnce();
+    return;
+  } catch (firstErr) {
+    // Backoff and retry once. Anything beyond two attempts is past the
+    // point where it's worth blocking the user's response — the structured
+    // log below is the recovery path in the rare case both fail.
+    await new Promise((r) => setTimeout(r, 400));
+    try {
+      await insertOnce();
+      return;
+    } catch (secondErr) {
+      // Structured log so it can be grep'd and the row backfilled offline.
+      console.error('recordUsage:permanent_failure', JSON.stringify({
+        user_id: userId,
+        variants,
+        first_error: firstErr instanceof Error ? firstErr.message : String(firstErr),
+        second_error: secondErr instanceof Error ? secondErr.message : String(secondErr),
+        timestamp: new Date().toISOString(),
+      }));
+      throw secondErr;
+    }
+  }
 }
 
 export interface QuotaInfo {
