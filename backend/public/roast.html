@@ -456,61 +456,189 @@
       // Score 0–10. 0 clichés = 10. Each cliché knocks ~1 point. Capped at 0.
       const score = Math.max(0, 10 - cliches);
 
-      // Verdict — savagely tiered. Short, quotable, screenshot-friendly.
-      let verdict, verdictClass, verdictSub, readsLike;
-      if (cliches === 0) {
-        verdict = '10/10 — clean.';
-        verdictClass = 'ok';
-        verdictSub = "No template phrases. If your reply rate is still trash, the problem isn't your language — it's that you didn't actually read their profile. We can't help with that part.";
-        readsLike = "Reads like: a human who actually paid attention.";
-      } else if (cliches === 1) {
-        verdict = '9/10 — one slip.';
-        verdictClass = 'ok';
-        verdictSub = "Cut the highlight. You're one substitution away from clean.";
-        readsLike = null;
-      } else if (cliches === 2) {
-        verdict = '8/10 — minor crimes.';
-        verdictClass = 'ouch';
-        verdictSub = "Two clichés. Mostly clean. Replace the highlights with something specific to them and you're 80% there.";
-        readsLike = "Reads like: a real human having a slightly off Tuesday.";
-      } else if (cliches <= 4) {
-        verdict = `${score}/10 — this is a template.`;
-        verdictClass = 'ouch';
-        verdictSub = "If a candidate gets 50 of these a week, yours is one of them. The fix isn't editing — it's starting over from a specific observation about them.";
-        readsLike = "Reads like: a Lemlist sequence on its third A/B test.";
-      } else if (cliches <= 6) {
-        verdict = `${score}/10 — Mad Lib detected.`;
-        verdictClass = 'ouch';
-        verdictSub = "Indistinguishable from every other cold pitch in their inbox. They're not even reading the second sentence.";
-        readsLike = "Reads like: a recruiter who took the $99 LinkedIn course in 2019.";
-      } else if (cliches <= 9) {
-        verdict = `${score}/10 — outreach malpractice.`;
-        verdictClass = 'ouch';
-        verdictSub = "More clichés than original ideas. This message is a hostage situation for the English language.";
-        readsLike = "Reads like: ChatGPT, on autopilot, in 2023, while half-asleep.";
-      } else {
-        verdict = `0/10 — we're impressed.`;
-        verdictClass = 'ouch';
-        verdictSub = "Genuine, museum-grade cold-outreach malpractice. Send this to your LinkedIn coach and ask for a refund.";
-        readsLike = "Reads like: someone copy-pasted the entire 'recruiter cliché bingo' card.";
+      // Deterministic seed from the input text. Same paste → same verdict, so
+      // shared permalinks stay stable. Different paste → different variant.
+      // Cheap djb2-style hash, plenty for picking 1 of N options.
+      let seed = 5381;
+      for (let i = 0; i < text.length; i++) {
+        seed = ((seed << 5) + seed + text.charCodeAt(i)) | 0;
       }
+      seed = Math.abs(seed);
+      const pick = (arr, salt) => arr[(seed + salt) % arr.length];
+
+      // Verdict pools per tier. Variety keeps the page feeling alive on
+      // re-runs and re-shares without being random — same text always
+      // produces the same verdict.
+      const TIERS = {
+        clean: {
+          headlines: ['10/10 — clean.', '10/10 — restraint.', '10/10 — actually wrote this themselves.'],
+          subs: [
+            "No template phrases. If your reply rate is still trash, that's not a language problem — it's that you didn't actually read their profile. We can't help with that part.",
+            "Zero clichés. The candidate will read the whole thing, which is the rarest outcome on LinkedIn since 2014.",
+            "Clean. Either you wrote this carefully or you got lucky. Either way, ship it.",
+          ],
+          readsLike: [
+            "a human who actually paid attention.",
+            "someone who closed LinkedIn for a moment and just wrote.",
+            "a person who has met another person before.",
+          ],
+        },
+        oneSlip: {
+          headlines: ['9/10 — one slip.', '9/10 — one bad word.', '9/10 — almost.'],
+          subs: [
+            "Cut the highlight. You're one substitution away from clean.",
+            "One scratch on an otherwise clean car. The touch-up paint is right there in the highlighted word.",
+            "Almost. The flagged phrase is exactly the one your candidate has trained themselves to skip.",
+          ],
+          readsLike: [
+            "a writer who hit Send three minutes too early.",
+            "the second draft, sent because the first had a typo.",
+            "someone who almost made it to the finish line.",
+          ],
+        },
+        minorCrimes: {
+          headlines: ['8/10 — minor crimes.', '8/10 — two yellow flags.', '8/10 — mostly intentional.'],
+          subs: [
+            "Two clichés. Mostly clean. Swap the highlights for something specific to them and you're 80% there.",
+            "The candidate's not benching you yet, but they noticed both of those.",
+            "Two strikes. Survivable. The next pitch you write will be cleaner if you start with their last post instead of your role.",
+          ],
+          readsLike: [
+            "a real human having a slightly off Tuesday.",
+            "someone who skimmed their own message before sending.",
+            "a recruiter who knows the difference but defaulted on autopilot twice.",
+          ],
+        },
+        template: {
+          headlines: [
+            `${score}/10 — this is a template.`,
+            `${score}/10 — templated, but trying.`,
+            `${score}/10 — sequence energy.`,
+          ],
+          subs: [
+            "If a candidate gets 50 of these a week, yours is one of them. The fix isn't editing — it's starting over from one specific observation about them.",
+            "Recognizable from across the inbox. The opener could be a CAPTCHA: 'are you a human or a recruiter?'",
+            "Three highlights put this in the 'archive without reading' bucket. The candidate is already doing it.",
+          ],
+          readsLike: [
+            "a Lemlist sequence on its third A/B test.",
+            "a copy-paste with the {{firstName}} variable filled in but the body never updated.",
+            "the result of a 'how to write LinkedIn cold messages' YouTube tutorial from 2022.",
+          ],
+        },
+        madLib: {
+          headlines: [
+            `${score}/10 — Mad Lib detected.`,
+            `${score}/10 — fill-in-the-blank energy.`,
+            `${score}/10 — five flags is its own personality.`,
+          ],
+          subs: [
+            "Indistinguishable from every other cold pitch in their inbox. They're not reading the second sentence.",
+            "A high-grade template with the names swapped in. The candidate filed yours next to four identical ones from this morning.",
+            "The structural integrity of a SaaS sequence and the personality of an SMS marketing blast.",
+          ],
+          readsLike: [
+            "a recruiter who took the $99 LinkedIn course in 2019.",
+            "Apollo's default 'cold outreach' template, untouched since installation.",
+            "the message a sales rep sends when they're behind quota and dinner is in twenty minutes.",
+          ],
+        },
+        malpractice: {
+          headlines: [
+            `${score}/10 — outreach malpractice.`,
+            `${score}/10 — multiple felonies.`,
+            `${score}/10 — keyword soup.`,
+          ],
+          subs: [
+            "More clichés than original ideas. This message is a hostage situation for the English language.",
+            "Even ChatGPT would refuse to send this. It would suggest 'cooling off' first.",
+            "If you sent this to a hundred candidates and got zero replies, that wouldn't be a slump. That would be the system working.",
+          ],
+          readsLike: [
+            "ChatGPT, on autopilot, in 2023, while half-asleep.",
+            "a sequence built by an outsourced VA who never spoke to the founder.",
+            "an Outreach.io template last edited during a quarterly review.",
+          ],
+        },
+        impressed: {
+          headlines: [
+            `0/10 — we're impressed.`,
+            `0/10 — Hall of Fame entry.`,
+            `0/10 — bingo card complete.`,
+          ],
+          subs: [
+            "Museum-grade cold-outreach malpractice. Send this to your LinkedIn coach and ask for a refund.",
+            "If clichés were a currency, you'd be Warren Buffett.",
+            "We had to count twice. We were sure no one could fit this many in a single message.",
+          ],
+          readsLike: [
+            "someone copy-pasted the entire 'recruiter cliché bingo' card.",
+            "the bottom of the LinkedIn outreach iceberg.",
+            "a recruiter who has been replaced by their own automation, and didn't notice.",
+          ],
+        },
+      };
+
+      // Tier selection.
+      let pool;
+      let verdictClass = 'ouch';
+      if (cliches === 0)        { pool = TIERS.clean;        verdictClass = 'ok'; }
+      else if (cliches === 1)   { pool = TIERS.oneSlip;      verdictClass = 'ok'; }
+      else if (cliches === 2)   { pool = TIERS.minorCrimes;  }
+      else if (cliches <= 4)    { pool = TIERS.template;     }
+      else if (cliches <= 6)    { pool = TIERS.madLib;       }
+      else if (cliches <= 9)    { pool = TIERS.malpractice;  }
+      else                      { pool = TIERS.impressed;    }
+
+      const verdict = pick(pool.headlines, 0);
+      const verdictSub = pick(pool.subs, 1);
+      const readsLike = pool.readsLike ? `Reads like: ${pick(pool.readsLike, 2)}` : null;
 
       return { html, wordCount, cliches, clichePer100, score, findings, verdict, verdictClass, verdictSub, readsLike };
     }
 
     // Build the text that gets put in clipboard / X / LinkedIn share.
+    // Variants per tier — funnier when shared multiple times. Different
+    // copy depending on whether you nailed it (flex), almost nailed it
+    // (humble brag), or got cooked (self-roast).
     function buildShareText(r) {
       const url = 'rifflylabs.com/roast';
       if (r.cliches === 0) {
-        return `My LinkedIn cold message scored 10/10 on Riffly's Roast — zero clichés. The recruiter equivalent of being told I'm "not bad." Try yours: ${url}`;
+        const opts = [
+          `My LinkedIn cold message scored 10/10 on Riffly's Roast — zero clichés. The recruiter equivalent of being told I'm "not bad." ${url}`,
+          `Got 10/10 on Riffly's Roast. I am, technically, in the top 1% of LinkedIn outreach. Set a low bar and clear it: ${url}`,
+          `Riffly's Roast says my cold message has zero clichés. I've never felt more seen. ${url}`,
+        ];
+        return opts[Math.floor(Math.random() * opts.length)];
       } else if (r.cliches === 1) {
-        return `My LinkedIn cold message scored ${r.score}/10 on Riffly's Roast (1 cliché flagged). Try yours: ${url}`;
+        const opts = [
+          `My LinkedIn cold message scored ${r.score}/10 on Riffly's Roast — one cliché away from perfect. Heartbreaking. ${url}`,
+          `9/10 on Riffly's Roast. Lost a point on a single phrase. I will think about this for weeks. ${url}`,
+        ];
+        return opts[Math.floor(Math.random() * opts.length)];
       } else if (r.cliches <= 4) {
         const phrases = r.findings.slice(0, 3).map(f => `"${f.phrase}"`).join(', ');
-        return `My LinkedIn cold message scored ${r.score}/10 on Riffly's Roast — flagged for ${phrases}. Try yours: ${url}`;
-      } else {
+        const opts = [
+          `My LinkedIn cold message scored ${r.score}/10 on Riffly's Roast — flagged for ${phrases}. Going to claim I did it on purpose. ${url}`,
+          `Riffly's Roast caught me red-handed: ${r.score}/10 for ${phrases}. The candidate would have caught me too. ${url}`,
+          `Took the Riffly Roast. ${r.score}/10. They flagged ${phrases}. I deserve this. ${url}`,
+        ];
+        return opts[Math.floor(Math.random() * opts.length)];
+      } else if (r.cliches <= 9) {
         const phrases = r.findings.slice(0, 3).map(f => `"${f.phrase}"`).join(', ');
-        return `Verdict: "${r.verdict}" on Riffly's Roast — ${r.cliches} clichés including ${phrases}. Try yours: ${url}`;
+        const opts = [
+          `Verdict: "${r.verdict}" on Riffly's Roast. ${r.cliches} clichés in one message including ${phrases}. I need to sit down. ${url}`,
+          `Riffly's Roast just dragged my LinkedIn message: ${r.score}/10. The flagged phrases are exactly the ones I was proud of. ${url}`,
+          `${r.score}/10 from Riffly's Roast. ${r.cliches} clichés. I have been so confidently wrong. ${url}`,
+        ];
+        return opts[Math.floor(Math.random() * opts.length)];
+      } else {
+        const opts = [
+          `Riffly's Roast gave my cold message a 0/10. A perfect imperfect score. I am in the Hall of Fame. ${url}`,
+          `0/10 on Riffly's Roast. Apparently it's possible to fail this so completely you loop back to impressive. ${url}`,
+          `Cold message scored 0/10 on Riffly's Roast. Going to print this and frame it. ${url}`,
+        ];
+        return opts[Math.floor(Math.random() * opts.length)];
       }
     }
 
@@ -520,7 +648,7 @@
 
       // Empty input — nudge instead of silence.
       if (!rawText || !rawText.trim()) {
-        result.innerHTML = '<div class="empty-msg">Paste a cold message into the box first, then click Roast it.</div>';
+        result.innerHTML = '<div class="empty-msg">The box is empty. We can\'t roast nothing — though some recruiters somehow manage to.</div>';
         result.scrollIntoView({ behavior: 'smooth', block: 'start' });
         return;
       }
@@ -564,7 +692,7 @@
           </div>
         </div>
         <div class="highlighted">${r.html}</div>
-        ${truncated ? '<div class="empty-msg" style="margin-top:14px;">Capped at the first 3000 characters — no real cold message is that long anyway.</div>' : ''}
+        ${truncated ? '<div class="empty-msg" style="margin-top:14px;">We capped this at 2000 characters. If your cold message is longer than this, the cliché count is the least of your problems.</div>' : ''}
         ${r.findings.length > 0 ? `
           <div class="findings">
             <div class="findings-title">What got flagged and why</div>
