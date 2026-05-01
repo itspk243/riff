@@ -199,6 +199,23 @@ async function fetchMe() {
 
 async function refreshAuthUI() {
   const { riff_token } = await getStorage(['riff_token']);
+  // Reviewer flow #3 frustration #2: gate Generate on auth status. Without
+  // this, a signed-out user can hit Generate and get a useless "Sign in to
+  // keep going" toast — a dead-clickable button. Now the button is grayed
+  // out with a tooltip explaining why, so the auth-section CTA above it
+  // becomes the obvious next action.
+  const generateBtn = $('#generate');
+  if (generateBtn) {
+    if (!riff_token) {
+      generateBtn.disabled = true;
+      generateBtn.title = 'Sign in to Riffly to generate drafts.';
+    } else {
+      generateBtn.title = '';
+      // Don't FORCE-enable here — loadProfile / clearCandidateState are
+      // the authority on profile-readiness. We only LOCK the button when
+      // signed out; the profile path manages its own enable/disable.
+    }
+  }
   if (riff_token) {
     $('#auth-section').classList.add('hidden');
     $('#auth-status').classList.remove('hidden');
@@ -332,10 +349,57 @@ $('#auth-submit').addEventListener('click', async () => {
   await refreshAuthUI();
 });
 
+// Clear UI that's specific to the previous candidate. Called when the
+// user navigates to a new profile, away from a profile entirely, or signs
+// out — either way the prior drafts/notices/scores no longer apply and
+// would mislead the recruiter into copying the wrong message.
+function clearCandidateState() {
+  const results = $('#results');
+  if (results) {
+    results.innerHTML = '';
+    results.classList.add('hidden');
+  }
+  const thread = $('#thread-notice');
+  if (thread) {
+    thread.innerHTML = '';
+    thread.classList.add('hidden');
+  }
+  const fit = $('#fit-score');
+  if (fit) {
+    fit.innerHTML = '';
+    fit.classList.add('hidden');
+  }
+  // Reset profile-card text so the next render doesn't flash stale data.
+  const pName = $('#p-name'); if (pName) pName.textContent = '';
+  const pHead = $('#p-headline'); if (pHead) pHead.textContent = '';
+  const pRole = $('#p-role'); if (pRole) pRole.textContent = '';
+}
+
 $('#signout-link').addEventListener('click', async (e) => {
   e.preventDefault();
   // Wipe both tokens so the next sign-in is clean.
   await setStorage({ riff_token: null, riff_refresh: null });
+  // Reset all in-memory state that depended on the signed-in identity.
+  // Without this the previous user's plan badge, drafts, profile card,
+  // thread notice, fit score, and usage chip would linger after sign-out
+  // and read as "partially signed in," which is the most confusing
+  // possible state for the next person at the keyboard.
+  currentPlan = null;
+  currentEmail = null;
+  clearCandidateState();
+  refreshPlanBadge();
+  const usageChip = $('#usage-chip');
+  if (usageChip) { usageChip.classList.add('hidden'); usageChip.textContent = ''; }
+  const quota = $('#quota');
+  if (quota) { quota.textContent = ''; quota.classList.remove('urgent'); }
+  // Hide profile-card too (sometimes still visible from prior session).
+  const card = $('#profile-card'); if (card) card.classList.add('hidden');
+  const stateBox = $('#profile-state');
+  if (stateBox) {
+    stateBox.classList.remove('hidden');
+    const hint = stateBox.querySelector('.hint');
+    if (hint) hint.textContent = 'Signed out. Sign in again to keep drafting.';
+  }
   await refreshAuthUI();
 });
 
@@ -429,7 +493,34 @@ async function loadProfile() {
       } catch {}
       stateBox.classList.add('hidden');
       card.classList.remove('hidden');
-      generateBtn.disabled = false;
+      // Generate stays disabled if signed out (refreshAuthUI is the
+      // authority on auth-gate). Otherwise, profile is ready → enable.
+      (async () => {
+        const { riff_token } = await getStorage(['riff_token']);
+        generateBtn.disabled = !riff_token;
+      })();
+
+      // Reviewer flow #12: parser-health soft warning. If LinkedIn's DOM
+      // shifts and we lose 3 of the 4 main fields, the user sees a card
+      // with just a name and assumes the profile has no info — then they
+      // generate a generic draft and blame Riffly's prompt. Better: tell
+      // them upfront that we're having trouble, point at the recovery
+      // path (refresh) and the support inbox. Sets expectation, prevents
+      // a bad draft from being mistakenly attributed to model quality.
+      const fieldsMissing = [p.headline, p.about, p.currentRole, p.currentCompany]
+        .filter(v => !v || !String(v).trim()).length;
+      const card_warning = $('#parse-warning');
+      if (fieldsMissing >= 3 && p.name) {
+        if (!card_warning) {
+          const w = document.createElement('div');
+          w.id = 'parse-warning';
+          w.className = 'parse-warning';
+          w.innerHTML = `<strong>Trouble reading this profile.</strong> Try refreshing the page first. If it persists, <a href="mailto:support@rifflylabs.com?subject=Riffly%20parse%20issue">support@rifflylabs.com</a> — we patch within a day.`;
+          card.appendChild(w);
+        }
+      } else if (card_warning) {
+        card_warning.remove();
+      }
 
       currentProfile = p;
       currentCategory = categorizeProfile(p);
@@ -680,12 +771,59 @@ function openSpecsManager() {
 
 // ---------- prior-thread detection (Day 1 follow-up loop) ----------
 
-function checkPriorThread(candidateUrl) {
+async function checkPriorThread(candidateUrl) {
   if (!candidateUrl) return;
-  // Plan gate: cross-machine follow-up loop is paid-only. Free users still
-  // get LOCAL stats via chrome.storage.local — they just don't get the
-  // "you sent here X days ago" nudge.
-  if (!hasFollowUpLoop(currentPlan)) return;
+  const notice = $('#thread-notice');
+  if (!notice) return;
+
+  // Strategy:
+  //   - Free users: read riff_events from chrome.storage.local. Same-device
+  //     memory aid only ("you sent here Xd ago"). Cross-device sync + the
+  //     "Draft the follow-up" automation stay paid-only.
+  //   - Paid users: same lookup against the server (cross-device source of
+  //     truth) plus the follow-up draft button.
+  //
+  // Without the local fallback, free users hit Day 2 with zero recollection
+  // they messaged the candidate yesterday — which is when they accidentally
+  // double-message and blame Riffly.
+
+  if (!hasFollowUpLoop(currentPlan)) {
+    // ---------- Free path: local storage only ----------
+    try {
+      const { riff_events } = await getStorage(['riff_events']);
+      const all = Array.isArray(riff_events) ? riff_events : [];
+      // Only events that recorded the candidate URL (post-v1.2.4) qualify.
+      // Older events without candidate_url are ignored — they're aggregate
+      // stats fodder, not per-candidate.
+      const forThis = all.filter(e => e && e.candidate_url === candidateUrl);
+      if (forThis.length === 0) return;
+      // Most-recent first (events are append-only, so reverse).
+      forThis.sort((a, b) => (b.t || 0) - (a.t || 0));
+      const replied = forThis.find(e => e.kind === 'replied');
+      const sent = forThis.find(e => e.kind === 'sent');
+      if (replied) {
+        const days = daysSinceMs(replied.t);
+        notice.innerHTML = `<strong>${days === 0 ? 'They replied today.' : `They replied ${days}d ago.`}</strong> Nice. Drafting another touch?`;
+      } else if (sent) {
+        const days = daysSinceMs(sent.t);
+        if (days >= 14) {
+          notice.innerHTML = `<strong>You sent a draft here ${days}d ago.</strong> No reply yet. <span class="muted small">Cross-device sync + auto follow-up drafts come with Pro.</span>`;
+        } else if (days >= 2) {
+          notice.innerHTML = `<strong>You sent a draft here ${days}d ago.</strong> No reply yet. <span class="muted small">Auto-draft the follow-up — Pro.</span>`;
+        } else {
+          notice.innerHTML = `<strong>Just sent here ${days === 0 ? 'today' : 'yesterday'}.</strong> Give it a few days before the follow-up.`;
+        }
+      } else {
+        return;
+      }
+      notice.classList.remove('hidden');
+    } catch {
+      /* best-effort */
+    }
+    return;
+  }
+
+  // ---------- Paid path: server-side, cross-device ----------
   chrome.runtime.sendMessage(
     { type: 'RIFF_EVENTS_FOR_CANDIDATE', payload: { candidate: candidateUrl } },
     (resp) => {
@@ -694,9 +832,6 @@ function checkPriorThread(candidateUrl) {
       const events = resp.events; // most recent first
       const replied = events.find(e => e.kind === 'replied');
       const sent = events.find(e => e.kind === 'sent');
-
-      const notice = $('#thread-notice');
-      if (!notice) return;
 
       if (replied) {
         const days = daysSince(replied.created_at);
@@ -728,6 +863,14 @@ function checkPriorThread(candidateUrl) {
       }
     }
   );
+}
+
+// Local-event timestamps are Unix ms. Server-event timestamps are ISO strings.
+// Two helpers so neither path has to translate.
+function daysSinceMs(ms) {
+  try {
+    return Math.max(0, Math.floor((Date.now() - ms) / (1000 * 60 * 60 * 24)));
+  } catch { return 0; }
 }
 
 function daysSince(iso) {
@@ -786,7 +929,10 @@ $('#template').addEventListener('change', (e) => {
   pitchEl.dataset.fromTemplate = '1';
 });
 
-// If user manually edits pitch, mark it as no-longer-from-template
+// If user manually edits pitch, mark it as no-longer-from-template.
+// (The chrome.storage.session persistence — separate concern — is wired
+// up in DOMContentLoaded init below to avoid double-writing on every
+// keystroke.)
 $('#pitch').addEventListener('input', () => {
   delete $('#pitch').dataset.fromTemplate;
 });
@@ -797,7 +943,20 @@ function generate(profile) {
   const generateBtn = $('#generate');
   generateBtn.disabled = true;
   generateBtn.classList.add('loading');
-  generateBtn.textContent = 'Drafting…';
+
+  // Animated dot progression — gives the user a constant heartbeat that
+  // tells them "still working." Without this, the silent 5–10s wait makes
+  // users wonder if the click registered, and they start clicking other
+  // things. The shimmer is decorative; the dots are the actual signal.
+  // Phase change every 400ms so each dot is visible for two cycles before
+  // it cycles back, giving a perceptible loop without feeling jittery.
+  const dotFrames = ['Drafting.', 'Drafting..', 'Drafting...'];
+  let dotIndex = 0;
+  generateBtn.textContent = dotFrames[0];
+  const dotTimer = setInterval(() => {
+    dotIndex = (dotIndex + 1) % dotFrames.length;
+    generateBtn.textContent = dotFrames[dotIndex];
+  }, 400);
 
   const tone = $('#tone').value;
   const length = $('#length').value;
@@ -815,9 +974,12 @@ function generate(profile) {
   };
 
   chrome.runtime.sendMessage({ type: 'RIFF_GENERATE', payload }, async (resp) => {
+    clearInterval(dotTimer);
     generateBtn.disabled = false;
     generateBtn.classList.remove('loading');
-    generateBtn.textContent = 'Generate';
+    // Restore label WITH the keyboard-shortcut hint chip (the original
+    // popup.html markup includes it, but textContent assignments wipe it).
+    generateBtn.innerHTML = 'Generate <span class="kbd-hint">⌘↵</span>';
     // Even on error, the rich `usage` snapshot may be present (e.g. on 402
     // we still know exactly how many drafts the user has used / has left).
     updateUsageChipFromResponse(resp);
@@ -955,7 +1117,8 @@ function renderVariants(variants, ctx) {
     const sentBtn = document.createElement('button');
     sentBtn.textContent = 'Mark sent';
     sentBtn.addEventListener('click', async () => {
-      await recordEvent({ id: eventId, kind: 'sent', tone: ctx.tone, length: ctx.length, type: v.type, t: Date.now() });
+      const candidate_url = (currentProfile && currentProfile.profileUrl) || '';
+      await recordEvent({ id: eventId, kind: 'sent', tone: ctx.tone, length: ctx.length, type: v.type, t: Date.now(), candidate_url });
       // Mirror to server so follow-up loop works across machines.
       sendServerEvent('sent', v.type, ctx);
       sentBtn.classList.add('sent');
@@ -966,7 +1129,8 @@ function renderVariants(variants, ctx) {
     const replyBtn = document.createElement('button');
     replyBtn.textContent = 'Mark replied';
     replyBtn.addEventListener('click', async () => {
-      await recordEvent({ id: eventId, kind: 'replied', tone: ctx.tone, length: ctx.length, type: v.type, t: Date.now() });
+      const candidate_url = (currentProfile && currentProfile.profileUrl) || '';
+      await recordEvent({ id: eventId, kind: 'replied', tone: ctx.tone, length: ctx.length, type: v.type, t: Date.now(), candidate_url });
       sendServerEvent('replied', v.type, ctx);
       replyBtn.classList.add('replied');
       replyBtn.textContent = 'Replied ✓';
@@ -1473,6 +1637,34 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Initialize templates list with default purpose + 'other' category
   refreshTemplates('hire', 'other');
 
+  // ---------- Pitch persistence (popup mode) ----------
+  // In popup mode the entire DOM is destroyed when the popup closes (focus
+  // loss = popup close), so the pitch the user typed is lost. Sidebar mode
+  // doesn't have this problem (panel DOM persists across tab switches).
+  // chrome.storage.session is the right tier: persists across popup
+  // open/close within the same browser session, but cleared when the
+  // browser closes (so we don't carry stale pitches into the next day).
+  // Falls back gracefully if storage.session isn't available (older Chrome).
+  if (chrome.storage && chrome.storage.session) {
+    try {
+      const { pitch_draft, post_draft } = await chrome.storage.session.get(['pitch_draft', 'post_draft']);
+      if (pitch_draft && $('#pitch')) $('#pitch').value = pitch_draft;
+      if (post_draft && $('#post')) $('#post').value = post_draft;
+    } catch { /* storage.session unavailable — silently skip */ }
+    const pitchEl = $('#pitch');
+    const postEl = $('#post');
+    if (pitchEl) {
+      pitchEl.addEventListener('input', () => {
+        try { chrome.storage.session.set({ pitch_draft: pitchEl.value }); } catch {}
+      });
+    }
+    if (postEl) {
+      postEl.addEventListener('input', () => {
+        try { chrome.storage.session.set({ post_draft: postEl.value }); } catch {}
+      });
+    }
+  }
+
   let profile = await loadProfile();
   // Plus tier — surface saved-search scan UI when on a tracked search URL.
   // Runs independently of profile load (different active-tab branch).
@@ -1508,32 +1700,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (_seedTab && _seedTab.url) lastExtractedUrl = _seedTab.url;
   }
 
-  // Clear UI that's specific to the previous candidate. Called when the
-  // user navigates to a new profile OR away from a profile entirely —
-  // either way the prior drafts/notices/scores no longer apply and would
-  // mislead the recruiter into copying the wrong candidate's message.
-  function clearCandidateState() {
-    const results = $('#results');
-    if (results) {
-      results.innerHTML = '';
-      results.classList.add('hidden');
-    }
-    const thread = $('#thread-notice');
-    if (thread) {
-      thread.innerHTML = '';
-      thread.classList.add('hidden');
-    }
-    const fit = $('#fit-score');
-    if (fit) {
-      fit.innerHTML = '';
-      fit.classList.add('hidden');
-    }
-    // Reset profile-card text so the next render doesn't flash stale data.
-    const pName = $('#p-name'); if (pName) pName.textContent = '';
-    const pHead = $('#p-headline'); if (pHead) pHead.textContent = '';
-    const pRole = $('#p-role'); if (pRole) pRole.textContent = '';
-  }
-
   async function reExtractIfNeeded(reason) {
     const tab = await getActiveTab();
     if (!tab || !tab.url) return;
@@ -1561,6 +1727,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     // re-extract delay, which is exactly the wrong moment to be confused
     // about which message belongs to whom.
     clearCandidateState();
+    // Reviewer flow #9: lock Generate during the 600ms render-wait. Without
+    // this, a fast user could click Generate while currentProfile still
+    // points at the previous candidate — generating a message FOR Bob using
+    // ALICE's profile data. The button visually flickers disabled→enabled
+    // but that's better than producing the wrong draft.
+    const generateBtn = $('#generate');
+    if (generateBtn) generateBtn.disabled = true;
     // Small delay so LinkedIn's React tree has time to render the new profile
     // (otherwise we extract the previous candidate's name on top of the new
     // candidate's photo). 600ms is conservative — trial-and-error suggested 350ms

@@ -655,6 +655,39 @@ footer .small {
 }
 .tpl-save-composer .save-cancel:hover { color: var(--ink); }
 
+/* Parse-health soft warning. Renders inside #profile-card when the parser
+   recovered the candidate's name but lost most other fields (LinkedIn DOM
+   drift). Yellow/amber to read as advisory, not an error. */
+.parse-warning {
+  margin-top: 10px;
+  padding: 9px 11px;
+  background: #fff8eb;
+  border: 1px solid #f4d99c;
+  border-radius: var(--radius-sm);
+  font-size: 11.5px;
+  color: #6b4a14;
+  line-height: 1.45;
+}
+.parse-warning strong { color: #4a3514; font-weight: 700; }
+.parse-warning a { color: #6b4a14; border-bottom: 1px dotted #6b4a14; text-decoration: none; }
+.parse-warning a:hover { color: #4a3514; border-bottom-color: #4a3514; }
+
+/* Free-tier upsell hint inside #thread-notice. Inline link to /dashboard
+   so the user can see the cross-device sync benefit at the moment they
+   experience the same-device version. */
+.thread-upsell {
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--muted);
+}
+.thread-upsell a {
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 600;
+  border-bottom: 1px dotted var(--accent);
+}
+.thread-upsell a:hover { color: var(--ink); border-bottom-color: var(--ink); }
+
 /* ---------- Follow-up notice ---------- */
 
 #thread-notice {
