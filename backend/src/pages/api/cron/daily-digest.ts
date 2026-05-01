@@ -66,18 +66,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     ? hourOverride
     : new Date().getUTCHours();
 
-  let usersQuery = supabase
+  // Two query branches instead of one reassignable `let`. Supabase's
+  // PostgrestFilterBuilder type narrows on each chained call, which
+  // makes `let q = ...; q = q.eq(...)` reject under strict TS settings.
+  // Hourly mode (or manual ?hour= test) → filter by hour. Daily mode →
+  // no hour filter, so everyone with a Plus/Team plan + email receives
+  // the digest at the single fire time.
+  const filterByHour = isHourly || Number.isFinite(hourOverride);
+  const baseQuery = supabase
     .from('users')
     .select('id, email, digest_send_hour_utc')
     .in('plan', ['plus', 'team']);
-  if (isHourly || Number.isFinite(hourOverride)) {
-    // Hourly mode (or manual ?hour= test) — filter by hour. Includes users
-    // whose preference is null in the override case via .or() below.
-    usersQuery = usersQuery.eq('digest_send_hour_utc', targetHour);
-  }
-  // Daily mode: no hour filter — everyone with a Plus/Team plan + email
-  // receives the digest at the single fire time.
-  const { data: users, error: usersErr } = await usersQuery;
+  const { data: users, error: usersErr } = filterByHour
+    ? await baseQuery.eq('digest_send_hour_utc', targetHour)
+    : await baseQuery;
   if (usersErr) {
     return res.status(500).json({ ok: false, error: usersErr.message });
   }

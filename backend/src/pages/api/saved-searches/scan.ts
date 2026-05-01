@@ -162,17 +162,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .in('job_spec_id', specIds)
       .gte('scored_at', cacheCutoffIso)
       .order('scored_at', { ascending: false });
-    for (const row of cached || []) {
+    for (const row of (cached || []) as any[]) {
+      // Schema columns are all nullable (score smallint null, reasoning text
+      // null, matched/missing jsonb null). Skip rows with no actual score —
+      // they're not useful as a cache hit and ScoreResult.score is non-null.
+      if (row?.score == null) continue;
       const k = `${row.candidate_url}:${row.job_spec_id}`;
       // First row wins because we ordered by scored_at desc — that's the
       // most recent score for this (candidate, spec) pair.
       if (!cache.has(k)) {
         cache.set(k, {
-          score: row.score,
-          reasoning: row.reasoning,
-          matched: row.matched || [],
-          missing: row.missing || [],
-        } as ScoreResult);
+          score: row.score as number,
+          reasoning: (row.reasoning as string) || '',
+          matched: Array.isArray(row.matched) ? (row.matched as string[]) : [],
+          missing: Array.isArray(row.missing) ? (row.missing as string[]) : [],
+        });
       }
     }
   }
