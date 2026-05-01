@@ -21,6 +21,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { generateVariants } from '../../lib/llm';
 import type { GenerateRequest, MessageVariant } from '../../lib/types';
+import { bumpRateLimit, decrementRateLimit, hashIp } from '../../lib/demo-rate-limit';
 
 const COOKIE_NAME = 'riff_demo_used';
 const COOKIE_GENERATIONS_KEY = 'riff_demo_count';
@@ -32,44 +33,14 @@ const ALLOWED_LENGTHS = new Set(['short', 'medium']);
 // blocks endless loops. Upgrades to unlimited via signup.
 const PER_COOKIE_LIMIT = 3;
 
-// IP-based daily limit — in-memory map. Resets on cold start. Resilient
-// enough for organic traffic; combined with the global daily hard cap and
-// cookie cap, abuse cost is bounded at ~$10–20/day worst case.
+// IP-based daily limit. Persisted in Supabase (demo_rate_limits table) so
+// it survives Vercel cold starts. Previously this was an in-memory Map
+// that reset on every deploy, letting bursts of abuse slip through.
 const PER_IP_DAILY_LIMIT = 5;
-const ipBuckets = new Map<string, { date: string; count: number }>();
-function bumpPerIp(ip: string): { ok: boolean; count: number } {
-  const today = todayIso();
-  const cur = ipBuckets.get(ip);
-  if (!cur || cur.date !== today) {
-    ipBuckets.set(ip, { date: today, count: 1 });
-    return { ok: true, count: 1 };
-  }
-  if (cur.count >= PER_IP_DAILY_LIMIT) return { ok: false, count: cur.count };
-  cur.count++;
-  return { ok: true, count: cur.count };
-}
-function decrementPerIp(ip: string) {
-  const cur = ipBuckets.get(ip);
-  if (cur) cur.count = Math.max(0, cur.count - 1);
-}
 
 // Global daily hard cap — last line of defense if everything else fails.
+// Also persisted now.
 const DAILY_HARD_CAP = 200;
-let dailyDate = todayIso();
-let dailyCount = 0;
-function todayIso(): string {
-  return new Date().toISOString().slice(0, 10);
-}
-function bumpDailyCounter(): boolean {
-  const t = todayIso();
-  if (t !== dailyDate) {
-    dailyDate = t;
-    dailyCount = 0;
-  }
-  if (dailyCount >= DAILY_HARD_CAP) return false;
-  dailyCount++;
-  return true;
-}
 
 // Vercel sets x-forwarded-for and x-real-ip on every request. Take the
 // first IP in the chain (the actual client). Falls back to a coarse bucket
@@ -126,9 +97,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     });
   }
 
-  // IP-based daily cap. Survives cookie clears.
+  // IP-based daily cap. Survives cookie clears AND Vercel cold starts —
+  // unlike the previous in-memory implementation. The IP itself is hashed
+  // (sha256 + RIFF_IP_SALT) before persistence so a leak of the
+  // demo_rate_limits table can't be linked back to specific visitors.
   const ip = getClientIp(req);
-  const ipResult = bumpPerIp(ip);
+  const ipBucket = hashIp(ip);
+  const ipResult = await bumpRateLimit('ip', ipBucket, PER_IP_DAILY_LIMIT);
   if (!ipResult.ok) {
     return res.status(429).json({
       ok: false,
@@ -138,9 +113,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   // Global daily cap — last line of defense against scrapers / coordinated
-  // abuse hitting from many IPs.
-  if (!bumpDailyCounter()) {
-    decrementPerIp(ip);
+  // abuse hitting from many IPs. Now persistent across deploys.
+  const globalResult = await bumpRateLimit('global', 'all', DAILY_HARD_CAP);
+  if (!globalResult.ok) {
+    await decrementRateLimit('ip', ipBucket);
     return res.status(429).json({
       ok: false,
       error: "Demo's been popular today — we've hit our daily generation cap. Sign up free to keep going.",
@@ -148,33 +124,38 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     });
   }
 
+  // Helper to refund both counters when a request fails after the bump.
+  // Both decrements are best-effort — small accuracy loss on failure is
+  // fine; the user-visible behavior is still bounded by the cap.
+  const refund = async () => {
+    await Promise.all([
+      decrementRateLimit('ip', ipBucket),
+      decrementRateLimit('global', 'all'),
+    ]);
+  };
+
   const body = (req.body || {}) as { pitch?: string; tone?: string; length?: string };
   const pitchRaw = (body.pitch || '').trim();
   const toneRaw = (body.tone || 'direct').trim();
   const lengthRaw = (body.length || 'medium').trim();
 
   if (!pitchRaw) {
-    // Refund the daily counter so failed validation doesn't burn a slot.
-    dailyCount = Math.max(0, dailyCount - 1);
-    decrementPerIp(ip);
+    await refund();
     return res.status(400).json({ ok: false, error: 'Add a one-sentence pitch first.' });
   }
   if (pitchRaw.length > PITCH_MAX) {
-    dailyCount = Math.max(0, dailyCount - 1);
-    decrementPerIp(ip);
+    await refund();
     return res.status(400).json({
       ok: false,
       error: `Pitch is too long for the demo (${pitchRaw.length}/${PITCH_MAX} chars). Sign up free for unlimited length.`,
     });
   }
   if (!ALLOWED_TONES.has(toneRaw)) {
-    dailyCount = Math.max(0, dailyCount - 1);
-    decrementPerIp(ip);
+    await refund();
     return res.status(400).json({ ok: false, error: 'Pick warm, direct, or cheeky.' });
   }
   if (!ALLOWED_LENGTHS.has(lengthRaw)) {
-    dailyCount = Math.max(0, dailyCount - 1);
-    decrementPerIp(ip);
+    await refund();
     return res.status(400).json({ ok: false, error: 'Length must be short or medium.' });
   }
 
@@ -190,8 +171,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       language: 'en',
     });
   } catch (e: any) {
-    dailyCount = Math.max(0, dailyCount - 1);
-    decrementPerIp(ip);
+    await refund();
     return res.status(500).json({
       ok: false,
       error: 'The demo model is busy right now. Try again in a moment, or sign up to use the real extension.',
@@ -202,8 +182,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   // it. Cheaper, simpler UX, and the visitor can sign up to see all three.
   const opener = variants.find((v) => v.type === 'cold_opener') || variants[0];
   if (!opener) {
-    dailyCount = Math.max(0, dailyCount - 1);
-    decrementPerIp(ip);
+    await refund();
     return res.status(500).json({ ok: false, error: 'No draft produced. Try again.' });
   }
 
