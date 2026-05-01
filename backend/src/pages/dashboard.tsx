@@ -418,10 +418,9 @@ export default function Dashboard() {
       // (window.riffIdentify) is set up in /public/analytics.js and
       // is a no-op when PostHog isn't configured.
       try {
-        if (typeof window !== 'undefined' && (window as any).riffIdentify && data?.id) {
-          (window as any).riffIdentify(data.id, {
+        if (typeof window !== 'undefined' && (window as any).riffIdentify && data?.email) {
+          (window as any).riffIdentify(data.email, {
             plan: data.plan,
-            email: data.email,
           });
         }
       } catch { /* analytics is never allowed to throw */ }
