@@ -13,6 +13,7 @@ const nextConfig = {
       { source: '/roast', destination: '/roast.html' },
       { source: '/brand', destination: '/brand/index.html' },
       { source: '/pricing', destination: '/index.html#pricing' },
+      { source: '/features/voice-fingerprint', destination: '/features/voice-fingerprint.html' },
     ];
   },
   async headers() {

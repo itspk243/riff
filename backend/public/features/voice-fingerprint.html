@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="Voice fingerprint trains Riffly on your past LinkedIn messages so drafts come out sounding like you wrote them. Pro feature.">
+  <link rel="canonical" href="https://rifflylabs.com/features/voice-fingerprint">
+  <meta name="theme-color" content="#faf9f6">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://rifflylabs.com/features/voice-fingerprint">
+  <meta property="og:title" content="Voice fingerprint — drafts in your dialect · Riffly">
+  <meta property="og:description" content="Train Riffly on 5–10 of your real messages. Drafts come back in your cadence, your sign-off, your style.">
+  <meta property="og:image" content="https://rifflylabs.com/og.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Voice fingerprint — drafts in your dialect · Riffly">
+  <meta name="twitter:description" content="Train Riffly on your real messages. Drafts come back in your style.">
+  <meta name="twitter:image" content="https://rifflylabs.com/og.png">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
+  <title>Voice fingerprint — drafts in your dialect · Riffly</title>
+  <style>
+    :root {
+      --bg: #faf9f6;
+      --surface: #ffffff;
+      --ink: #111110;
+      --ink-2: #2a2a28;
+      --muted: #6b6a65;
+      --line: #e7e4dc;
+      --line-2: #d6d2c7;
+      --accent: #b14a1a;
+      --accent-soft: #fdeee5;
+      --warm: #f3f0e8;
+      --green: #1a7a48;
+      --green-soft: #e8f6ee;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+      font-size: clamp(14px, 2vw, 16px);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+    a { color: inherit; }
+    .wrap { max-width: 880px; margin: 0 auto; padding: clamp(16px, 4vw, 64px); }
+    header { padding: 24px 0; }
+    .nav-row {
+      display: flex; justify-content: space-between; align-items: center;
+      max-width: 880px; margin: 0 auto; padding: 0 clamp(16px, 4vw, 64px);
+    }
+    .brand {
+      display: inline-flex; align-items: center; gap: 9px;
+      font-weight: 600; font-size: 17px; letter-spacing: -0.02em;
+      text-decoration: none; color: var(--ink);
+    }
+    .logo-mark {
+      display: inline-block; width: 20px; height: 20px;
+      background: var(--ink); border-radius: 5px; position: relative;
+    }
+    .logo-mark::after {
+      content: ""; position: absolute; top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      width: 8px; height: 8px;
+      background: var(--bg); border-radius: 1.5px;
+    }
+    .nav-links { display: flex; gap: 18px; align-items: center; }
+    .nav-link {
+      color: var(--muted); font-size: 14px; text-decoration: none;
+    }
+    .nav-link:hover { color: var(--ink); }
+    .nav-cta {
+      padding: 7px 14px; background: var(--ink); color: #fff;
+      border-radius: 6px; font-size: 13px; font-weight: 500;
+      text-decoration: none;
+    }
+    .nav-cta:hover { background: var(--ink-2); }
+
+    .feature-tag {
+      display: inline-block; margin-top: 32px;
+      font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em;
+      font-weight: 700; color: var(--accent);
+      padding: 5px 11px;
+      background: var(--accent-soft);
+      border-radius: 100px;
+    }
+    h1 {
+      font-size: clamp(34px, 6vw, 56px);
+      font-weight: 600; letter-spacing: -0.03em; line-height: 1.05;
+      margin: 18px 0 16px;
+      max-width: 720px;
+    }
+    .lede {
+      font-size: clamp(17px, 2.4vw, 20px);
+      color: var(--ink-2); max-width: 640px;
+      line-height: 1.5; margin: 0 0 36px;
+    }
+
+    /* Section pattern */
+    section { margin: 64px 0; }
+    h2 {
+      font-size: clamp(22px, 3vw, 30px);
+      font-weight: 600; letter-spacing: -0.02em;
+      margin: 0 0 12px;
+    }
+    .section-lede {
+      font-size: 16px; color: var(--muted);
+      max-width: 580px; margin: 0 0 28px;
+    }
+
+    /* Before / after compare */
+    .compare {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 18px;
+      margin: 32px 0;
+    }
+    @media (max-width: 720px) { .compare { grid-template-columns: 1fr; } }
+    .compare-card {
+      padding: 22px 24px;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+    }
+    .compare-card.bad { background: #fefcfa; border-color: #f0d8c8; }
+    .compare-card.good { background: #f7faf8; border-color: #c7e3d2; }
+    .compare-label {
+      display: inline-block; margin-bottom: 12px;
+      font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.08em;
+      font-weight: 700;
+    }
+    .compare-card.bad .compare-label { color: var(--accent); }
+    .compare-card.good .compare-label { color: var(--green); }
+    .compare-text {
+      font-size: 14px; color: var(--ink-2); line-height: 1.6;
+      white-space: pre-line;
+    }
+    .compare-meta {
+      margin-top: 14px; padding-top: 14px;
+      border-top: 1px dashed var(--line);
+      font-size: 12px; color: var(--muted); line-height: 1.5;
+    }
+
+    /* Dashboard panel mockup */
+    .panel-mockup {
+      background: var(--surface);
+      border: 1px solid var(--line-2);
+      border-radius: 14px;
+      padding: 28px 32px;
+      box-shadow: 0 30px 80px -30px rgba(20, 18, 12, 0.14), 0 8px 20px -8px rgba(20, 18, 12, 0.06);
+      max-width: 720px;
+      margin: 24px 0 8px;
+    }
+    .panel-eyebrow {
+      font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.08em;
+      font-weight: 700; color: var(--muted); margin-bottom: 4px;
+    }
+    .panel-title {
+      font-size: 17px; font-weight: 600; color: var(--ink);
+      margin-bottom: 18px;
+    }
+    .panel-sub {
+      font-size: 13.5px; color: var(--ink-2); line-height: 1.6;
+      margin-bottom: 18px;
+    }
+    .panel-stats {
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;
+      margin-bottom: 16px;
+    }
+    @media (max-width: 600px) {
+      .panel-stats { grid-template-columns: 1fr 1fr; }
+      .panel-mockup { padding: 22px 18px; }
+    }
+    .panel-stat {
+      padding: 12px 14px;
+      background: var(--bg);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+    }
+    .stat-label {
+      font-size: 10.5px; text-transform: uppercase;
+      letter-spacing: 0.06em; font-weight: 600; color: var(--muted);
+      margin-bottom: 4px;
+    }
+    .stat-value {
+      font-size: 15px; font-weight: 600; color: var(--ink);
+      letter-spacing: -0.01em;
+    }
+    .panel-chip-row {
+      margin-top: 14px;
+      display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+    }
+    .panel-chip-label {
+      font-size: 10.5px; font-weight: 700; letter-spacing: 0.06em;
+      text-transform: uppercase; color: var(--muted);
+      margin-right: 4px;
+    }
+    .panel-chip {
+      display: inline-flex; align-items: center;
+      padding: 4px 10px;
+      font-size: 12.5px; font-weight: 500;
+      background: var(--warm);
+      border: 1px solid var(--line);
+      border-radius: 100px;
+      color: var(--ink-2);
+    }
+    .panel-caption {
+      margin-top: 14px;
+      font-size: 12px; color: var(--muted);
+      text-align: center; font-style: italic;
+    }
+
+    /* Three-step flow */
+    .steps {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px;
+      margin-top: 24px;
+    }
+    @media (max-width: 720px) { .steps { grid-template-columns: 1fr; } }
+    .step {
+      padding: 22px 24px;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      position: relative;
+    }
+    .step-num {
+      position: absolute; top: -14px; left: 22px;
+      width: 28px; height: 28px;
+      background: var(--ink); color: #fff;
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 700; font-size: 13px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    }
+    .step-title {
+      font-size: 15px; font-weight: 600; color: var(--ink);
+      margin: 6px 0 8px;
+    }
+    .step-text {
+      font-size: 13.5px; color: var(--ink-2); line-height: 1.55;
+    }
+
+    /* Privacy callout */
+    .privacy-card {
+      padding: 24px 28px;
+      background: var(--green-soft);
+      border: 1px solid #b5dec5;
+      border-radius: 12px;
+      margin: 32px 0;
+    }
+    .privacy-title {
+      font-size: 15px; font-weight: 700; color: var(--green);
+      margin-bottom: 8px;
+      display: inline-flex; align-items: center; gap: 8px;
+    }
+    .privacy-title::before {
+      content: "";
+      width: 14px; height: 14px;
+      border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 0 4px rgba(26, 122, 72, 0.15);
+    }
+    .privacy-text {
+      font-size: 14px; color: #1a3d28;
+      line-height: 1.6;
+    }
+
+    /* CTA */
+    .cta-card {
+      margin: 64px 0 32px;
+      padding: clamp(28px, 5vw, 48px);
+      background: var(--ink);
+      color: #fff;
+      border-radius: 16px;
+      text-align: center;
+    }
+    .cta-card h2 { color: #fff; margin: 0 0 10px; }
+    .cta-sub {
+      color: #c7c4bb;
+      font-size: 16px; margin: 0 auto 24px;
+      max-width: 480px;
+      line-height: 1.55;
+    }
+    .cta-row {
+      display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;
+    }
+    .btn-primary {
+      padding: 13px 24px;
+      background: var(--accent); color: #fff;
+      border: 1px solid var(--accent);
+      border-radius: 8px;
+      font-size: 15px; font-weight: 600;
+      text-decoration: none;
+      transition: background 120ms ease, transform 80ms ease;
+    }
+    .btn-primary:hover { background: #c8581f; }
+    .btn-primary:active { transform: scale(0.98); }
+    .btn-secondary {
+      padding: 13px 24px;
+      background: transparent; color: #fff;
+      border: 1px solid rgba(255,255,255,0.3);
+      border-radius: 8px;
+      font-size: 15px; font-weight: 500;
+      text-decoration: none;
+    }
+    .btn-secondary:hover { background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.5); }
+
+    /* Footer */
+    footer {
+      border-top: 1px solid var(--line);
+      padding: 32px 0;
+      margin-top: 32px;
+      font-size: 13px; color: var(--muted);
+    }
+    footer a { color: var(--muted); text-decoration: none; margin-right: 18px; }
+    footer a:hover { color: var(--ink); }
+
+    /* FAQ */
+    details {
+      border-bottom: 1px solid var(--line);
+      padding: 16px 0;
+    }
+    details:last-of-type { border-bottom: none; }
+    summary {
+      font-size: 15.5px; font-weight: 500; color: var(--ink);
+      cursor: pointer;
+      padding-right: 20px;
+      list-style: none;
+      position: relative;
+    }
+    summary::-webkit-details-marker { display: none; }
+    summary::after {
+      content: "+";
+      position: absolute;
+      right: 4px; top: -2px;
+      font-size: 22px; color: var(--muted);
+      font-weight: 300;
+      transition: transform 160ms ease;
+    }
+    details[open] summary::after { transform: rotate(45deg); }
+    details p {
+      margin: 12px 0 0;
+      font-size: 14.5px; color: var(--ink-2); line-height: 1.6;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="nav-row">
+      <a href="/" class="brand">
+        <span class="logo-mark"></span>Riffly
+      </a>
+      <div class="nav-links">
+        <a href="/#pricing" class="nav-link">Pricing</a>
+        <a href="/roast" class="nav-link">Roast</a>
+        <a href="/signup" class="nav-cta">Get started</a>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <div class="wrap">
+      <span class="feature-tag">Pro feature</span>
+      <h1>Your voice. Their inbox.</h1>
+      <p class="lede">Drafts that sound like you, not a model. Train Riffly on five or six of your real LinkedIn messages and the next thousand it writes will land in your cadence, your register, your sign-off.</p>
+
+      <section>
+        <h2>The "AI tell" problem</h2>
+        <p class="section-lede">Recipients can clock an AI draft in three seconds. The cadence is wrong. The sign-off is too clean. The phrasing is too symmetrical.</p>
+
+        <div class="compare">
+          <div class="compare-card bad">
+            <span class="compare-label">Generic AI draft</span>
+            <div class="compare-text">Hi Maya — I came across your profile and was impressed by your background in fintech infrastructure. I'd love to connect and learn more about your work. Would you be open to a brief 30-minute conversation next week to discuss potential opportunities?
+
+Looking forward to hearing from you.
+
+Best regards,
+Sam</div>
+            <div class="compare-meta">Five sentences, two ed-clauses, "I'd love to connect," "Looking forward to hearing from you." Identical to the other 47 in her inbox.</div>
+          </div>
+          <div class="compare-card good">
+            <span class="compare-label">Your voice, fingerprinted</span>
+            <div class="compare-text">Maya — your team's redesign of the recon flow is the cleanest payments engineering I've read this month. I'm hiring a Staff Engineer for our payments infra at Series B. Worth a 20-minute conversation if the timing isn't terrible?
+
+— Sam</div>
+            <div class="compare-meta">Short, specific opener. Question instead of declarative. Em-dash sign-off. Same writer, recognizable as a person.</div>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h2>What we actually learn from your samples</h2>
+        <p class="section-lede">Eight signals, derived locally in your browser. Not the messages themselves.</p>
+
+        <div class="panel-mockup">
+          <div class="panel-eyebrow">Voice fingerprint · drafts in your dialect</div>
+          <div class="panel-title">Riffly is matching your style. Trained on <strong>7</strong> samples.</div>
+
+          <div class="panel-stats">
+            <div class="panel-stat">
+              <div class="stat-label">Avg sentence</div>
+              <div class="stat-value">11.2 words</div>
+            </div>
+            <div class="panel-stat">
+              <div class="stat-label">Register</div>
+              <div class="stat-value">Casual</div>
+            </div>
+            <div class="panel-stat">
+              <div class="stat-label">Contractions</div>
+              <div class="stat-value">68%</div>
+            </div>
+            <div class="panel-stat">
+              <div class="stat-label">Asks questions</div>
+              <div class="stat-value">42%</div>
+            </div>
+          </div>
+
+          <div class="panel-chip-row">
+            <span class="panel-chip-label">Signoffs</span>
+            <span class="panel-chip">— Sam</span>
+            <span class="panel-chip">cheers, S</span>
+            <span class="panel-chip">talk soon</span>
+          </div>
+
+          <div class="panel-chip-row">
+            <span class="panel-chip-label">Openers</span>
+            <span class="panel-chip">Hey [name] —</span>
+            <span class="panel-chip">[name], saw your</span>
+            <span class="panel-chip">Quick one —</span>
+          </div>
+        </div>
+        <p class="panel-caption">Live preview from the dashboard. Every number is computed in your browser — we never see your raw messages.</p>
+      </section>
+
+      <section>
+        <h2>How it works</h2>
+        <p class="section-lede">Three minutes once. Riffly remembers from then on.</p>
+
+        <div class="steps">
+          <div class="step">
+            <div class="step-num">1</div>
+            <div class="step-title">Paste 5–10 messages</div>
+            <div class="step-text">Best LinkedIn DMs you've sent. Best cold emails. Best replies. The mix doesn't matter — Riffly picks up your voice from any prose you've actually written.</div>
+          </div>
+          <div class="step">
+            <div class="step-num">2</div>
+            <div class="step-title">See your fingerprint</div>
+            <div class="step-text">Sentence length, register, contraction rate, question rate, how you tend to open and sign off. Live preview while you type. Save when it looks right.</div>
+          </div>
+          <div class="step">
+            <div class="step-num">3</div>
+            <div class="step-title">Every draft from now on</div>
+            <div class="step-text">When Riffly drafts a cold message, it matches your style. Recipients read it as a person, not a template — because it is one.</div>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h2>The privacy line</h2>
+        <div class="privacy-card">
+          <div class="privacy-title">Your messages stay in your browser.</div>
+          <div class="privacy-text">The fingerprint computation runs client-side. We extract eight numeric stats and a few short opener / signoff strings, then send only those to our backend. Your actual messages never leave the page. You can clear your fingerprint or paste new samples to retrain anytime.</div>
+        </div>
+      </section>
+
+      <section>
+        <h2>Common questions</h2>
+
+        <details>
+          <summary>What kind of samples should I paste?</summary>
+          <p>Real LinkedIn messages, real cold emails, or any prose you've written that sounds like you. Five short messages beat one long one. The sweet spot is 5–10 messages of 50–150 words each.</p>
+        </details>
+
+        <details>
+          <summary>Will it copy phrases verbatim from my samples?</summary>
+          <p>No. It learns the shape of your voice — sentence length, register, how you tend to open and close — and feeds that as a one-paragraph style hint to the model. The actual sentences in your drafts are written fresh.</p>
+        </details>
+
+        <details>
+          <summary>What if my style changes?</summary>
+          <p>Click "Retrain with new samples" on the dashboard panel. The new fingerprint replaces the old one immediately. There's no churn period.</p>
+        </details>
+
+        <details>
+          <summary>Is this on every Pro draft, or do I have to enable it per draft?</summary>
+          <p>Every draft, automatically, once you've trained one. No per-draft toggle. If you want to turn it off, click "Clear" on the dashboard panel and Riffly goes back to its default style.</p>
+        </details>
+
+        <details>
+          <summary>Does it work for non-English messages?</summary>
+          <p>Partially. Sentence length, contraction rate, and signoff capture work in any language. The formality heuristic is tuned for English. We're rolling tier 2 for German, Spanish, and French through 2026.</p>
+        </details>
+
+        <details>
+          <summary>How is this different from just adding a "be casual" instruction?</summary>
+          <p>"Be casual" is one knob with three positions. Voice fingerprint is eight, calibrated to your specific cadence. The difference shows up most in the openers and sign-offs, which are the lines a recipient notices.</p>
+        </details>
+      </section>
+
+      <div class="cta-card">
+        <h2>Set up your voice fingerprint.</h2>
+        <p class="cta-sub">Pro plan unlocks it. $15/month, 200 drafts, voice fingerprint, saved pitch templates.</p>
+        <div class="cta-row">
+          <a href="/signup" class="btn-primary">Start with Pro →</a>
+          <a href="/#pricing" class="btn-secondary">See plans</a>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <div class="wrap" style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: 16px;">
+      <div>
+        <a href="/">Riffly</a>
+        <a href="/#pricing">Pricing</a>
+        <a href="/roast">Roast</a>
+      </div>
+      <div>
+        <a href="/privacy">Privacy</a>
+        <a href="/terms">Terms</a>
+        <a href="/security">Security</a>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>
