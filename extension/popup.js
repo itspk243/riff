@@ -54,12 +54,14 @@ function surfaceLabel(surface) {
 function categorizeProfile(profile) {
   const text = [profile.headline, profile.currentRole, profile.about].join(' ').toLowerCase();
   if (!text.trim()) return 'other';
-  if (/\b(co-?founder|founder|ceo|cto|chief executive|chief technology|chief product|chief operating|coo)\b/.test(text)) return 'founder';
-  if (/\b(designer|design lead|head of design|product design|ux|ui|brand designer|illustrator|art director|creative director)\b/.test(text)) return 'designer';
-  if (/\b(product manager|head of product|director of product|group product|principal pm|senior pm|associate pm|\bpm\b)\b/.test(text)) return 'pm';
-  if (/\b(engineer|developer|programmer|swe|sde|sre|architect|tech lead|staff engineer|principal engineer|senior dev|backend|frontend|full[\s-]?stack|ios|android)\b/.test(text)) return 'engineer';
-  if (/\b(account executive|sales|sdr|business development|\bbd\b|\bae\b|head of sales|chief revenue|cro)\b/.test(text)) return 'sales';
-  if (/\b(marketing|growth|seo|sem|content|brand|demand gen)\b/.test(text)) return 'marketing';
+  // Multilingual: English plus DE / FR / ES / PT / IT / NL keywords for the
+  // common roles in each category. Mirrors the language list the popup offers.
+  if (/\b(co-?founder|founder|ceo|cto|chief executive|chief technology|chief product|chief operating|coo|fundador|fundadora|fondateur|fondatrice|gr[uü]nder|gr[uü]nderin|oprichter|oprichtster|fondatore|fondatrice)\b/.test(text)) return 'founder';
+  if (/\b(designer|design lead|head of design|product design|ux|ui|brand designer|illustrator|art director|creative director|dise[ñn]ador|dise[ñn]adora|grafico|grafica|gestaltung)\b/.test(text)) return 'designer';
+  if (/\b(product manager|head of product|director of product|group product|principal pm|senior pm|associate pm|\bpm\b|product owner|gestor de producto|chef de produit|cheffe de produit|produktmanager|produktmanagerin|product[\s-]?manager)\b/.test(text)) return 'pm';
+  if (/\b(engineer|developer|programmer|swe|sde|sre|architect|tech lead|staff engineer|principal engineer|senior dev|backend|frontend|full[\s-]?stack|ios|android|ingeniero|ingeniera|ing[ée]nieur|ing[ée]nieure|ingenieur|ingenieurin|programador|programadora|sviluppatore|sviluppatrice|ontwikkelaar|ontwikkelaarster)\b/.test(text)) return 'engineer';
+  if (/\b(account executive|sales|sdr|business development|\bbd\b|\bae\b|head of sales|chief revenue|cro|ventas|ventes|vertrieb|verkoop|vendite|comercial|commerciale|verkauf)\b/.test(text)) return 'sales';
+  if (/\b(marketing|growth|seo|sem|content|brand|demand gen|mercadeo|mercadotecnia)\b/.test(text)) return 'marketing';
   return 'other';
 }
 
@@ -226,13 +228,61 @@ async function refreshAuthUI() {
       currentPlan = null;
     }
     refreshPlanBadge();
+    refreshUsageChip(); // fire-and-forget; renders the "X drafts left" header pill
   } else {
     $('#auth-section').classList.remove('hidden');
     $('#auth-status').classList.add('hidden');
     currentPlan = null;
     currentEmail = null;
     refreshPlanBadge();
+    const chip = $('#usage-chip');
+    if (chip) { chip.classList.add('hidden'); chip.textContent = ''; }
   }
+}
+
+// Header usage chip — shows "X drafts left" with a color shift at 70%/90%.
+// Sourced from /api/usage on every popup open. The /api/generate response
+// also returns the same `usage` snapshot, so we update the chip after every
+// generation without an extra round-trip — see updateUsageChipFromResponse.
+function renderUsageChip(usage) {
+  const chip = $('#usage-chip');
+  if (!chip) return;
+  if (!usage || usage.limit == null) {
+    chip.classList.add('hidden');
+    chip.textContent = '';
+    return;
+  }
+  const pct = usage.limit > 0 ? usage.used / usage.limit : 0;
+  const tier = pct >= 1 ? 'blocked' : pct >= 0.9 ? 'red' : pct >= 0.7 ? 'amber' : 'green';
+  const colors = {
+    green:   { bg: '#e3f0e9', fg: '#1a7a48', border: '#c1dfc9' },
+    amber:   { bg: '#fbf0d9', fg: '#a05f15', border: '#e7d3a3' },
+    red:     { bg: '#fdebd9', fg: '#b14a1a', border: '#e8c8a4' },
+    blocked: { bg: '#fdebd9', fg: '#b14a1a', border: '#e8c8a4' },
+  };
+  const c = colors[tier];
+  const remaining = usage.remaining ?? 0;
+  const label = remaining === 0
+    ? 'Limit reached'
+    : `${remaining} draft${remaining === 1 ? '' : 's'} left`;
+  chip.textContent = label;
+  chip.title = `${usage.used} / ${usage.limit} used this ${usage.windowKind === 'weekly' ? 'week' : 'month'}` +
+    (usage.resetsLabel ? ` · resets ${usage.resetsLabel}` : '');
+  chip.style.cssText = `display: inline-flex; align-items: center; padding: 2px 8px; margin-right: 6px; border-radius: 12px; font-size: 11px; font-weight: 600; background: ${c.bg}; color: ${c.fg}; border: 1px solid ${c.border};`;
+  chip.classList.remove('hidden');
+}
+
+async function refreshUsageChip() {
+  try {
+    const resp = await new Promise((resolve) =>
+      chrome.runtime.sendMessage({ type: 'RIFF_GET_USAGE' }, resolve)
+    );
+    if (resp && resp.ok && resp.usage) renderUsageChip(resp.usage);
+  } catch {}
+}
+
+function updateUsageChipFromResponse(genResp) {
+  if (genResp && genResp.usage) renderUsageChip(genResp.usage);
 }
 
 $('#auth-submit').addEventListener('click', async () => {
@@ -290,6 +340,22 @@ $('#signup-link').addEventListener('click', async (e) => {
   chrome.tabs.create({ url: `${base}/signup` });
 });
 
+// Primary sign-in path: open the dashboard in a new tab. The dashboard-bridge
+// content script auto-handoffs the token back into the extension, so by the
+// time the user re-opens this popup they're signed in. Friction-free for
+// non-technical recruiters who don't know what a "token" is.
+const signinBtn = $('#auth-signin-btn');
+if (signinBtn) {
+  signinBtn.addEventListener('click', async () => {
+    const { riff_backend_url } = await getStorage(['riff_backend_url']);
+    const base = riff_backend_url || DEFAULT_BACKEND_URL;
+    chrome.tabs.create({ url: `${base}/dashboard?from=ext` });
+    // Close the popup so the user's attention follows the new tab. Chrome
+    // will reopen it next time they click the toolbar icon.
+    window.close();
+  });
+}
+
 // Dashboard / billing link — central place to upgrade, manage subscription,
 // or copy a fresh token. Only wired when authed (the row is hidden otherwise).
 const dashboardLink = $('#dashboard-link');
@@ -335,6 +401,22 @@ async function loadProfile() {
       $('#p-headline').textContent = p.headline || '';
       $('#p-role').textContent = [p.currentRole, p.currentCompany].filter(Boolean).join(' · ');
       $('#surface-label').textContent = surfaceLabel(p.surface);
+
+      // Fire-and-forget parse-health telemetry. Lets the team see when
+      // LinkedIn ships a DOM change that breaks our parser, before users
+      // complain. No PII — just booleans for which fields populated.
+      try {
+        chrome.runtime.sendMessage({
+          type: 'RIFF_PARSE_HEALTH',
+          payload: {
+            surface: p.surface || 'unknown',
+            gotName: !!p.name,
+            gotHeadline: !!p.headline,
+            gotAbout: !!p.about,
+            gotRecentPosts: !!(p.recentPost && String(p.recentPost).length > 0),
+          },
+        });
+      } catch {}
       stateBox.classList.add('hidden');
       card.classList.remove('hidden');
       generateBtn.disabled = false;
@@ -726,6 +808,9 @@ function generate(profile) {
     generateBtn.disabled = false;
     generateBtn.classList.remove('loading');
     generateBtn.textContent = 'Generate';
+    // Even on error, the rich `usage` snapshot may be present (e.g. on 402
+    // we still know exactly how many drafts the user has used / has left).
+    updateUsageChipFromResponse(resp);
     if (!resp || !resp.ok) {
       if (resp && resp.needsAuth) {
         $('#auth-section').classList.remove('hidden');
@@ -733,9 +818,8 @@ function generate(profile) {
       showToast(resp && resp.error ? resp.error : 'Generation failed. Try again in a moment.', 'error');
       return;
     }
-    // Quota label — only shown for free tier. Paid users get an empty quota
-    // pill since they have no soft cap. We use the server-supplied free limit
-    // (cached from /api/me) instead of hard-coding "/3" in case it changes.
+    // Free-tier weekly quota label (legacy /api/me field — still emitted for
+    // back-compat). Paid plans now show the monthly count via the usage chip.
     if (typeof resp.remainingThisWeek === 'number') {
       const q = $('#quota');
       q.textContent = `${resp.remainingThisWeek} / ${freeWeeklyLimit} free this week`;

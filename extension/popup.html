@@ -9,17 +9,29 @@
     <div class="brand">Riffly</div>
     <div class="header-right">
       <span class="plan-badge hidden" id="plan-badge"></span>
+      <span class="usage-chip hidden" id="usage-chip"></span>
       <span class="quota" id="quota"></span>
     </div>
   </header>
 
-  <!-- Sign-in: hidden when authed -->
+  <!-- Sign-in: hidden when authed.
+       Primary path is a single button that opens the dashboard in a new tab;
+       the dashboard-bridge content script auto-hands the token back to the
+       extension once the user is signed in there, so the popup re-opens
+       authenticated. The token-paste fallback is hidden behind an
+       Advanced disclosure for the rare case it's needed. -->
   <section id="auth-section" class="hidden">
     <div class="auth-box">
-      <div class="small muted" style="margin-bottom: 6px;">Sign in to Riffly</div>
-      <input id="token-input" type="password" placeholder="Paste your token from rifflylabs.com/dashboard" />
-      <button id="auth-submit">Save token</button>
-      <div class="small muted" style="margin-top: 6px;">Don't have an account? <a id="signup-link" href="#">Sign up</a></div>
+      <div class="small muted" style="margin-bottom: 8px;">Sign in to Riffly</div>
+      <button id="auth-signin-btn" class="primary-btn" type="button">Sign in via rifflylabs.com →</button>
+      <div class="small muted" style="margin-top: 8px;">Don't have an account? <a id="signup-link" href="#">Sign up</a></div>
+      <details style="margin-top: 12px;">
+        <summary class="small muted" style="cursor: pointer;">Advanced: paste a token</summary>
+        <div style="margin-top: 8px;">
+          <input id="token-input" type="password" placeholder="Paste your token from rifflylabs.com/dashboard" />
+          <button id="auth-submit" type="button">Save token</button>
+        </div>
+      </details>
     </div>
   </section>
 
@@ -125,7 +137,7 @@
         </label>
 
         <label>Recent post URL or text <span class="small muted">(optional)</span>
-          <textarea id="post" placeholder="Paste a recent post for deeper personalization."></textarea>
+          <textarea id="post" placeholder="Paste the text of a recent post for deeper personalization (URLs are ignored)."></textarea>
         </label>
       </div>
     </details>

@@ -204,6 +204,17 @@ async function apiCall(path, opts) {
         res = await doFetch(refreshed);
       }
     }
+
+    // Single retry on transient 5xx (502/503/504 are common during Vercel
+    // cold-starts or backend deploys). One extra attempt with 500ms backoff
+    // turns a user-visible "Generation failed" toast into a one-second hiccup.
+    if (res.status >= 500 && res.status < 600) {
+      await new Promise(r => setTimeout(r, 500));
+      try {
+        const token2 = await getValidAccessToken();
+        res = await doFetch(token2);
+      } catch {}
+    }
   } catch (e) {
     return { ok: false, error: 'Network error — check connection.' };
   }
@@ -216,7 +227,14 @@ async function apiCall(path, opts) {
       return { ok: false, error: 'Sign in to Riffly to keep going.', needsAuth: true };
     }
     if (res.status === 402) {
-      return { ok: false, error: (body && body.error) || 'Free limit hit. Upgrade for unlimited.', needsUpgrade: true };
+      // Surface the rich usage snapshot so the popup can render exact
+      // remaining counts and reset dates instead of a generic "limit hit".
+      return {
+        ok: false,
+        error: (body && body.error) || 'Monthly draft limit reached. Upgrade or wait for reset.',
+        needsUpgrade: true,
+        usage: body && body.usage,
+      };
     }
     return { ok: false, error: (body && body.error) || `Backend ${res.status}` };
   }
@@ -291,6 +309,23 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg.type === 'RIFF_ME') {
     apiCall('/api/me', { method: 'GET' }).then(sendResponse);
     return true;
+  }
+
+  // /api/usage — popup's header usage chip ("X drafts left this month").
+  // Cheap call, runs every popup open. Refreshed after every successful
+  // generation via the `usage` field in the /api/generate response.
+  if (msg.type === 'RIFF_GET_USAGE') {
+    apiCall('/api/usage', { method: 'GET' }).then(sendResponse);
+    return true;
+  }
+
+  // /api/parse-health — fire-and-forget telemetry from content.js. Lets us
+  // see when LinkedIn ships a DOM change that breaks our parser, before the
+  // first user complains via a Web Store review. Never blocks the popup.
+  if (msg.type === 'RIFF_PARSE_HEALTH') {
+    apiCall('/api/parse-health', { method: 'POST', body: msg.payload }).catch(() => {});
+    sendResponse({ ok: true });
+    return false;
   }
 
   // Active Profile Assist — score the profile against active job specs.
