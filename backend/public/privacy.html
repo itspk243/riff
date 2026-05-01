@@ -110,111 +110,111 @@
   <main>
     <div class="wrap">
       <h2>Overview</h2>
-      <p>Riffly is a Chrome extension that drafts personalized LinkedIn cold messages. This privacy policy describes what data we collect, how we use it, and how we protect it.</p>
+      <p>Riffly is a Chrome extension that drafts cold LinkedIn messages. Here's what we keep when you use it, what we don't, and how to get rid of any of it.</p>
 
       <h2>Data We Collect</h2>
-      <p>When you use Riffly, we collect the following data:</p>
+      <p>When you use Riffly:</p>
       <ul>
-        <li><strong>LinkedIn Profile Data:</strong> The profile information you paste into the Riffly popup (headline, bio, about section, recent posts) is sent to our backend to generate a draft message.</li>
-        <li><strong>Account Email:</strong> Your email address is stored to identify your account for billing and quota management.</li>
-        <li><strong>Generated Messages:</strong> The AI-drafted messages you generate for your records and auditing purposes.</li>
-        <li><strong>Usage Logs:</strong> We log that a generation event occurred, your account ID, and timestamp for billing and feature tracking.</li>
+        <li><strong>LinkedIn profile content.</strong> The headline, bio, about section, and recent post you've got open when you click Riffly get sent to our backend so the model can draft something specific. We don't keep them past the 30-day debug window described below.</li>
+        <li><strong>Account email.</strong> Used to identify your account for billing, quota, and login.</li>
+        <li><strong>Drafts you generated.</strong> Stored against your account so you've got a record of what was sent.</li>
+        <li><strong>Usage logs.</strong> A row per generation: who, when, which plan. Used for billing and to debug pipeline issues.</li>
       </ul>
 
       <h2>Google User Data (Sign in with Google)</h2>
-      <p>If you choose to sign in to Riffly with your Google account, Google's OAuth flow shares a limited set of profile fields with us. This section describes exactly what we receive, how we use it, how long we keep it, and who else can see it. Riffly's use and transfer of information received from Google APIs adheres to the <a href="https://developers.google.com/terms/api-services-user-data-policy" rel="noopener" target="_blank">Google API Services User Data Policy</a>, including the Limited Use requirements.</p>
-      <h3>What Google user data we access</h3>
-      <p>When you sign in with Google, we request only the following non-sensitive OAuth scopes:</p>
+      <p>If you sign in with Google, the bullets below are the whole story. Riffly's handling of Google user data follows the <a href="https://developers.google.com/terms/api-services-user-data-policy" rel="noopener" target="_blank">Google API Services User Data Policy</a>, including the Limited Use rules.</p>
+      <h3>What we receive</h3>
+      <p>Three non-sensitive OAuth scopes:</p>
       <ul>
-        <li><code>openid</code> — confirms you are a real Google account holder.</li>
-        <li><code>email</code> — your primary Google email address.</li>
-        <li><code>profile</code> — your display name and (if you have one set) your profile picture URL.</li>
+        <li><code>openid</code> — proves the account is real.</li>
+        <li><code>email</code> — your primary Google email.</li>
+        <li><code>profile</code> — your display name and your avatar URL if you've set one.</li>
       </ul>
-      <p>We do <strong>not</strong> request or access your Gmail, Drive, Calendar, Contacts, YouTube data, location, or any other Google service. We never request restricted or sensitive scopes.</p>
-      <h3>How we use this data</h3>
+      <p>That's the full list. We don't ask for Gmail. We don't touch Drive, Calendar, Contacts, YouTube, your location, or any other Google service. No restricted or sensitive scopes, ever.</p>
+      <h3>What we do with it</h3>
       <ul>
-        <li><strong>Identifying your Riffly account.</strong> Your Google email becomes your Riffly account identifier. This is what links you to your subscription, draft history, and saved settings.</li>
-        <li><strong>Authenticating you on return visits.</strong> We use Google's OAuth tokens to confirm it's still you when you sign in again. We never see or store your Google password.</li>
-        <li><strong>Displaying your name and avatar in the dashboard.</strong> Your display name and profile picture URL are shown only to you, in your own dashboard, so you can confirm which account you're signed into.</li>
+        <li><strong>Account identifier.</strong> Your Google email is the key we use to find your Riffly account when you come back.</li>
+        <li><strong>Sign-in.</strong> Google's OAuth tokens tell us it's still you on subsequent visits. We never see your Google password.</li>
+        <li><strong>Showing you who you're signed in as.</strong> Your name and avatar appear in your own dashboard so you can confirm the right account is active.</li>
       </ul>
-      <p>We do <strong>not</strong> use Google user data for advertising, profiling, training generalized AI models, selling or transferring to third parties, or any purpose unrelated to providing the Riffly drafting service.</p>
-      <h3>How we store and protect this data</h3>
-      <p>Google account data is stored in our authentication database (Supabase, US, encrypted at rest). The OAuth refresh token is encrypted in transit (HTTPS) and at rest. We do not duplicate Google data into other systems beyond the bare minimum needed to log you in.</p>
+      <p>We do <strong>not</strong> use Google user data for advertising, profiling, training general AI models, or selling or transferring it to third parties. The Limited Use rule, in plain English: we use it to log you in, and for nothing else.</p>
+      <h3>Where it lives</h3>
+      <p>In our Supabase auth database, US region, encrypted at rest. The OAuth refresh token is encrypted in transit and at rest. We don't copy any of this into other systems beyond what's needed to keep you signed in.</p>
       <h3>How long we keep it</h3>
-      <p>We retain your Google account email and display name for as long as your Riffly account exists. If you delete your Riffly account (by emailing <a href="mailto:support@rifflylabs.com?subject=Delete%20my%20account">support@rifflylabs.com</a>), we delete this data within 30 days, except where retention is required for billing records or legal compliance. You can also revoke Riffly's access to your Google account at any time at <a href="https://myaccount.google.com/permissions" rel="noopener" target="_blank">myaccount.google.com/permissions</a>.</p>
-      <h3>How we share it</h3>
-      <p>Google account data is shared only with our authentication sub-processor (Supabase) for the technical purpose of maintaining your session. It is <strong>not</strong> shared with our LLM provider (Anthropic), our payment processor (Stripe), our email provider (Resend), or any other third party. We do not sell, rent, or trade Google user data.</p>
+      <p>For as long as your Riffly account exists. Email <a href="mailto:support@rifflylabs.com?subject=Delete%20my%20account">support@rifflylabs.com</a> to delete your account, and we erase it within 30 days (minus what we're legally required to retain for billing). You can also revoke Riffly's access from Google's side at any time at <a href="https://myaccount.google.com/permissions" rel="noopener" target="_blank">myaccount.google.com/permissions</a>.</p>
+      <h3>Who else sees it</h3>
+      <p>Only Supabase, our auth sub-processor, and only because they're hosting the session. Anthropic doesn't see it. Stripe doesn't see it. Resend doesn't see it. We don't sell, rent, or trade Google user data.</p>
       <h3>Limited Use compliance</h3>
-      <p>Riffly's use of Google user data is limited to providing user-facing features that are visible and prominent in the user interface — specifically: signing you in to your account, identifying which account you're using, and displaying your name and avatar in your own dashboard. We do not transfer this data except to provide or improve user-facing features, comply with applicable law, or as part of a merger / acquisition / sale (in which case the new owner is bound by this policy). We do not use this data to serve advertisements. Human review of this data, including reading individual users' email addresses or names, is done only when (a) the user has given explicit consent for a specific issue, (b) it is required for security purposes such as investigating abuse, (c) it is necessary to comply with applicable law, or (d) the data has been aggregated and is used for internal operations in accordance with the Google API Services User Data Policy.</p>
+      <p>Riffly's use of Google user data is limited to user-facing features that are visible and obvious in the app: signing you in, identifying your account, and showing your name and avatar in your own dashboard. We don't transfer this data except to provide or improve those features, to comply with applicable law, or as part of a sale or merger (where the new owner is bound by this same policy). We don't use it for advertising. Humans on our side only look at this data with your explicit consent on a specific issue, when investigating abuse for security reasons, when required by law, or as aggregated stats — per the Google API Services User Data Policy.</p>
 
-      <h2>Data We Do NOT Collect</h2>
+      <h2>What We Don't Collect</h2>
       <ul>
-        <li>We do <strong>not</strong> automatically scrape LinkedIn. Riffly only reads what's visible on the profile page you're viewing.</li>
-        <li>We do <strong>not</strong> use cookies to track you across websites.</li>
-        <li>We do <strong>not</strong> crawl your LinkedIn connections or activity feed in the background.</li>
-        <li>We do <strong>not</strong> store your LinkedIn password or authentication tokens.</li>
-        <li>We do <strong>not</strong> monitor which profiles you visit or how you use LinkedIn.</li>
+        <li>We don't crawl LinkedIn. Riffly reads the profile that's currently in front of you, only when you click the icon.</li>
+        <li>No third-party cookies, no cross-site tracking.</li>
+        <li>No background traversal of your connections, your feed, or anything else on LinkedIn.</li>
+        <li>Your LinkedIn password and session cookies stay where they belong: in your browser. We never see them.</li>
+        <li>We don't keep tabs on which profiles you visit or how you use LinkedIn outside of when you click Riffly.</li>
       </ul>
 
       <h2>Sub-Processors</h2>
-      <p>Your data is shared only with the following sub-processors, each for a specific purpose. All are bound by data processing agreements that meet GDPR Article 28 requirements:</p>
+      <p>Five vendors touch your data, each with a specific job. All five are bound by data processing agreements that meet the GDPR Article 28 bar:</p>
       <ul>
-        <li><strong>Anthropic (US)</strong> — profile data and your pitch description are sent to Claude for message generation. Required for the core product. <a href="https://www.anthropic.com/legal/privacy" rel="noopener" target="_blank">Privacy policy</a>.</li>
-        <li><strong>Stripe (US)</strong> — email and billing information for payment processing and subscription management. <a href="https://stripe.com/privacy" rel="noopener" target="_blank">Privacy policy</a>.</li>
-        <li><strong>Supabase (US)</strong> — primary application database (Postgres) and authentication. <a href="https://supabase.com/privacy" rel="noopener" target="_blank">Privacy policy</a>.</li>
-        <li><strong>Vercel (US)</strong> — web hosting, edge functions, and rate limiting. <a href="https://vercel.com/legal/privacy-policy" rel="noopener" target="_blank">Privacy policy</a>.</li>
-        <li><strong>Resend (US)</strong> — transactional email delivery (digest emails, install reminders). <a href="https://resend.com/legal/privacy-policy" rel="noopener" target="_blank">Privacy policy</a>.</li>
+        <li><strong>Anthropic (US)</strong> — receives the profile snapshot and your pitch so Claude can draft. This is the core of the product. <a href="https://www.anthropic.com/legal/privacy" rel="noopener" target="_blank">Privacy policy</a>.</li>
+        <li><strong>Stripe (US)</strong> — handles your email and card for billing. <a href="https://stripe.com/privacy" rel="noopener" target="_blank">Privacy policy</a>.</li>
+        <li><strong>Supabase (US)</strong> — the Postgres database and auth layer. <a href="https://supabase.com/privacy" rel="noopener" target="_blank">Privacy policy</a>.</li>
+        <li><strong>Vercel (US)</strong> — hosts the website and the API routes; also rate-limits abuse. <a href="https://vercel.com/legal/privacy-policy" rel="noopener" target="_blank">Privacy policy</a>.</li>
+        <li><strong>Resend (US)</strong> — sends our transactional emails (digests, install reminders). <a href="https://resend.com/legal/privacy-policy" rel="noopener" target="_blank">Privacy policy</a>.</li>
       </ul>
-      <p>We do not sell, rent, or share your data with any other parties for marketing, advertising, or other purposes.</p>
+      <p>That's the full list. No ad networks, no analytics resellers, no data brokers. We don't sell, rent, or share your data for any marketing or advertising purpose.</p>
 
       <h2>Data Retention</h2>
-      <p>We retain profile data and generated messages for <strong>30 days</strong> to support customer debugging and feature improvement. After 30 days, this data is automatically deleted. Account and billing data are retained as long as your subscription remains active or as required by law.</p>
+      <p>Profile snapshots and the drafts we generated for you stick around for <strong>30 days</strong>, mostly so we can debug specific issues you might raise with support. After that they're deleted automatically. Account and billing records are kept for the life of your subscription, or however long the law requires.</p>
 
       <h2>Security</h2>
-      <p>All data transmission between the Riffly extension and our backend is encrypted using HTTPS. We follow industry best practices for data storage and access control.</p>
+      <p>HTTPS everywhere — between the extension and our backend, between us and our sub-processors. Storage is encrypted at rest. Access is locked down to the team members who actually need it.</p>
 
       <h2>Your Rights</h2>
-      <p>Regardless of where you live, you have the right to:</p>
+      <p>No matter where you live, you can:</p>
       <ul>
-        <li>Access the personal data we hold about you</li>
-        <li>Correct inaccurate or incomplete data</li>
-        <li>Request deletion of your account and associated data</li>
-        <li>Restrict or object to certain processing</li>
-        <li>Receive a copy of your data in a portable, machine-readable format</li>
-        <li>Withdraw consent at any time, where processing is based on consent</li>
+        <li>see what we have on you;</li>
+        <li>correct anything that's wrong;</li>
+        <li>have your account and data deleted;</li>
+        <li>restrict or object to specific kinds of processing;</li>
+        <li>get a portable copy of your data in a machine-readable format;</li>
+        <li>withdraw consent where consent was the basis for what we were doing.</li>
       </ul>
-      <p>To exercise any of these rights, email <a href="mailto:support@rifflylabs.com?subject=Privacy%20Request">support@rifflylabs.com</a>. We respond within 30 days.</p>
+      <p>Email <a href="mailto:support@rifflylabs.com?subject=Privacy%20Request">support@rifflylabs.com</a> to do any of those. We turn around requests inside 30 days.</p>
 
       <h2>For EU, UK, and EEA Users (GDPR)</h2>
-      <p><strong>Data Controller.</strong> Riffly Labs is the data controller for personal data processed through rifflylabs.com and the Riffly Chrome extension. Contact: <a href="mailto:support@rifflylabs.com?subject=GDPR%20Request">support@rifflylabs.com</a>.</p>
+      <p><strong>Data Controller.</strong> Riffly Labs is the data controller for personal data processed through rifflylabs.com and the Riffly Chrome extension. Reach us at <a href="mailto:support@rifflylabs.com?subject=GDPR%20Request">support@rifflylabs.com</a>.</p>
 
       <p><strong>Legal Bases for Processing (Article 6 GDPR).</strong></p>
       <ul>
-        <li><em>Performance of a contract</em> — to provide the extension and dashboard you signed up for (profile drafting, account management, billing).</li>
-        <li><em>Legitimate interests</em> — to operate, secure, and improve the service (rate limiting, abuse prevention, debugging). You may object to processing under this basis.</li>
-        <li><em>Compliance with legal obligations</em> — for tax, accounting, and any required disclosures.</li>
+        <li><em>Performance of a contract</em>: providing the extension and dashboard you signed up for, including drafting, account management, and billing.</li>
+        <li><em>Legitimate interests</em>: operating, securing, and improving the service. That covers rate limiting, abuse prevention, and debugging. You can object to processing under this basis.</li>
+        <li><em>Compliance with legal obligations</em>: tax, accounting, and any disclosures required of us.</li>
       </ul>
 
-      <p><strong>International Data Transfers.</strong> Our infrastructure providers (Anthropic, Stripe, Vercel, Supabase, Resend) are primarily based in the United States. Personal data is transferred to the US under safeguards that include the <a href="https://www.dataprivacyframework.gov/" rel="noopener" target="_blank">EU-US Data Privacy Framework</a> (where the recipient is certified) and Standard Contractual Clauses approved by the European Commission.</p>
+      <p><strong>International Data Transfers.</strong> Our infrastructure vendors (Anthropic, Stripe, Vercel, Supabase, Resend) are based in the United States. Personal data goes to the US under safeguards that include the <a href="https://www.dataprivacyframework.gov/" rel="noopener" target="_blank">EU-US Data Privacy Framework</a>, where the recipient is certified, and Standard Contractual Clauses approved by the European Commission.</p>
 
-      <p><strong>Right to Lodge a Complaint.</strong> If you believe we have processed your data unlawfully, you can complain to your local supervisory authority. A directory is maintained by the European Data Protection Board at <a href="https://www.edpb.europa.eu/about-edpb/about-edpb/members_en" rel="noopener" target="_blank">edpb.europa.eu</a>. UK residents may complain to the Information Commissioner's Office at <a href="https://ico.org.uk" rel="noopener" target="_blank">ico.org.uk</a>.</p>
+      <p><strong>Right to Lodge a Complaint.</strong> If you think we've processed your data unlawfully, you can complain to your local supervisory authority. The European Data Protection Board keeps a directory at <a href="https://www.edpb.europa.eu/about-edpb/about-edpb/members_en" rel="noopener" target="_blank">edpb.europa.eu</a>. UK residents go to the Information Commissioner's Office at <a href="https://ico.org.uk" rel="noopener" target="_blank">ico.org.uk</a>.</p>
 
-      <p><strong>Automated Decision-Making.</strong> Riffly uses an LLM to draft outreach text on your behalf. This is automated content generation, not automated decision-making with legal or similarly significant effects. You always review and decide whether to send the draft.</p>
+      <p><strong>Automated Decision-Making.</strong> Riffly uses an LLM to draft outreach text on your behalf. That's automated content generation, not automated decision-making with legal or similarly significant effects. You read every draft and decide whether to send it.</p>
 
       <h2>If You Are a Recruiter Using Riffly to Process Candidate Data (Article 14 GDPR)</h2>
-      <p>If you are a recruiter, sourcer, or talent professional using Riffly to draft outreach to candidates, you (or your employer) are the <em>data controller</em> for the candidate's personal data under GDPR. Riffly processes that data on your behalf as a <em>processor</em>. Article 14 of GDPR generally requires the controller to inform the data subject (the candidate) about the processing within a reasonable period. That notification obligation is yours, not ours. We strongly encourage including a one-line note in your outreach (for example: "I drafted this message using a tool called Riffly which processed your public LinkedIn profile content. Reply STOP and I'll remove you from any future outreach.") if your jurisdiction or your employer requires it. A standard Data Processing Agreement covering Riffly's role as your processor is available at <a href="mailto:support@rifflylabs.com?subject=DPA%20request">support@rifflylabs.com</a>.</p>
+      <p>If you're using Riffly to draft outreach to candidates, you (or your employer) are the <em>data controller</em> for those candidates' personal data under GDPR. Riffly is the <em>processor</em> handling it on your behalf. Article 14 says the controller has to tell the candidate about the processing within a reasonable period. That notification obligation is yours, not ours. If your jurisdiction or your employer requires it, a one-liner in your outreach is usually enough, something like: "I drafted this with a tool called Riffly that processed your public LinkedIn profile content. Reply STOP and I'll take you off any future outreach." A standard Data Processing Agreement covering Riffly's processor role is available on request at <a href="mailto:support@rifflylabs.com?subject=DPA%20request">support@rifflylabs.com</a>.</p>
 
       <h2>For California Users (CCPA / CPRA)</h2>
-      <p>California residents have the right to know what personal information we collect, request deletion, correct inaccurate information, opt out of sale or sharing of personal information, and not be discriminated against for exercising these rights. We do not sell or share personal information for cross-context behavioral advertising. To exercise your rights, email <a href="mailto:support@rifflylabs.com?subject=CCPA%20Request">support@rifflylabs.com</a>.</p>
+      <p>California residents can ask what personal info we have, get it deleted, correct what's wrong, opt out of any sale or sharing, and not be punished for asking. We don't sell or share personal information for cross-context behavioral advertising. Email <a href="mailto:support@rifflylabs.com?subject=CCPA%20Request">support@rifflylabs.com</a> to use any of those rights.</p>
 
       <h2>Children</h2>
-      <p>Riffly is not directed to children under 16, and we do not knowingly collect personal data from children. If you believe we have, contact us and we will delete it.</p>
+      <p>Riffly isn't aimed at anyone under 16. We don't knowingly collect data from kids. If you think we have, tell us and we'll delete it.</p>
 
       <h2>Changes to This Policy</h2>
-      <p>We may update this privacy policy from time to time. We will notify you of material changes via email to your registered account address.</p>
+      <p>We update this policy when something material changes. When that happens we email everyone with an account.</p>
 
       <h2>Contact Us</h2>
-      <p>If you have questions or concerns about this privacy policy or our data practices, contact us at <a href="mailto:support@rifflylabs.com?subject=Riffly%20Privacy">support@rifflylabs.com</a>.</p>
+      <p>Anything about this policy or our data practices: <a href="mailto:support@rifflylabs.com?subject=Riffly%20Privacy">support@rifflylabs.com</a>.</p>
     </div>
   </main>
 
