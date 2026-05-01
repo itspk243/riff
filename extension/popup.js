@@ -826,6 +826,19 @@ function generate(profile) {
         $('#auth-section').classList.remove('hidden');
       }
       showToast(resp && resp.error ? resp.error : 'Generation failed. Try again in a moment.', 'error');
+      // 402 quota-blocked: surface the recovery paths inline so the user
+      // doesn't have to know about the roast bonus from outside the popup.
+      // For free users this renders both share-roast + upgrade-to-Pro;
+      // paid users (Pro at cap) get only the upgrade-to-Plus link.
+      if (resp && resp.needsUpgrade) {
+        // Clear any stale variant cards so the hint appears in #results.
+        const results = $('#results');
+        if (results) {
+          results.innerHTML = '';
+          results.classList.remove('hidden');
+        }
+        showUpgradeHint(resp.error || 'Limit reached.');
+      }
       return;
     }
     // Free-tier weekly quota label (legacy /api/me field — still emitted for
@@ -868,9 +881,22 @@ function showUpgradeHint(message) {
   const results = $('#results');
   if (!results) return;
   // Insert as the last card-following node so it sits under the variants.
+  // Free users get TWO recovery paths: (1) share a roast for +3 one-time
+  // bonus, (2) upgrade to Pro. Paid users (Pro hitting cap) get only the
+  // Plus upgrade path. Without this, free users hitting the cap saw only
+  // an upgrade nudge and had no idea the bonus path existed.
   const hint = document.createElement('div');
   hint.className = 'upgrade-hint';
-  hint.innerHTML = `${escapeHtml(message)} <a href="https://rifflylabs.com/dashboard" target="_blank">Upgrade</a>`;
+  if (currentPlan === 'free') {
+    hint.innerHTML =
+      `${escapeHtml(message)} ` +
+      `<div style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap;">` +
+      `<a href="https://rifflylabs.com/roast" target="_blank" style="font-weight:600;">Share a roast for +3 →</a>` +
+      `<a href="https://rifflylabs.com/dashboard?upgrade=pro" target="_blank">Upgrade to Pro</a>` +
+      `</div>`;
+  } else {
+    hint.innerHTML = `${escapeHtml(message)} <a href="https://rifflylabs.com/dashboard" target="_blank">Upgrade</a>`;
+  }
   results.appendChild(hint);
 }
 
