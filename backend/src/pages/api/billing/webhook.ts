@@ -17,16 +17,28 @@ import { serviceClient } from '../../../lib/supabase';
  *   STRIPE_PRICE_TEAM_MONTHLY ($99)    → 'team'  (legacy, grandfathered)
  *   anything unknown                   → 'pro'   (defensive default + warning log)
  */
+// Plan-mapping helper. Throws if STRIPE_PRICE_PLUS_MONTHLY is unset/empty,
+// because silently mapping a Plus-priced subscription to 'pro' (the previous
+// behavior when the env was blank) would downgrade paying customers without
+// any visible signal beyond a console.log. Better to fail the webhook hard
+// so Stripe retries and we get a real error in the dashboard.
 function planFromPriceId(priceId: string): 'pro' | 'plus' | 'team' {
-  if (priceId === process.env.STRIPE_PRICE_PLUS_MONTHLY) return 'plus';
-  if (priceId === process.env.STRIPE_PRICE_TEAM_MONTHLY) return 'team';
-  // Pro ($15, legacy $14.99), Test ($5), grandfathered $39 Pro all map to plan='pro'.
-  if (
-    priceId !== process.env.STRIPE_PRICE_PRO_MONTHLY &&
-    priceId !== process.env.STRIPE_PRICE_TEST_MONTHLY
-  ) {
-    console.log(`webhook: unknown priceId ${priceId} — defaulting to 'pro'`);
+  const plusPrice = process.env.STRIPE_PRICE_PLUS_MONTHLY;
+  const proPrice = process.env.STRIPE_PRICE_PRO_MONTHLY;
+  if (!plusPrice || !proPrice) {
+    throw new Error(
+      `Stripe price env vars missing (PLUS=${!!plusPrice}, PRO=${!!proPrice}). ` +
+      `Refusing to map priceId ${priceId} to avoid silently downgrading Plus customers to Pro.`
+    );
   }
+  if (priceId === plusPrice) return 'plus';
+  if (priceId === process.env.STRIPE_PRICE_TEAM_MONTHLY) return 'team';
+  if (priceId === proPrice) return 'pro';
+  if (priceId === process.env.STRIPE_PRICE_TEST_MONTHLY) return 'pro';
+  // Truly unknown priceId — log loudly. Defaults to 'pro' as a safety floor
+  // (we'd rather give Pro than break the user), but since we now throw on
+  // missing-env above, this only runs for legacy priceIds we forgot to map.
+  console.error(`webhook: unknown priceId ${priceId} — defaulting to 'pro'. Add it to env or planFromPriceId.`);
   return 'pro';
 }
 

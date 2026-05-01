@@ -1163,6 +1163,19 @@ function renderVariants(variants, ctx) {
   results.innerHTML = '';
   results.classList.remove('hidden');
 
+  // Pin the profile that these variants belong to. Without this, the
+  // "Mark sent" / "Mark replied" handlers below would read the LIVE
+  // `currentProfile` at click time — meaning a user who generates drafts
+  // for Alice, then SPA-navigates to Bob, then clicks Mark sent on
+  // Alice's draft would record the event against BOB's URL. Snapshot
+  // here, use the snapshot in the handlers.
+  const pinnedProfile = currentProfile
+    ? {
+        profileUrl: currentProfile.profileUrl || '',
+        name: currentProfile.name || null,
+      }
+    : { profileUrl: '', name: null };
+
   variants.forEach((v, idx) => {
     const eventId = `${Date.now()}-${idx}`;
     const card = document.createElement('div');
@@ -1218,7 +1231,7 @@ function renderVariants(variants, ctx) {
     sentBtn.textContent = 'Mark sent';
     sentBtn.title = 'Click to mark this draft as sent. Click again to undo.';
     sentBtn.addEventListener('click', async () => {
-      const candidate_url = (currentProfile && currentProfile.profileUrl) || '';
+      const candidate_url = pinnedProfile.profileUrl;
       const sentEventId = `${eventId}-sent`;
       if (sentMarked) {
         // Undo
@@ -1231,7 +1244,7 @@ function renderVariants(variants, ctx) {
         return;
       }
       await recordEvent({ id: sentEventId, kind: 'sent', tone: ctx.tone, length: ctx.length, type: v.type, t: Date.now(), candidate_url });
-      sendServerEvent('sent', v.type, ctx, sentEventId);
+      sendServerEvent('sent', v.type, ctx, sentEventId, pinnedProfile);
       sentBtn.classList.add('sent');
       sentBtn.textContent = 'Sent ✓';
       sentMarked = true;
@@ -1242,7 +1255,7 @@ function renderVariants(variants, ctx) {
     replyBtn.textContent = 'Mark replied';
     replyBtn.title = 'Click to mark that the candidate replied. Click again to undo.';
     replyBtn.addEventListener('click', async () => {
-      const candidate_url = (currentProfile && currentProfile.profileUrl) || '';
+      const candidate_url = pinnedProfile.profileUrl;
       const replyEventId = `${eventId}-replied`;
       if (repliedMarked) {
         await removeEventById(replyEventId);
@@ -1254,7 +1267,7 @@ function renderVariants(variants, ctx) {
         return;
       }
       await recordEvent({ id: replyEventId, kind: 'replied', tone: ctx.tone, length: ctx.length, type: v.type, t: Date.now(), candidate_url });
-      sendServerEvent('replied', v.type, ctx, replyEventId);
+      sendServerEvent('replied', v.type, ctx, replyEventId, pinnedProfile);
       replyBtn.classList.add('replied');
       replyBtn.textContent = 'Replied ✓';
       repliedMarked = true;
@@ -1304,16 +1317,24 @@ function deleteServerEvent(eventId) {
 //
 // Plan gate: paid-only. Free users keep working locally (no error toast,
 // no console noise from a 402) — they just don't sync.
-function sendServerEvent(kind, variantType, ctx, eventId) {
+//
+// `pinnedProfile` is the candidate snapshot from RENDER time, not click
+// time — see the C5 fix in renderVariants. Without this argument, a user
+// who navigates to a new candidate before clicking Mark sent on an old
+// draft would record the event against the wrong person. Caller falls
+// back to currentProfile only when there's no pinned snapshot (older
+// callsites that haven't been refactored yet).
+function sendServerEvent(kind, variantType, ctx, eventId, pinnedProfile) {
   if (!hasReplyAnalytics(currentPlan)) return;
-  if (!currentProfile) return;
-  const candidate_url = currentProfile.profileUrl || '';
+  const profile = pinnedProfile || currentProfile;
+  if (!profile) return;
+  const candidate_url = profile.profileUrl || '';
   if (!candidate_url) return;
   chrome.runtime.sendMessage({
     type: 'RIFF_EVENTS_RECORD',
     payload: {
       candidate_url,
-      candidate_name: currentProfile.name || null,
+      candidate_name: profile.name || null,
       variant_type: variantType,
       tone: (ctx && ctx.tone) || null,
       length_label: (ctx && ctx.length) || null,

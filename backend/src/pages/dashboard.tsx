@@ -762,7 +762,7 @@ export default function Dashboard() {
                     <li><strong>All 3 variants</strong> (cold opener + follow-up + breakup)</li>
                     <li>Voice fingerprint (drafts in your dialect)</li>
                     <li>Saved pitch templates, synced across devices</li>
-                    <li>Auto follow-up loop (knows when to remind you)</li>
+                    <li>Three variants per draft (opener · follow-up · breakup)</li>
                     <li>7 languages</li>
                     <li>Cross-machine reply analytics</li>
                     <li>Email support</li>
@@ -1007,7 +1007,7 @@ export default function Dashboard() {
           {/* Footer */}
           <footer style={footerStyle}>
             <a href="/" style={linkStyle}>Home</a>
-            <a href="mailto:pksruly@gmail.com?subject=Riffly%20feedback" style={linkStyle}>Send feedback</a>
+            <a href="mailto:support@rifflylabs.com?subject=Riffly%20feedback" style={linkStyle}>Send feedback</a>
           </footer>
         </div>
       </main>

@@ -13,7 +13,17 @@ import { hasAllVariants } from '../../lib/capabilities';
 import { fingerprintAsPromptHint, type VoiceFingerprint } from '../../lib/voice-fingerprint';
 import type { GenerateRequest, GenerateResponse } from '../../lib/types';
 
-const ALLOW_ANON = process.env.ALLOW_ANON === 'true';
+// Anonymous access is a local-dev convenience only. Production must always
+// require a Bearer token. A misconfigured env var (ALLOW_ANON=true on
+// Vercel) would otherwise let anonymous traffic burn the global quota.
+// Refuse to honor it whenever NODE_ENV says production.
+const ALLOW_ANON =
+  process.env.ALLOW_ANON === 'true' && process.env.NODE_ENV !== 'production';
+if (process.env.ALLOW_ANON === 'true' && process.env.NODE_ENV === 'production') {
+  console.error(
+    'ALLOW_ANON=true ignored in production. Auth is mandatory in prod regardless of env.'
+  );
+}
 
 export default async function handler(
   req: NextApiRequest,
