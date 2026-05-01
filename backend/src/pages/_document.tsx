@@ -11,7 +11,7 @@
 
 import { Html, Head, Main, NextScript } from 'next/document';
 
-const POSTHOG_KEY = process.env.NEXT_PUBLIC_POSTHOG_KEY || 'YOUR_POSTHOG_KEY_HERE';
+const POSTHOG_KEY = process.env.NEXT_PUBLIC_POSTHOG_KEY || 'phc_qGNvqYvTcMpLhKikzCmckAetNEKX9dLRv6YJEDXpR3h7';
 const POSTHOG_HOST = process.env.NEXT_PUBLIC_POSTHOG_HOST || 'https://us.i.posthog.com';
 
 export default function Document() {

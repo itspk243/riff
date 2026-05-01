@@ -16,7 +16,7 @@ const DEFAULT_BACKEND_URL = 'https://rifflylabs.com';
 // posthog.com/project/settings/general before publishing. Public keys
 // are designed to live on the client — no risk in committing.
 // If left as the placeholder, all telemetry calls become no-ops.
-const POSTHOG_KEY = 'YOUR_POSTHOG_KEY_HERE';
+const POSTHOG_KEY = 'phc_qGNvqYvTcMpLhKikzCmckAetNEKX9dLRv6YJEDXpR3h7';
 const POSTHOG_HOST = 'https://us.i.posthog.com';
 
 // Generate or retrieve a stable anonymous distinct_id for this install.
