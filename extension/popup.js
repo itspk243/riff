@@ -1508,12 +1508,41 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (_seedTab && _seedTab.url) lastExtractedUrl = _seedTab.url;
   }
 
+  // Clear UI that's specific to the previous candidate. Called when the
+  // user navigates to a new profile OR away from a profile entirely —
+  // either way the prior drafts/notices/scores no longer apply and would
+  // mislead the recruiter into copying the wrong candidate's message.
+  function clearCandidateState() {
+    const results = $('#results');
+    if (results) {
+      results.innerHTML = '';
+      results.classList.add('hidden');
+    }
+    const thread = $('#thread-notice');
+    if (thread) {
+      thread.innerHTML = '';
+      thread.classList.add('hidden');
+    }
+    const fit = $('#fit-score');
+    if (fit) {
+      fit.innerHTML = '';
+      fit.classList.add('hidden');
+    }
+    // Reset profile-card text so the next render doesn't flash stale data.
+    const pName = $('#p-name'); if (pName) pName.textContent = '';
+    const pHead = $('#p-headline'); if (pHead) pHead.textContent = '';
+    const pRole = $('#p-role'); if (pRole) pRole.textContent = '';
+  }
+
   async function reExtractIfNeeded(reason) {
     const tab = await getActiveTab();
     if (!tab || !tab.url) return;
     if (tab.url === lastExtractedUrl) return; // unchanged — skip
     if (!isSupportedProfile(tab.url)) {
-      // Navigated AWAY from a profile (e.g., to LinkedIn feed). Reset to hint state.
+      // Navigated AWAY from a profile (e.g., to LinkedIn feed). Reset to
+      // hint state and collapse the previous candidate's drafts so the user
+      // can't accidentally copy a message intended for someone else.
+      clearCandidateState();
       const stateBox = $('#profile-state');
       const card = $('#profile-card');
       if (stateBox && card) {
@@ -1526,6 +1555,12 @@ document.addEventListener('DOMContentLoaded', async () => {
       lastExtractedUrl = tab.url;
       return;
     }
+    // Navigated to a NEW profile — collapse the previous candidate's drafts
+    // before re-extracting. Otherwise the recruiter sees the old variants
+    // hanging around above the new profile card for ~600ms during the
+    // re-extract delay, which is exactly the wrong moment to be confused
+    // about which message belongs to whom.
+    clearCandidateState();
     // Small delay so LinkedIn's React tree has time to render the new profile
     // (otherwise we extract the previous candidate's name on top of the new
     // candidate's photo). 600ms is conservative — trial-and-error suggested 350ms
