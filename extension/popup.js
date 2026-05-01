@@ -304,12 +304,25 @@ async function refreshUsageChip() {
     const resp = await new Promise((resolve) =>
       chrome.runtime.sendMessage({ type: 'RIFF_GET_USAGE' }, resolve)
     );
-    if (resp && resp.ok && resp.usage) renderUsageChip(resp.usage);
+    if (resp && resp.ok) {
+      if (resp.usage) renderUsageChip(resp.usage);
+      // Cache the one-time roast-share flag so showUpgradeHint can decide
+      // whether to render the bonus link or just the upgrade-to-Pro path.
+      if (typeof resp.roastShareUsed === 'boolean') {
+        cachedRoastShareUsed = resp.roastShareUsed;
+      }
+    }
   } catch {}
 }
 
 function updateUsageChipFromResponse(genResp) {
   if (genResp && genResp.usage) renderUsageChip(genResp.usage);
+  // /api/generate's 402 response also carries roastShareUsed under the
+  // usage snapshot when the backend bothered to populate it; pick it up
+  // so the inline upgrade hint renders correctly without an extra fetch.
+  if (genResp && typeof genResp.roastShareUsed === 'boolean') {
+    cachedRoastShareUsed = genResp.roastShareUsed;
+  }
 }
 
 $('#auth-submit').addEventListener('click', async () => {
@@ -986,8 +999,19 @@ function generate(profile) {
     if (!resp || !resp.ok) {
       if (resp && resp.needsAuth) {
         $('#auth-section').classList.remove('hidden');
+        // Reviewer flow #13: persistent banner so the user sees what
+        // happened even if they tabbed away during the request.
+        showPersistentError('Session expired. Please sign in again.', 'auth');
+      } else {
+        const msg = (resp && resp.error) || 'Generation failed. Try again in a moment.';
+        const isNetwork = msg.toLowerCase().includes('network');
+        // Reviewer flow #11 (frustration): network errors disappeared after
+        // 5s. If a user tabbed away mid-generation they came back to a
+        // re-enabled button and no idea what happened. Persistent banner
+        // they dismiss explicitly.
+        if (isNetwork) showPersistentError(msg, 'network');
+        else showToast(msg, 'error');
       }
-      showToast(resp && resp.error ? resp.error : 'Generation failed. Try again in a moment.', 'error');
       // 402 quota-blocked: surface the recovery paths inline so the user
       // doesn't have to know about the roast bonus from outside the popup.
       // For free users this renders both share-roast + upgrade-to-Pro;
@@ -1003,6 +1027,9 @@ function generate(profile) {
       }
       return;
     }
+    // Successful generation — clear any persistent error left over from a
+    // previous failed attempt.
+    clearPersistentError();
     // Free-tier weekly quota label (legacy /api/me field — still emitted for
     // back-compat). Paid plans now show the monthly count via the usage chip.
     if (typeof resp.remainingThisWeek === 'number') {
@@ -1039,21 +1066,86 @@ function showToast(message, kind) {
   setTimeout(() => box.remove(), lifetime);
 }
 
+// Persistent error banner — for failures the user might miss in the toast
+// timeout (network drops mid-generation, session expiry while tabbed away).
+// Stays until the user clicks ✕ or until the next successful generation
+// auto-clears it. Reviewer flows #6 and #13.
+//
+// `kind` controls the optional secondary action label:
+//   'auth' → "Sign in"   (focuses the auth-section)
+//   'network' → "Retry"  (re-fires the last generate)
+function showPersistentError(message, kind) {
+  const region = $('#toast-region');
+  if (!region) return;
+  // Avoid duplicate banners — replace whatever's there.
+  region.innerHTML = '';
+  const box = document.createElement('div');
+  box.className = 'error-banner';
+  box.id = 'persistent-error';
+  const msg = document.createElement('span');
+  msg.textContent = message;
+  box.appendChild(msg);
+  if (kind === 'auth') {
+    const a = document.createElement('a');
+    a.href = '#';
+    a.textContent = 'Sign in';
+    a.className = 'error-banner-action';
+    a.addEventListener('click', (e) => {
+      e.preventDefault();
+      const btn = $('#auth-signin-btn');
+      if (btn) btn.click();
+    });
+    box.appendChild(a);
+  } else if (kind === 'network') {
+    const a = document.createElement('a');
+    a.href = '#';
+    a.textContent = 'Retry';
+    a.className = 'error-banner-action';
+    a.addEventListener('click', (e) => {
+      e.preventDefault();
+      clearPersistentError();
+      if (currentProfile) generate(currentProfile);
+    });
+    box.appendChild(a);
+  }
+  const close = document.createElement('button');
+  close.type = 'button';
+  close.className = 'error-banner-close';
+  close.setAttribute('aria-label', 'Dismiss');
+  close.textContent = '✕';
+  close.addEventListener('click', clearPersistentError);
+  box.appendChild(close);
+  region.appendChild(box);
+}
+
+function clearPersistentError() {
+  const el = $('#persistent-error');
+  if (el) el.remove();
+}
+
+// Cached on each /api/usage call so showUpgradeHint can decide whether the
+// roast-share bonus is still available (one-time-per-account). Without this
+// check, a returning free user who already burned the bonus would see
+// "Share a roast for +3 →" and click through to a no-op share. Reviewer #12.
+let cachedRoastShareUsed = false;
+
 function showUpgradeHint(message) {
   const results = $('#results');
   if (!results) return;
-  // Insert as the last card-following node so it sits under the variants.
-  // Free users get TWO recovery paths: (1) share a roast for +3 one-time
-  // bonus, (2) upgrade to Pro. Paid users (Pro hitting cap) get only the
-  // Plus upgrade path. Without this, free users hitting the cap saw only
-  // an upgrade nudge and had no idea the bonus path existed.
+  // Free users get up to TWO recovery paths: (a) share a roast for +3
+  // one-time bonus — only shown if they haven't claimed it yet — and
+  // (b) upgrade to Pro. Paid users (Pro hitting cap) get only the
+  // Plus upgrade path.
   const hint = document.createElement('div');
   hint.className = 'upgrade-hint';
   if (currentPlan === 'free') {
+    const shareLink = cachedRoastShareUsed
+      ? ''
+      : `<a href="https://rifflylabs.com/roast" target="_blank" style="font-weight:600;">Share a roast for +3 →</a>`;
     hint.innerHTML =
       `${escapeHtml(message)} ` +
       `<div style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap;">` +
-      `<a href="https://rifflylabs.com/roast" target="_blank" style="font-weight:600;">Share a roast for +3 →</a>` +
+      shareLink +
       `<a href="https://rifflylabs.com/dashboard?upgrade=pro" target="_blank">Upgrade to Pro</a>` +
       `</div>`;
   } else {
@@ -1114,26 +1206,58 @@ function renderVariants(variants, ctx) {
     });
     actions.appendChild(copyBtn);
 
+    // Track per-card whether sent/replied have been marked, so a second
+    // click toggles the action OFF (reviewer #9 — "I clicked Mark sent by
+    // mistake and there's no undo"). The local event is removed by id;
+    // the server best-effort delete is fired for paid users. Stats
+    // re-render so reply rate doesn't stay inflated by a misclick.
+    let sentMarked = false;
+    let repliedMarked = false;
+
     const sentBtn = document.createElement('button');
     sentBtn.textContent = 'Mark sent';
+    sentBtn.title = 'Click to mark this draft as sent. Click again to undo.';
     sentBtn.addEventListener('click', async () => {
       const candidate_url = (currentProfile && currentProfile.profileUrl) || '';
-      await recordEvent({ id: eventId, kind: 'sent', tone: ctx.tone, length: ctx.length, type: v.type, t: Date.now(), candidate_url });
-      // Mirror to server so follow-up loop works across machines.
-      sendServerEvent('sent', v.type, ctx);
+      const sentEventId = `${eventId}-sent`;
+      if (sentMarked) {
+        // Undo
+        await removeEventById(sentEventId);
+        deleteServerEvent(sentEventId);
+        sentBtn.classList.remove('sent');
+        sentBtn.textContent = 'Mark sent';
+        sentMarked = false;
+        await renderStats();
+        return;
+      }
+      await recordEvent({ id: sentEventId, kind: 'sent', tone: ctx.tone, length: ctx.length, type: v.type, t: Date.now(), candidate_url });
+      sendServerEvent('sent', v.type, ctx, sentEventId);
       sentBtn.classList.add('sent');
       sentBtn.textContent = 'Sent ✓';
+      sentMarked = true;
     });
     actions.appendChild(sentBtn);
 
     const replyBtn = document.createElement('button');
     replyBtn.textContent = 'Mark replied';
+    replyBtn.title = 'Click to mark that the candidate replied. Click again to undo.';
     replyBtn.addEventListener('click', async () => {
       const candidate_url = (currentProfile && currentProfile.profileUrl) || '';
-      await recordEvent({ id: eventId, kind: 'replied', tone: ctx.tone, length: ctx.length, type: v.type, t: Date.now(), candidate_url });
-      sendServerEvent('replied', v.type, ctx);
+      const replyEventId = `${eventId}-replied`;
+      if (repliedMarked) {
+        await removeEventById(replyEventId);
+        deleteServerEvent(replyEventId);
+        replyBtn.classList.remove('replied');
+        replyBtn.textContent = 'Mark replied';
+        repliedMarked = false;
+        await renderStats();
+        return;
+      }
+      await recordEvent({ id: replyEventId, kind: 'replied', tone: ctx.tone, length: ctx.length, type: v.type, t: Date.now(), candidate_url });
+      sendServerEvent('replied', v.type, ctx, replyEventId);
       replyBtn.classList.add('replied');
       replyBtn.textContent = 'Replied ✓';
+      repliedMarked = true;
       await renderStats();
     });
     actions.appendChild(replyBtn);
@@ -1152,12 +1276,35 @@ async function recordEvent(ev) {
   await setStorage({ riff_events: events.slice(-1000) });
 }
 
+// Reviewer #9 — undo path. Pulls the event out of the local store by id so
+// the next renderStats() call doesn't double-count it.
+async function removeEventById(id) {
+  const { riff_events } = await getStorage(['riff_events']);
+  const events = Array.isArray(riff_events) ? riff_events : [];
+  const filtered = events.filter(e => e && e.id !== id);
+  await setStorage({ riff_events: filtered });
+}
+
+// Best-effort server-side delete. The /api/events DELETE endpoint may not
+// exist yet — if it doesn't, this is a silent no-op and the local undo is
+// what the user sees. Server records will get cleaned up server-side later.
+function deleteServerEvent(eventId) {
+  if (!hasReplyAnalytics(currentPlan)) return;
+  if (!eventId) return;
+  // Send via background; background.js will route as a DELETE if the
+  // endpoint exists. Worst case the server logs a 404 we ignore.
+  chrome.runtime.sendMessage({
+    type: 'RIFF_EVENTS_DELETE',
+    payload: { event_id: eventId },
+  }, () => { void chrome.runtime.lastError; });
+}
+
 // Mirror sent / replied marks to the server so the follow-up loop and
 // cross-machine stats work. Best-effort — local stats are still authoritative.
 //
 // Plan gate: paid-only. Free users keep working locally (no error toast,
 // no console noise from a 402) — they just don't sync.
-function sendServerEvent(kind, variantType, ctx) {
+function sendServerEvent(kind, variantType, ctx, eventId) {
   if (!hasReplyAnalytics(currentPlan)) return;
   if (!currentProfile) return;
   const candidate_url = currentProfile.profileUrl || '';
@@ -1171,6 +1318,9 @@ function sendServerEvent(kind, variantType, ctx) {
       tone: (ctx && ctx.tone) || null,
       length_label: (ctx && ctx.length) || null,
       kind,
+      // Pass the local id so the server can store it for later undo
+      // delete operations. Backend can ignore if it generates its own ids.
+      client_id: eventId || null,
     },
   });
 }
@@ -1636,6 +1786,28 @@ document.addEventListener('DOMContentLoaded', async () => {
   await renderStats();
   // Initialize templates list with default purpose + 'other' category
   refreshTemplates('hire', 'other');
+
+  // ---------- First-run intro card (reviewer #11 + Flow 4) ----------
+  // Show the orientation card on the user's very first popup open ever.
+  // Persists the seen-flag in chrome.storage.local so it never reappears
+  // even after sign-out / sign-in / browser restart. Click "Got it" to
+  // dismiss permanently. The card includes the "Mark sent" hint inline,
+  // so the reviewer's two suggestions (tour + first-time tip) collapse
+  // into a single non-intrusive surface.
+  try {
+    const { riff_seen_intro } = await getStorage(['riff_seen_intro']);
+    const introCard = $('#intro-card');
+    if (!riff_seen_intro && introCard) {
+      introCard.classList.remove('hidden');
+      const dismiss = $('#intro-dismiss');
+      if (dismiss) {
+        dismiss.addEventListener('click', async () => {
+          introCard.classList.add('hidden');
+          await setStorage({ riff_seen_intro: true });
+        });
+      }
+    }
+  } catch { /* best-effort */ }
 
   // ---------- Pitch persistence (popup mode) ----------
   // In popup mode the entire DOM is destroyed when the popup closes (focus

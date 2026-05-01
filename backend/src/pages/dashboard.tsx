@@ -82,6 +82,10 @@ export default function Dashboard() {
   const [connectError, setConnectError] = useState<string | null>(null);
   const [showCanceledMsg, setShowCanceledMsg] = useState(false);
   const [showUpgradedMsg, setShowUpgradedMsg] = useState(false);
+  // True when the user landed here via the extension's sign-in flow
+  // (?from=ext). Triggers a banner pointing them back to LinkedIn so
+  // they don't sit on /dashboard wondering what to do next.
+  const [fromExt, setFromExt] = useState(false);
   // True for users who signed in BEFORE the riff_session bundle was a thing.
   // We can't auto-refresh their token (no refresh_token in localStorage), so
   // we nudge them to sign out + sign back in once. After that, never again.
@@ -97,6 +101,7 @@ export default function Dashboard() {
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const params = new URLSearchParams(window.location.search);
+    if (params.get('from') === 'ext') setFromExt(true);
     if (params.get('canceled') === '1') setShowCanceledMsg(true);
     if (params.get('upgraded') === '1') {
       setShowUpgradedMsg(true);
@@ -596,6 +601,16 @@ export default function Dashboard() {
           </header>
 
           {/* Banners */}
+          {/* Reviewer Flow 2: when the user comes here from the extension's
+              "Sign in via rifflylabs.com →" button, the dashboard-bridge has
+              just handed the token back to the extension. Without this
+              banner, they'd sit on /dashboard wondering why nothing
+              happened. Tell them their next step is to go back to LinkedIn. */}
+          {fromExt && (
+            <div style={bannerOkStyle} className="riff-banner">
+              <strong>You're signed in.</strong> Go back to a candidate profile (LinkedIn, GitHub, or Wellfound), open Riffly from the Chrome toolbar, and start drafting. You can close this tab.
+            </div>
+          )}
           {needsReauthForRefresh && (
             <div style={bannerInfoStyle} className="riff-banner">
               <strong>Sign in again — one last time.</strong> We added auto-refresh so the extension never logs you out. To activate it, click <strong>Sign out</strong> above and sign back in. After that, never again.

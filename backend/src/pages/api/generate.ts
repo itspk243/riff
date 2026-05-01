@@ -81,6 +81,10 @@ export default async function handler(
         remainingThisWeek: 0, // legacy field, kept for old extension versions
         plan: user.plan,
         usage: usageSnapshot,
+        // Surfaced so the extension's inline upgrade hint can decide whether
+        // to show "Share a roast for +3" (one-time bonus is still available)
+        // or hide it (already claimed). Reviewer #12.
+        roastShareUsed: !!user.roast_shared_at,
       });
     }
   }

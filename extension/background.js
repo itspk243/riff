@@ -314,11 +314,14 @@ async function apiCall(path, opts) {
     if (res.status === 402) {
       // Surface the rich usage snapshot so the popup can render exact
       // remaining counts and reset dates instead of a generic "limit hit".
+      // roastShareUsed lets the inline upgrade hint hide the bonus link
+      // if the one-time +3 has already been claimed.
       return {
         ok: false,
         error: (body && body.error) || 'Monthly draft limit reached. Upgrade or wait for reset.',
         needsUpgrade: true,
         usage: body && body.usage,
+        roastShareUsed: body && body.roastShareUsed,
       };
     }
     return { ok: false, error: (body && body.error) || `Backend ${res.status}` };
@@ -481,6 +484,16 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg.type === 'RIFF_EVENTS_FOR_CANDIDATE') {
     const url = msg.payload && msg.payload.candidate;
     apiCall(`/api/events?candidate=${encodeURIComponent(url || '')}`, { method: 'GET' }).then(sendResponse);
+    return true;
+  }
+  // Best-effort delete for the undo flow on Mark sent / Mark replied.
+  // Backend may 404 if the endpoint isn't there yet — that's fine; the
+  // local undo already removed the event from chrome.storage.local.
+  if (msg.type === 'RIFF_EVENTS_DELETE') {
+    const id = msg.payload && msg.payload.event_id;
+    apiCall(`/api/events?event_id=${encodeURIComponent(id || '')}`, { method: 'DELETE' })
+      .then(sendResponse)
+      .catch(() => sendResponse({ ok: false }));
     return true;
   }
 });

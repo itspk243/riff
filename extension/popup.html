@@ -44,6 +44,22 @@
     </div>
   </section>
 
+  <!-- One-time intro card. Shown on the user's very first popup open ever
+       (gated by chrome.storage.local.riff_seen_intro). 4 short bullets +
+       a single Got it button. Disappears for good when dismissed. -->
+  <section id="intro-card" class="hidden">
+    <div class="intro-body">
+      <div class="intro-title">Quick orientation</div>
+      <ol class="intro-list">
+        <li>Open a candidate profile on LinkedIn, GitHub, or Wellfound.</li>
+        <li>Type your pitch — what you're hiring for, in 1–2 lines.</li>
+        <li>Pick a tone &amp; length, hit <strong>Generate</strong>. Three variants render.</li>
+        <li>Edit, copy, paste into LinkedIn yourself. Click <strong>Mark sent</strong> so Riffly can show you which tones get replies.</li>
+      </ol>
+      <button type="button" id="intro-dismiss" class="intro-dismiss">Got it</button>
+    </div>
+  </section>
+
   <section id="profile-state">
     <div class="hint">Open a LinkedIn, GitHub, or Wellfound profile to start drafting.</div>
   </section>

@@ -448,6 +448,39 @@ button#generate.loading::after {
   animation: slideDown 240ms ease-out, shake 320ms ease 240ms;
 }
 
+/* Persistent error banner (network failures, session expiry). Same color
+   palette as error-toast but with a ✕ close button so the user has to
+   dismiss it explicitly — fixes the reviewer's flow #11/#13 problem
+   where a 5s toast disappeared while the user was tabbed away. */
+.error-banner {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px;
+  background: var(--red-soft);
+  border: 1px solid #f4c4ba;
+  border-radius: var(--radius-sm);
+  color: var(--red);
+  font-size: 12px;
+  margin-bottom: 12px;
+  animation: slideDown 240ms ease-out;
+}
+.error-banner > span:first-child { flex: 1; min-width: 0; line-height: 1.45; }
+.error-banner-action {
+  font-weight: 600; color: var(--red);
+  text-decoration: none; border-bottom: 1px solid var(--red);
+  white-space: nowrap; font-size: 12px;
+}
+.error-banner-action:hover { color: var(--accent); border-bottom-color: var(--accent); }
+.error-banner-close {
+  flex-shrink: 0;
+  width: 22px; height: 22px;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: transparent; border: none;
+  color: var(--red); font-size: 14px; cursor: pointer;
+  border-radius: 4px; padding: 0; font-family: inherit;
+  transition: background 100ms ease;
+}
+.error-banner-close:hover { background: rgba(184,51,26,0.12); }
+
 .success-toast {
   padding: 10px 12px;
   background: var(--green-soft);
@@ -671,6 +704,41 @@ footer .small {
 .parse-warning strong { color: #4a3514; font-weight: 700; }
 .parse-warning a { color: #6b4a14; border-bottom: 1px dotted #6b4a14; text-decoration: none; }
 .parse-warning a:hover { color: #4a3514; border-bottom-color: #4a3514; }
+
+/* One-time intro card — first popup open only. Minimal: 4 numbered steps
+   and a Got it button. Dismissed permanently via chrome.storage.local. */
+#intro-card { animation: slideDown 240ms ease-out; }
+.intro-body {
+  padding: 14px 16px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+.intro-title {
+  font-size: 11px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.06em;
+  color: var(--accent);
+  margin-bottom: 10px;
+}
+.intro-list {
+  margin: 0 0 12px;
+  padding-left: 20px;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--ink-2);
+}
+.intro-list li { margin-bottom: 4px; }
+.intro-list li:last-child { margin-bottom: 0; }
+.intro-dismiss {
+  width: 100%;
+  padding: 8px;
+  background: var(--ink); color: #fff;
+  border: 1px solid var(--ink); border-radius: var(--radius-sm);
+  font-weight: 600; font-size: 12px; cursor: pointer; font-family: inherit;
+  transition: background 120ms ease, transform 80ms ease;
+}
+.intro-dismiss:hover { background: var(--ink-2); }
+.intro-dismiss:active { transform: scale(0.98); }
 
 /* Free-tier upsell hint inside #thread-notice. Inline link to /dashboard
    so the user can see the cross-device sync benefit at the moment they
