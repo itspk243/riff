@@ -12,6 +12,65 @@
 //   chrome.storage.local.set({ riff_backend_url: 'http://localhost:3000' })
 const DEFAULT_BACKEND_URL = 'https://rifflylabs.com';
 
+// PostHog public project key. Replace with the real key from
+// posthog.com/project/settings/general before publishing. Public keys
+// are designed to live on the client — no risk in committing.
+// If left as the placeholder, all telemetry calls become no-ops.
+const POSTHOG_KEY = 'YOUR_POSTHOG_KEY_HERE';
+const POSTHOG_HOST = 'https://us.i.posthog.com';
+
+// Generate or retrieve a stable anonymous distinct_id for this install.
+// PostHog uses this to stitch events across sessions. We generate once
+// per extension install and stick with it for the lifetime of the
+// install. Once the user signs in, we also send their riff user_id as
+// the $set on each event so the install-level id can be aliased server-
+// side to the authed account.
+async function getInstallId() {
+  const { riff_install_id } = await chrome.storage.local.get('riff_install_id');
+  if (riff_install_id) return riff_install_id;
+  // crypto.randomUUID is available in MV3 service workers.
+  const id = (self.crypto && self.crypto.randomUUID) ? self.crypto.randomUUID() : `riff-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  await chrome.storage.local.set({ riff_install_id: id });
+  return id;
+}
+
+// Fire-and-forget PostHog event. Never throws. Never blocks. The MV3
+// CSP forbids loading their JS lib but we can POST directly to the
+// /capture/ endpoint from the service worker. One event = one fetch.
+async function riffTrackExt(event, properties) {
+  if (!POSTHOG_KEY || POSTHOG_KEY === 'YOUR_POSTHOG_KEY_HERE') return;
+  try {
+    const distinct_id = await getInstallId();
+    const { riff_user_id } = await chrome.storage.local.get('riff_user_id');
+    const payload = {
+      api_key: POSTHOG_KEY,
+      event,
+      distinct_id,
+      properties: {
+        $current_url: 'extension://riffly',
+        $set: riff_user_id ? { riff_user_id } : undefined,
+        ...(properties || {}),
+      },
+      timestamp: new Date().toISOString(),
+    };
+    await fetch(`${POSTHOG_HOST}/capture/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+      keepalive: true,
+    });
+  } catch { /* analytics is never allowed to throw or log noise */ }
+}
+
+// Helper for "first time only" events. Stores a flag in chrome.storage
+// after the first call so we never double-count installs / activations.
+async function riffTrackOnce(flagName, event, properties) {
+  const { [flagName]: already } = await chrome.storage.local.get(flagName);
+  if (already) return;
+  await chrome.storage.local.set({ [flagName]: true });
+  await riffTrackExt(event, properties);
+}
+
 async function getBackendBase() {
   const { riff_backend_url } = await chrome.storage.local.get('riff_backend_url');
   return riff_backend_url || DEFAULT_BACKEND_URL;
@@ -190,9 +249,15 @@ async function applySurfaceMode() {
   }
 }
 
-chrome.runtime.onInstalled.addListener(() => {
+chrome.runtime.onInstalled.addListener((details) => {
   chrome.alarms.create('riff_overdue_check', { periodInMinutes: 60, delayInMinutes: 1 });
   applySurfaceMode();
+  // Funnel: track each lifetime first-install (not updates / browser_update).
+  if (details && details.reason === 'install') {
+    riffTrackOnce('riff_telemetry_first_install', 'ext_first_install', {
+      version: chrome.runtime.getManifest().version,
+    });
+  }
 });
 chrome.runtime.onStartup?.addListener(() => {
   chrome.alarms.create('riff_overdue_check', { periodInMinutes: 60, delayInMinutes: 1 });
@@ -378,7 +443,13 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     }
     chrome.storage.local
       .set({ riff_token: access, riff_refresh: refresh || null })
-      .then(() => sendResponse({ ok: true }))
+      .then(() => {
+        // Funnel: token hand-off completed. Proxy for "user is signed
+        // in within the extension." First-time-only so re-auth flows
+        // don't double-count.
+        riffTrackOnce('riff_telemetry_first_signin', 'ext_first_signin');
+        sendResponse({ ok: true });
+      })
       .catch((e) => sendResponse({ ok: false, error: String(e && e.message || e) }));
     return true;
   }
@@ -386,7 +457,21 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   // Generation
   if (msg.type === 'RIFF_GENERATE') {
     (USE_STUB ? Promise.resolve(stubResponse(msg.payload)) : callBackend(msg.payload))
-      .then(sendResponse)
+      .then((resp) => {
+        // Funnel: track every successful generation, plus a one-time
+        // first_generate event so we can compute install→activation in
+        // PostHog. We never block the response on the telemetry call.
+        if (resp && resp.ok) {
+          const surface = msg.payload && msg.payload.profile && msg.payload.profile.surface;
+          riffTrackExt('ext_generate_success', { surface, plan: resp.plan });
+          riffTrackOnce('riff_telemetry_first_generate', 'ext_first_generate', { surface, plan: resp.plan });
+        } else if (resp && resp.needsAuth) {
+          riffTrackExt('ext_generate_blocked', { reason: 'auth' });
+        } else if (resp && resp.needsUpgrade) {
+          riffTrackExt('ext_generate_blocked', { reason: 'quota' });
+        }
+        sendResponse(resp);
+      })
       .catch(err => sendResponse({ ok: false, error: String(err && err.message || err) }));
     return true;
   }
@@ -478,7 +563,21 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 
   // Events (sent / replied tracking + follow-up detection)
   if (msg.type === 'RIFF_EVENTS_RECORD') {
-    apiCall('/api/events', { method: 'POST', body: msg.payload }).then(sendResponse);
+    apiCall('/api/events', { method: 'POST', body: msg.payload }).then((resp) => {
+      // Funnel: track first sent / first replied actions. These are
+      // the truly meaningful activation moments — install + sign-in
+      // + first-generate are all easy clicks; first Mark sent means
+      // the user actually pasted the draft into a real LinkedIn DM.
+      const kind = msg.payload && msg.payload.kind;
+      if (kind === 'sent') {
+        riffTrackOnce('riff_telemetry_first_sent', 'ext_first_sent');
+        riffTrackExt('ext_mark_sent', { variant_type: msg.payload.variant_type });
+      } else if (kind === 'replied') {
+        riffTrackOnce('riff_telemetry_first_replied', 'ext_first_replied');
+        riffTrackExt('ext_mark_replied', { variant_type: msg.payload.variant_type });
+      }
+      sendResponse(resp);
+    });
     return true;
   }
   if (msg.type === 'RIFF_EVENTS_FOR_CANDIDATE') {

@@ -2,12 +2,394 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta http-equiv="refresh" content="0; url=/#pricing">
-  <link rel="canonical" href="https://rifflylabs.com/#pricing">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="Riffly pricing. Free for casual outreach (3 drafts/week). Pro for active recruiters ($15/mo, 200 drafts). Plus for agencies ($25/mo, 600 drafts + voice fingerprint).">
+  <link rel="canonical" href="https://rifflylabs.com/pricing">
+  <meta name="theme-color" content="#faf9f6">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://rifflylabs.com/pricing">
+  <meta property="og:title" content="Pricing — Riffly">
+  <meta property="og:description" content="Three tiers. Free, Pro at $15/mo, Plus at $25/mo. Cancel anytime.">
+  <meta property="og:image" content="https://rifflylabs.com/og.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Pricing — Riffly">
+  <meta name="twitter:description" content="Three tiers. Free, Pro at $15/mo, Plus at $25/mo.">
+  <meta name="twitter:image" content="https://rifflylabs.com/og.png">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
   <title>Pricing — Riffly</title>
-  <script>window.location.replace('/#pricing');</script>
+  <meta name="riff-posthog-key" content="YOUR_POSTHOG_KEY_HERE">
+  <meta name="riff-posthog-host" content="https://us.i.posthog.com">
+  <script src="/analytics.js" defer></script>
+  <style>
+    :root {
+      --bg: #faf9f6;
+      --surface: #ffffff;
+      --ink: #111110;
+      --ink-2: #2a2a28;
+      --muted: #6b6a65;
+      --line: #e7e4dc;
+      --line-2: #d6d2c7;
+      --accent: #b14a1a;
+      --accent-soft: #fdeee5;
+      --warm: #f3f0e8;
+      --green: #1a7a48;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+      font-size: clamp(14px, 2vw, 16px);
+      line-height: 1.55;
+      -webkit-font-smoothing: antialiased;
+    }
+    a { color: inherit; }
+    .wrap { max-width: 1080px; margin: 0 auto; padding: clamp(16px, 4vw, 56px); }
+
+    header { padding: 24px 0; }
+    .nav-row {
+      display: flex; justify-content: space-between; align-items: center;
+      max-width: 1080px; margin: 0 auto; padding: 0 clamp(16px, 4vw, 56px);
+    }
+    .brand {
+      display: inline-flex; align-items: center; gap: 9px;
+      font-weight: 600; font-size: 17px; letter-spacing: -0.02em;
+      text-decoration: none; color: var(--ink);
+    }
+    .logo-mark {
+      display: inline-block; width: 20px; height: 20px;
+      background: var(--ink); border-radius: 5px; position: relative;
+    }
+    .logo-mark::after {
+      content: ""; position: absolute; top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      width: 8px; height: 8px;
+      background: var(--bg); border-radius: 1.5px;
+    }
+    .nav-links { display: flex; gap: 18px; align-items: center; }
+    .nav-link { color: var(--muted); font-size: 14px; text-decoration: none; }
+    .nav-link:hover { color: var(--ink); }
+    .nav-cta {
+      padding: 7px 14px; background: var(--ink); color: #fff;
+      border-radius: 6px; font-size: 13px; font-weight: 500;
+      text-decoration: none;
+    }
+    .nav-cta:hover { background: var(--ink-2); }
+
+    .hero { text-align: center; padding: 24px 0 32px; }
+    h1 {
+      font-size: clamp(34px, 6vw, 52px);
+      font-weight: 600; letter-spacing: -0.03em; line-height: 1.05;
+      margin: 16px 0 12px;
+    }
+    .lede {
+      font-size: clamp(16px, 2vw, 18px);
+      color: var(--muted); max-width: 540px;
+      margin: 0 auto 24px; line-height: 1.5;
+    }
+
+    .price-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr);
+      gap: 18px; margin: 32px 0 48px;
+    }
+    @media (max-width: 880px) {
+      .price-grid { grid-template-columns: 1fr; max-width: 480px; margin-left: auto; margin-right: auto; }
+    }
+    .price-card {
+      padding: 28px; background: var(--surface);
+      border: 1px solid var(--line); border-radius: 14px;
+      display: flex; flex-direction: column;
+    }
+    .price-card.featured { border: 2px solid var(--ink); position: relative; }
+    .price-tag {
+      position: absolute; top: -12px; left: 24px;
+      padding: 4px 10px;
+      background: var(--ink); color: #fff;
+      border-radius: 100px;
+      font-size: 10.5px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.08em;
+    }
+    .price-name {
+      font-size: 18px; font-weight: 600;
+      letter-spacing: -0.01em; margin-bottom: 4px;
+    }
+    .price-num {
+      font-size: 36px; font-weight: 700;
+      letter-spacing: -0.02em; margin: 8px 0 4px;
+    }
+    .price-num small { font-size: 14px; font-weight: 500; color: var(--muted); }
+    .price-blurb {
+      color: var(--muted); font-size: 14px;
+      margin: 4px 0 18px; min-height: 38px;
+    }
+    .price-feats { list-style: none; padding: 0; margin: 0 0 24px; flex: 1; }
+    .price-feats li {
+      display: flex; align-items: flex-start; gap: 9px;
+      padding: 8px 0;
+      font-size: 14px; line-height: 1.5; color: var(--ink-2);
+      border-bottom: 1px solid var(--line);
+    }
+    .price-feats li:last-child { border-bottom: none; }
+    .price-check {
+      flex-shrink: 0; width: 14px; height: 14px;
+      margin-top: 4px; color: var(--green);
+    }
+    .btn {
+      display: block; padding: 11px 18px;
+      border: 1px solid var(--ink);
+      background: var(--ink); color: #fff;
+      border-radius: 8px;
+      font-size: 14.5px; font-weight: 600;
+      text-decoration: none; text-align: center;
+      transition: background 120ms ease, transform 80ms ease;
+    }
+    .btn:hover { background: var(--ink-2); }
+    .btn:active { transform: scale(0.98); }
+    .btn-ghost { background: transparent; color: var(--ink); }
+    .btn-ghost:hover { background: var(--warm); }
+
+    .compare-section { margin: 64px 0 48px; }
+    h2 {
+      font-size: clamp(22px, 3vw, 28px);
+      font-weight: 600; letter-spacing: -0.02em;
+      margin: 0 0 12px;
+    }
+    .compare-lede {
+      color: var(--muted); font-size: 15px;
+      margin-bottom: 24px;
+    }
+    .compare-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    .compare-table th, .compare-table td {
+      padding: 14px 16px; text-align: left;
+      border-bottom: 1px solid var(--line); vertical-align: top;
+    }
+    .compare-table th {
+      font-size: 12px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.06em;
+      color: var(--muted); background: var(--warm);
+    }
+    .compare-table tr.section-row td {
+      background: var(--bg); font-weight: 700;
+      font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em;
+      color: var(--ink-2); padding: 16px;
+    }
+    .compare-table td:not(:first-child) { text-align: center; color: var(--ink-2); }
+    .compare-table .yes { color: var(--green); font-weight: 600; }
+    .compare-table .no  { color: #c0bdb3; }
+    @media (max-width: 720px) {
+      .compare-table { font-size: 12.5px; }
+      .compare-table th, .compare-table td { padding: 10px 8px; }
+    }
+
+    .faq-section { margin: 64px 0; }
+    details { border-bottom: 1px solid var(--line); padding: 16px 0; }
+    summary {
+      font-size: 16px; font-weight: 500; color: var(--ink);
+      cursor: pointer; list-style: none;
+      position: relative; padding-right: 24px;
+    }
+    summary::-webkit-details-marker { display: none; }
+    summary::after {
+      content: "+";
+      position: absolute; right: 0; top: -2px;
+      font-size: 22px; color: var(--muted);
+      transition: transform 160ms ease;
+    }
+    details[open] summary::after { transform: rotate(45deg); }
+    details p {
+      margin: 12px 0 0;
+      font-size: 14.5px; color: var(--ink-2); line-height: 1.6;
+    }
+
+    footer {
+      border-top: 1px solid var(--line);
+      padding: 32px 0; margin-top: 64px;
+      font-size: 13px; color: var(--muted);
+    }
+    footer a { color: var(--muted); text-decoration: none; margin-right: 18px; }
+    footer a:hover { color: var(--ink); }
+  </style>
 </head>
 <body>
-  <p>Redirecting to <a href="/#pricing">pricing</a>…</p>
+  <header>
+    <div class="nav-row">
+      <a href="/" class="brand">
+        <span class="logo-mark"></span>Riffly
+      </a>
+      <div class="nav-links">
+        <a href="/features/voice-fingerprint" class="nav-link">Voice fingerprint</a>
+        <a href="/roast" class="nav-link">Roast</a>
+        <a href="/signup" class="nav-cta">Get started</a>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <div class="wrap">
+      <div class="hero">
+        <h1>Three plans. Cancel anytime.</h1>
+        <p class="lede">Free if you message a few candidates a week. Pro if you live in LinkedIn. Plus if you run a saved-search workflow or want voice fingerprint.</p>
+      </div>
+
+      <div class="price-grid">
+        <div class="price-card">
+          <div class="price-name">Free</div>
+          <div class="price-num">$0<small>/forever</small></div>
+          <div class="price-blurb">For casual cold outreach. No card.</div>
+          <ul class="price-feats">
+            <li><svg class="price-check" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,6 5,9 10,3"/></svg>3 drafts a week (+3 one-time bonus when you share your first <a href="/roast" style="color: inherit;">roast</a>)</li>
+            <li><svg class="price-check" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,6 5,9 10,3"/></svg>Cold opener variant only</li>
+            <li><svg class="price-check" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,6 5,9 10,3"/></svg>All profile sources (LinkedIn, GitHub, Wellfound)</li>
+            <li><svg class="price-check" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,6 5,9 10,3"/></svg>Local reply stats</li>
+          </ul>
+          <a href="/signup" data-plan="free" class="btn btn-ghost">Start free</a>
+        </div>
+
+        <div class="price-card featured">
+          <span class="price-tag">Most popular</span>
+          <div class="price-name">Pro</div>
+          <div class="price-num">$15<small>/month</small></div>
+          <div class="price-blurb">For active recruiters. Real workflow.</div>
+          <ul class="price-feats">
+            <li><svg class="price-check" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,6 5,9 10,3"/></svg><strong>200 drafts / month</strong></li>
+            <li><svg class="price-check" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,6 5,9 10,3"/></svg>All 3 variants (opener, follow-up, breakup)</li>
+            <li><svg class="price-check" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,6 5,9 10,3"/></svg><a href="/features/voice-fingerprint" style="color: inherit;">Voice fingerprint</a> · drafts in your dialect</li>
+            <li><svg class="price-check" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,6 5,9 10,3"/></svg>Saved pitch templates, synced</li>
+            <li><svg class="price-check" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,6 5,9 10,3"/></svg>Three variants per draft (opener · follow-up · breakup) · 7 languages</li>
+            <li><svg class="price-check" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,6 5,9 10,3"/></svg>Cross-machine reply analytics</li>
+          </ul>
+          <a href="/signup?plan=pro" data-plan="pro" class="btn">Get Pro</a>
+        </div>
+
+        <div class="price-card">
+          <div class="price-name">Plus</div>
+          <div class="price-num">$25<small>/month</small></div>
+          <div class="price-blurb">For agencies and high-volume sourcers.</div>
+          <ul class="price-feats">
+            <li><svg class="price-check" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,6 5,9 10,3"/></svg><strong>600 drafts / month</strong> (3× Pro)</li>
+            <li><svg class="price-check" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,6 5,9 10,3"/></svg>Everything in Pro</li>
+            <li><svg class="price-check" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,6 5,9 10,3"/></svg>Active Profile Assist · live fit-scoring</li>
+            <li><svg class="price-check" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,6 5,9 10,3"/></svg>Saved-search daily digest</li>
+            <li><svg class="price-check" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,6 5,9 10,3"/></svg>Job-spec library</li>
+          </ul>
+          <a href="/signup?plan=plus" data-plan="plus" class="btn btn-ghost">Get Plus</a>
+        </div>
+      </div>
+
+      <section class="compare-section">
+        <h2>Detailed comparison</h2>
+        <p class="compare-lede">Every feature, every plan, in one table.</p>
+        <table class="compare-table">
+          <thead>
+            <tr>
+              <th>Feature</th><th>Free</th><th>Pro</th><th>Plus</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="section-row"><td colspan="4">Drafting</td></tr>
+            <tr><td>Monthly draft cap</td><td>3 / week</td><td>200</td><td>600</td></tr>
+            <tr><td>Variants per draft</td><td>Cold opener only</td><td>3 (opener, follow-up, breakup)</td><td>3 (opener, follow-up, breakup)</td></tr>
+            <tr><td>Languages</td><td class="yes">7</td><td class="yes">7</td><td class="yes">7</td></tr>
+            <tr><td>Phrase blacklist (40+ AI-tells)</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+
+            <tr class="section-row"><td colspan="4">Personalization</td></tr>
+            <tr><td>Voice fingerprint</td><td class="no">—</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+            <tr><td>Saved pitch templates</td><td class="no">—</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+            <tr><td>Recent-post grounding</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+
+            <tr class="section-row"><td colspan="4">Sourcing workflow (Plus)</td></tr>
+            <tr><td>Active Profile Assist (live fit-scoring)</td><td class="no">—</td><td class="no">—</td><td class="yes">✓</td></tr>
+            <tr><td>Saved-search daily digest</td><td class="no">—</td><td class="no">—</td><td class="yes">✓</td></tr>
+            <tr><td>Job-spec library</td><td class="no">—</td><td class="no">—</td><td class="yes">5 active specs</td></tr>
+
+            <tr class="section-row"><td colspan="4">Tracking</td></tr>
+            <tr><td>Local reply stats</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+            <tr><td>Cross-machine reply analytics</td><td class="no">—</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+            <tr><td>Prior-thread detection (cross-device)</td><td>Same device only</td><td class="yes">All devices</td><td class="yes">All devices</td></tr>
+
+            <tr class="section-row"><td colspan="4">Account</td></tr>
+            <tr><td>Sub-processor &amp; DPA on request</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+            <tr><td>Cancel anytime</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+            <tr><td>Refund policy</td><td>—</td><td>14 days, &lt;50 generations</td><td>14 days, &lt;50 generations</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="faq-section">
+        <h2>Pricing questions</h2>
+
+        <details>
+          <summary>What happens when I hit my draft cap?</summary>
+          <p>The popup tells you you're at the limit. Free users can share a roast at <a href="/roast">rifflylabs.com/roast</a> for a one-time +3 bonus, or upgrade to Pro. Pro and Plus users either wait for the calendar reset or upgrade to the next tier.</p>
+        </details>
+
+        <details>
+          <summary>Can I switch plans?</summary>
+          <p>Anytime, both directions. Upgrades take effect immediately and we prorate the difference. Downgrades take effect at the end of your current billing period — you keep your current tier until then.</p>
+        </details>
+
+        <details>
+          <summary>Do you offer team or agency pricing?</summary>
+          <p>Not yet. If you're 5+ recruiters and want a single bill, email <a href="mailto:support@rifflylabs.com?subject=Team%20pricing">support@rifflylabs.com</a> — we'll work something out manually until the team plan ships.</p>
+        </details>
+
+        <details>
+          <summary>Is there a free trial of Pro or Plus?</summary>
+          <p>The free tier is the trial. 3 drafts a week is enough to send to a handful of real candidates and decide whether the replies you're getting back are different. After that, Pro is $15/month with a 14-day refund window if you've used fewer than 50 generations.</p>
+        </details>
+
+        <details>
+          <summary>What payment methods do you accept?</summary>
+          <p>All major credit and debit cards, plus Apple Pay and Google Pay through Stripe. We don't currently accept ACH, wire, or invoice billing.</p>
+        </details>
+
+        <details>
+          <summary>Do you charge tax / VAT?</summary>
+          <p>Stripe Tax handles this automatically based on your billing address. EU VAT-registered businesses can enter their VAT number at checkout to avoid being charged VAT.</p>
+        </details>
+
+        <details>
+          <summary>Where can I see my invoices?</summary>
+          <p>The dashboard's billing section opens the Stripe customer portal, where you can download every invoice, update your card, and cancel.</p>
+        </details>
+
+        <details>
+          <summary>What's actually different about Plus vs Pro?</summary>
+          <p>Three things: 600 drafts/month instead of 200; live fit-scoring against your saved job specs (Active Profile Assist); and a daily email digest of the top candidates from your saved LinkedIn searches. If you scan saved searches more than weekly or have multiple active roles, Plus pays back. If you mostly work one-candidate-at-a-time, Pro is plenty.</p>
+        </details>
+      </section>
+    </div>
+  </main>
+
+  <footer>
+    <div class="wrap" style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: 16px;">
+      <div>
+        <a href="/">Riffly</a>
+        <a href="/features/voice-fingerprint">Voice fingerprint</a>
+        <a href="/roast">Roast</a>
+      </div>
+      <div>
+        <a href="/privacy">Privacy</a>
+        <a href="/terms">Terms</a>
+        <a href="/security">Security</a>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    // Funnel telemetry: pricing CTA clicks. Captures which plan the user
+    // clicked from the dedicated pricing page separately from the homepage
+    // pricing card so we can compare conversion paths in PostHog.
+    document.addEventListener('click', function (e) {
+      var a = e.target && e.target.closest && e.target.closest('a');
+      if (!a) return;
+      var plan = a.getAttribute('data-plan');
+      if (plan && window.riffTrack) {
+        window.riffTrack('pricing_page_cta_clicked', { plan: plan });
+      }
+    }, true);
+  </script>
 </body>
 </html>

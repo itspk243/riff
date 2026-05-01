@@ -19,7 +19,7 @@ Everything you need to copy-paste into chrome.google.com/webstore/devconsole. Re
 1. Click **+ Add new item**
 2. Drag-drop this file:
    ```
-   /Users/srulypikarsky/Library/Application Support/Claude/local-agent-mode-sessions/c5d3e72f-4128-4455-83db-7a63d2d5137f/2b9c6cb2-ad91-4933-b2ad-87f14f87e4e6/local_1eb4b77c-5296-415c-9154-cc2ebf0da1dd/outputs/riff/riffly-extension-1.2.7.zip
+   /Users/srulypikarsky/Library/Application Support/Claude/local-agent-mode-sessions/c5d3e72f-4128-4455-83db-7a63d2d5137f/2b9c6cb2-ad91-4933-b2ad-87f14f87e4e6/local_1eb4b77c-5296-415c-9154-cc2ebf0da1dd/outputs/riff/riffly-extension-1.2.8.zip
    ```
 3. Wait for the manifest validation (should pass — we patched it).
 

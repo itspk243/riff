@@ -12,7 +12,7 @@ const nextConfig = {
       { source: '/security', destination: '/security.html' },
       { source: '/roast', destination: '/roast.html' },
       { source: '/brand', destination: '/brand/index.html' },
-      { source: '/pricing', destination: '/index.html#pricing' },
+      { source: '/pricing', destination: '/pricing.html' },
       { source: '/features/voice-fingerprint', destination: '/features/voice-fingerprint.html' },
     ];
   },

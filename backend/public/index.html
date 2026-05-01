@@ -1111,6 +1111,13 @@
       #install .btn-chrome { width: 100%; padding: 16px 18px; font-size: 15px; }
     }
   </style>
+  <!-- PostHog funnel telemetry. Replace YOUR_POSTHOG_KEY_HERE with the key
+       from posthog.com/project/settings/general (the public project key is
+       safe to commit — it's designed to live on the client). If the
+       placeholder is left as-is, analytics.js silently becomes a no-op. -->
+  <meta name="riff-posthog-key" content="YOUR_POSTHOG_KEY_HERE">
+  <meta name="riff-posthog-host" content="https://us.i.posthog.com">
+  <script src="/analytics.js" defer></script>
 </head>
 <body>
   <header>
@@ -1759,6 +1766,21 @@
   </footer>
 
   <script>
+    // Funnel: signup-CTA clicks (any link to /signup gets logged) and
+    // pricing-card upgrade clicks (data-plan="pro|plus|free"). Lets us see
+    // in PostHog which CTA on the page actually drives sign-ups.
+    document.addEventListener('click', function (e) {
+      var a = e.target && e.target.closest && e.target.closest('a');
+      if (!a) return;
+      var href = a.getAttribute('href') || '';
+      var plan = a.getAttribute('data-plan');
+      if (plan && window.riffTrack) {
+        window.riffTrack('pricing_cta_clicked', { plan: plan, location: a.id || 'unknown' });
+      } else if (href.indexOf('/signup') === 0 && window.riffTrack) {
+        window.riffTrack('signup_cta_clicked', { location: a.id || 'inline' });
+      }
+    }, true);
+
     // If the visitor is already signed in (token in localStorage), swap
     // sign-up CTAs for dashboard-aware ones so they don't bounce through
     // /signup just to come back. Pricing buttons go to /dashboard?upgrade=<plan>
@@ -1879,6 +1901,9 @@
         status.textContent = 'Riffly is reading the sample profile and writing against your pitch. This is the actual product, not a mock.';
         status.className = 'demo-status';
 
+        // Funnel: demo run started.
+        if (window.riffTrack) window.riffTrack('demo_run_clicked', { tone: tone, length: length, pitch_chars: pitch.length });
+
         fetch('/api/demo-generate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -1894,6 +1919,8 @@
               draftMeta.textContent = (resp.body.variant.text.split(/\s+/).length) + ' words · live · against ' + (resp.body.profile && resp.body.profile.name);
               resultLabel.textContent = 'Live draft (real Riffly output)';
               var remaining = (typeof resp.body.remaining === 'number') ? resp.body.remaining : 0;
+              // Funnel: demo run completed successfully.
+              if (window.riffTrack) window.riffTrack('demo_run_success', { tone: tone, length: length, remaining: remaining });
               if (remaining > 0) {
                 btn.textContent = 'Try another tone — ' + remaining + ' left';
                 status.textContent = 'That\'s a real Riffly generation. Try a different tone or length to see the variant range.';
