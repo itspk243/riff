@@ -27,6 +27,18 @@ export const MONTHLY_LIMIT_TEAM = 600;
 export const PAID_DAILY_HARD_CAP = 200;
 export const GLOBAL_DAILY_HARD_CAP = 5000;
 
+// Monthly scan-call cap (Plus only — Pro and Free can't access scans).
+// Each "scan call" is one fresh (profile, spec) score that hits the LLM.
+// Cached scores (<24h old) don't count — only LLM-paid calls.
+//
+// At 2000/month × $0.003/score (Haiku 4.5) = $6/month worst case. Combined
+// with the $8.40 max draft cost on a $25 Plus subscription minus $1 Stripe,
+// that leaves a positive margin in the worst case. Heavy users who churn
+// through fresh candidates will hit this and need to slow down or wait
+// for the calendar reset; the typical user won't notice it exists.
+export const MONTHLY_SCAN_LIMIT_PLUS = 2000;
+export const MONTHLY_SCAN_LIMIT_TEAM = 2000;
+
 export function monthlyLimitForPlan(plan: Plan | null | undefined): number | null {
   if (plan === 'pro') return MONTHLY_LIMIT_PRO;
   if (plan === 'plus') return MONTHLY_LIMIT_PLUS;
@@ -220,6 +232,96 @@ export async function checkQuota(user: UserRow): Promise<QuotaResult> {
       ok: false,
       reason: `Monthly limit reached (${limit} drafts).${upgradeText} Resets ${resetsLabel}.`,
       reasonShort: `${limit}/mo limit hit`,
+      ...base,
+    };
+  }
+  return { ok: true, ...base };
+}
+
+// ---------- Scan-call quota (Plus tier saved-search scoring) ----------
+//
+// Counts FRESH score_events rows (i.e. rows we wrote, not cached re-uses).
+// Because the scan endpoint only inserts new rows for non-cached pairs,
+// score_events count == LLM-paid scoring calls this month.
+
+export function monthlyScanLimitForPlan(plan: Plan | null | undefined): number | null {
+  if (plan === 'plus') return MONTHLY_SCAN_LIMIT_PLUS;
+  if (plan === 'team') return MONTHLY_SCAN_LIMIT_TEAM;
+  // Pro and Free can't access scans (gated by hasSavedSearchDigest); a
+  // null limit means "feature not available," not "unlimited."
+  return null;
+}
+
+export async function getScansThisMonth(userId: string): Promise<number> {
+  const supabase = serviceClient();
+  const since = startOfThisMonthUtc().toISOString();
+  const { count } = await supabase
+    .from('score_events')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', userId)
+    .gte('scored_at', since);
+  return count || 0;
+}
+
+export interface ScanQuotaInfo {
+  used: number;
+  limit: number | null;
+  remaining: number | null;
+  plan: Plan;
+  resetsAt: string;
+  resetsLabel: string;
+}
+
+export type ScanQuotaResult =
+  | { ok: true } & ScanQuotaInfo
+  | { ok: false; reason: string } & ScanQuotaInfo;
+
+// Pre-flight check: returns ok:false if the user's already at their cap,
+// or if the requested freshCount would push them over. The scan endpoint
+// calls this AFTER cache lookup so cached pairs don't count against the
+// quota — only the LLM calls we're about to make do.
+export async function checkScanQuota(
+  user: UserRow,
+  freshCount: number,
+): Promise<ScanQuotaResult> {
+  const limit = monthlyScanLimitForPlan(user.plan);
+  const resetsAt = startOfNextMonthUtc();
+  const resetsLabel = humanResetDate(resetsAt);
+  if (limit === null) {
+    // Feature not available on this plan — caller should have caught this
+    // upstream via hasSavedSearchDigest, but defensive.
+    return {
+      ok: false,
+      reason: 'Saved-search scans require the Plus plan.',
+      used: 0,
+      limit: null,
+      remaining: null,
+      plan: user.plan,
+      resetsAt: resetsAt.toISOString(),
+      resetsLabel,
+    };
+  }
+  const used = await getScansThisMonth(user.id);
+  const remaining = Math.max(0, limit - used);
+  const base: ScanQuotaInfo = {
+    used,
+    limit,
+    remaining,
+    plan: user.plan,
+    resetsAt: resetsAt.toISOString(),
+    resetsLabel,
+  };
+  if (used >= limit) {
+    return {
+      ok: false,
+      reason: `Monthly scan limit reached (${limit} fresh scores). Resets ${resetsLabel}. The dashboard digest still works for already-scored candidates — only NEW profiles need a fresh score.`,
+      ...base,
+    };
+  }
+  if (freshCount > 0 && used + freshCount > limit) {
+    return {
+      ok: false,
+      reason: `This scan would put you over your monthly scan limit (${used}/${limit} used, this scan needs ${freshCount} more). Try fewer searches at once or wait until ${resetsLabel}.`,
       ...base,
     };
   }

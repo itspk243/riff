@@ -305,10 +305,12 @@ export default function SavedSearchesPanel({ token, plan }: Props) {
         appear below — refreshed every time you re-visit the search.
       </p>
 
-      {/* Per-user email-digest send time. Stored in users.digest_send_hour_utc;
-          cron filters recipients by current UTC hour so the cron must invoke
-          hourly (Vercel Hobby caps at daily — wire an external pinger or
-          upgrade for full coverage). */}
+      {/* Per-user email-digest send time. Stored in users.digest_send_hour_utc.
+          Cron behavior depends on DIGEST_HOURLY_FIRING env: when false (Hobby),
+          everyone gets the digest at the single fire time and this picker
+          becomes advisory. When true (Pro / external pinger), the picker is
+          honored exactly. The note below the picker tells the user which mode
+          is active so they're not surprised. */}
       <div id="digest-prefs" style={prefsRowStyle}>
         <span style={{ fontSize: 12.5, color: '#444' }}>
           Email me my digest at
@@ -327,6 +329,11 @@ export default function SavedSearchesPanel({ token, plan }: Props) {
         <span style={{ fontSize: 11, color: '#888', marginLeft: 'auto' }}>
           ({localTimeForUtcHour(digestHour)} your time)
         </span>
+      </div>
+      <div style={{ fontSize: 11, color: '#888', marginTop: 6, lineHeight: 1.45 }}>
+        Heads up: while Riffly is in beta the digest fires once daily at
+        08:00 UTC for everyone, so this hour preference is advisory. We'll
+        honor it exactly once we move to hourly firing.
       </div>
 
       {error && (

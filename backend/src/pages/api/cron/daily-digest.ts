@@ -47,22 +47,37 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const supabase = serviceClient();
   const sinceIso = new Date(Date.now() - WINDOW_HOURS * 60 * 60 * 1000).toISOString();
 
-  // Optional `?hour=N` override for manual testing — when present, filter
-  // recipients to that exact UTC hour. Otherwise use the current UTC hour.
-  // This means the cron must invoke once per hour to cover all 24 buckets.
-  // (Vercel Hobby is daily-only — wire an hourly external pinger or upgrade
-  //  to Pro to actually fire all hours.)
+  // Cron firing strategy is controlled by the DIGEST_HOURLY_FIRING env var.
+  //
+  // - false / unset (Vercel Hobby default): the cron fires once per day. We
+  //   ignore digest_send_hour_utc entirely and send to ALL Plus/Team users.
+  //   This is the "fail safe" mode — nobody gets silently skipped because
+  //   their preferred hour didn't match the single fire time. The reviewer
+  //   flagged the previous behavior as silent failure: a user who picked
+  //   any hour other than 08:00 UTC got nothing, with no error visible.
+  //
+  // - true (Vercel Pro or external hourly pinger): we respect the per-user
+  //   hour preference — the cron must fire 24×/day for full coverage.
+  //
+  // The ?hour=N query override is still honored for manual testing.
+  const isHourly = process.env.DIGEST_HOURLY_FIRING === 'true';
   const hourOverride = parseInt(String(req.query.hour ?? ''), 10);
   const targetHour = Number.isFinite(hourOverride) && hourOverride >= 0 && hourOverride <= 23
     ? hourOverride
     : new Date().getUTCHours();
 
-  // Pull Plus / Team users whose digest_send_hour_utc matches this hour.
-  const { data: users, error: usersErr } = await supabase
+  let usersQuery = supabase
     .from('users')
     .select('id, email, digest_send_hour_utc')
-    .in('plan', ['plus', 'team'])
-    .eq('digest_send_hour_utc', targetHour);
+    .in('plan', ['plus', 'team']);
+  if (isHourly || Number.isFinite(hourOverride)) {
+    // Hourly mode (or manual ?hour= test) — filter by hour. Includes users
+    // whose preference is null in the override case via .or() below.
+    usersQuery = usersQuery.eq('digest_send_hour_utc', targetHour);
+  }
+  // Daily mode: no hour filter — everyone with a Plus/Team plan + email
+  // receives the digest at the single fire time.
+  const { data: users, error: usersErr } = await usersQuery;
   if (usersErr) {
     return res.status(500).json({ ok: false, error: usersErr.message });
   }

@@ -11,14 +11,26 @@
 // Scaling notes:
 // - Hard cap of 25 profiles per request to bound LLM cost (~$0.005 each ×
 //   number of active specs). At 25 profiles × 5 specs = 125 calls = $0.625
-//   per scan. Scans are user-triggered (visit + click), not background.
+//   per scan WITHOUT caching.
+// - SCORE CACHE (24h window): before scoring we look up score_events for
+//   each (user_id, candidate_url, job_spec_id) tuple within the last 24h.
+//   Cache hits skip the LLM call entirely and reuse the prior score. This
+//   matters because Plus's marketed cadence (daily × 10 saved searches × 5
+//   specs) would otherwise cost ~$187/mo per active user on a $25/mo
+//   subscription. With the cache, the marginal cost of re-scanning the
+//   same search becomes near-zero (just the DB query). Fresh profiles
+//   (newly visible in the search results) and 24h+-stale candidates still
+//   trigger fresh scoring.
 // - Best-effort logging: we don't fail the response if score_events insert
 //   fails for one row.
+
+const SCORE_CACHE_WINDOW_MS = 24 * 60 * 60 * 1000;
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getUserFromBearer, serviceClient } from '../../../lib/supabase';
 import { hasSavedSearchDigest, maxJobSpecs } from '../../../lib/capabilities';
 import { scoreProfile } from '../../../lib/score';
+import { checkScanQuota } from '../../../lib/quota';
 import type { ProfileSnapshot, JobSpec, ScoreResult } from '../../../lib/types';
 
 const MAX_PROFILES_PER_SCAN = 25;
@@ -130,15 +142,91 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     });
   }
 
-  // Score every (profile, spec) pair in parallel.
-  const tasks: Array<Promise<{ profile: ProfileSnapshot; spec: JobSpec; result: ScoreResult | null }>> = [];
+  // ---------- Score cache lookup ----------
+  // For each (candidate_url, job_spec_id) we already scored within the
+  // last 24h, reuse the result instead of paying for another LLM call.
+  // Built before parallel scoring so we never enqueue a task for a cached
+  // pair. Keyed on `${candidate_url}:${job_spec_id}`.
+  const candidateUrls = profiles
+    .map(p => p?.profileUrl)
+    .filter((u): u is string => !!u && typeof u === 'string');
+  const specIds = specs.map(s => s.id);
+  const cacheCutoffIso = new Date(Date.now() - SCORE_CACHE_WINDOW_MS).toISOString();
+  const cache = new Map<string, ScoreResult>();
+  if (candidateUrls.length > 0 && specIds.length > 0) {
+    const { data: cached } = await supabase
+      .from('score_events')
+      .select('candidate_url, job_spec_id, score, reasoning, matched, missing, scored_at')
+      .eq('user_id', user.id)
+      .in('candidate_url', candidateUrls)
+      .in('job_spec_id', specIds)
+      .gte('scored_at', cacheCutoffIso)
+      .order('scored_at', { ascending: false });
+    for (const row of cached || []) {
+      const k = `${row.candidate_url}:${row.job_spec_id}`;
+      // First row wins because we ordered by scored_at desc — that's the
+      // most recent score for this (candidate, spec) pair.
+      if (!cache.has(k)) {
+        cache.set(k, {
+          score: row.score,
+          reasoning: row.reasoning,
+          matched: row.matched || [],
+          missing: row.missing || [],
+        } as ScoreResult);
+      }
+    }
+  }
+
+  // ---------- Pre-flight scan-quota check ----------
+  // Count how many FRESH (LLM-paying) calls this scan needs after cache
+  // hits are subtracted, then ask quota.ts whether the user has budget
+  // for them this month. Cached pairs are free — they don't count.
+  // Without this gate, a power user could blow through the whole monthly
+  // LLM budget on a Plus subscription that's only paying us $25.
+  let plannedFresh = 0;
+  for (const profile of profiles) {
+    if (!profile?.name) continue;
+    for (const spec of specs) {
+      const cacheKey = profile.profileUrl ? `${profile.profileUrl}:${spec.id}` : '';
+      if (!cacheKey || !cache.has(cacheKey)) plannedFresh++;
+    }
+  }
+  if (plannedFresh > 0) {
+    const scanQuota = await checkScanQuota(user, plannedFresh);
+    if (!scanQuota.ok) {
+      return res.status(402).json({
+        ok: false,
+        error: scanQuota.reason,
+        scanQuota: {
+          used: scanQuota.used,
+          limit: scanQuota.limit,
+          remaining: scanQuota.remaining,
+          resetsAt: scanQuota.resetsAt,
+          resetsLabel: scanQuota.resetsLabel,
+        },
+        needsUpgrade: false, // it's a usage cap, not a plan-tier issue
+      });
+    }
+  }
+
+  // Score every (profile, spec) pair in parallel — but skip the LLM call
+  // for any pair that's already in the 24h cache. The settled array below
+  // includes both cached and freshly-scored rows, with `cached` flagged so
+  // we know which ones to insert into score_events vs. skip.
+  const tasks: Array<Promise<{ profile: ProfileSnapshot; spec: JobSpec; result: ScoreResult | null; cached: boolean }>> = [];
   for (const profile of profiles) {
     if (!profile?.name) continue; // skip malformed entries silently
     for (const spec of specs) {
+      const cacheKey = profile.profileUrl ? `${profile.profileUrl}:${spec.id}` : '';
+      const cachedResult = cacheKey ? cache.get(cacheKey) : undefined;
+      if (cachedResult) {
+        tasks.push(Promise.resolve({ profile, spec, result: cachedResult, cached: true }));
+        continue;
+      }
       tasks.push(
         scoreProfile(profile, spec)
-          .then((result) => ({ profile, spec, result }))
-          .catch(() => ({ profile, spec, result: null }))
+          .then((result) => ({ profile, spec, result, cached: false }))
+          .catch(() => ({ profile, spec, result: null as ScoreResult | null, cached: false }))
       );
     }
   }
@@ -162,10 +250,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
   }
 
-  // Persist all scores (one row per (profile, spec) pair) tagged with
-  // saved_search_id so the digest endpoint can filter.
+  // Persist FRESHLY-SCORED pairs only. Cached ones already have a row in
+  // score_events from a prior scan; re-inserting would inflate the row
+  // count and skew the digest. Tagged with saved_search_id so the digest
+  // endpoint can still filter to this search.
   const rows = settled
-    .filter((s) => s.result)
+    .filter((s) => s.result && !s.cached)
     .map((s) => ({
       user_id: user.id,
       job_spec_id: s.spec.id,
@@ -194,12 +284,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     .filter((r) => r.best)
     .sort((a, b) => (b.best!.result.score || 0) - (a.best!.result.score || 0));
 
+  // Cost telemetry — useful for verifying the cache is doing its job in
+  // production without parsing logs.
+  const cachedCount = settled.filter((s) => s.cached).length;
+  const freshCount = settled.filter((s) => s.result && !s.cached).length;
+
   return res.status(200).json({
     ok: true,
     saved_search_id: search.id,
     saved_search_name: search.name,
     scanned: profiles.length,
     scored: results.length,
+    cachedPairs: cachedCount,
+    freshPairs: freshCount,
     results,
   });
 }
