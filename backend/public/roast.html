@@ -239,6 +239,25 @@
       color: var(--ink-2);
     }
 
+    .bonus-hint {
+      color: #1a7a48;
+      font-weight: 600;
+      font-size: 11px;
+      letter-spacing: 0.04em;
+      text-transform: none;
+      margin-left: 4px;
+    }
+    .share-bonus-toast {
+      margin-top: 14px;
+      padding: 10px 14px;
+      background: #e3f0e9;
+      border: 1px solid #b9d6c4;
+      border-radius: 8px;
+      font-size: 13.5px;
+      color: #1a7a48;
+      font-weight: 500;
+    }
+
     .examples { margin-top: 14px; }
     .examples-label { font-size: 12px; color: var(--muted); margin-bottom: 8px; }
     .example-chip {
@@ -516,9 +535,13 @@
 
       const r = roast(text);
       const shareText = buildShareText(r);
-      const shareUrl = 'https://rifflylabs.com/roast';
-      const tweetUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`;
-      const linkedinUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(shareUrl)}`;
+      // Permalink with the message text base64-encoded so recipients can
+      // see the same verdict you got. Capped at 2000 chars of input so the
+      // resulting URL stays under typical browser limits.
+      const permalink = buildPermalink(text);
+      const tweetUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText + ' ' + permalink)}`;
+      const linkedinUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(permalink)}`;
+      const isSignedIn = !!localStorage.getItem('riff_token');
 
       result.innerHTML = `
         <div class="verdict ${r.verdictClass}">${escapeHtml(r.verdict)}</div>
@@ -547,46 +570,142 @@
           </div>
         ` : ''}
         <div class="share-row">
-          <div class="share-row-label">Share this verdict</div>
+          <div class="share-row-label">Share this verdict ${isSignedIn ? '<span class="bonus-hint">· first share = +3 bonus drafts</span>' : ''}</div>
           <button class="share-btn primary" id="share-copy" type="button">Copy verdict</button>
-          <a class="share-btn" href="${tweetUrl}" target="_blank" rel="noopener">Post on X</a>
-          <a class="share-btn" href="${linkedinUrl}" target="_blank" rel="noopener">Share on LinkedIn</a>
+          <button class="share-btn" id="share-link" type="button" title="Copies a link that opens this exact roast for whoever you send it to">Copy link</button>
+          <a class="share-btn" id="share-x" href="${tweetUrl}" target="_blank" rel="noopener">Post on X</a>
+          <a class="share-btn" id="share-linkedin" href="${linkedinUrl}" target="_blank" rel="noopener">Share on LinkedIn</a>
         </div>
+        <div id="share-bonus-toast" class="share-bonus-toast" style="display:none;"></div>
       `;
 
-      // Wire up the copy button — re-rendered every roast, so re-bind every time.
+      // Wire up the copy buttons — re-rendered every roast, so re-bind every time.
       const copyBtn = document.getElementById('share-copy');
-      if (copyBtn) {
-        copyBtn.addEventListener('click', async () => {
-          try {
-            await navigator.clipboard.writeText(shareText);
-          } catch {
-            // Fallback for browsers without clipboard API permission.
-            const ta = document.createElement('textarea');
-            ta.value = shareText;
-            ta.style.position = 'fixed';
-            ta.style.opacity = '0';
-            document.body.appendChild(ta);
-            ta.select();
-            try { document.execCommand('copy'); } catch {}
-            document.body.removeChild(ta);
-          }
-          copyBtn.textContent = '✓ Copied — paste anywhere';
-          copyBtn.classList.add('copied');
-          setTimeout(() => {
-            copyBtn.textContent = 'Copy verdict';
-            copyBtn.classList.remove('copied');
-          }, 2400);
-        });
+      const linkBtn = document.getElementById('share-link');
+      const xBtn = document.getElementById('share-x');
+      const liBtn = document.getElementById('share-linkedin');
+
+      function flashCopied(btn, label) {
+        btn.textContent = label;
+        btn.classList.add('copied');
+        setTimeout(() => {
+          btn.textContent = btn === copyBtn ? 'Copy verdict' : 'Copy link';
+          btn.classList.remove('copied');
+        }, 2400);
       }
 
+      async function copyToClipboard(value) {
+        try {
+          await navigator.clipboard.writeText(value);
+        } catch {
+          const ta = document.createElement('textarea');
+          ta.value = value;
+          ta.style.position = 'fixed';
+          ta.style.opacity = '0';
+          document.body.appendChild(ta);
+          ta.select();
+          try { document.execCommand('copy'); } catch {}
+          document.body.removeChild(ta);
+        }
+      }
+
+      if (copyBtn) {
+        copyBtn.addEventListener('click', async () => {
+          await copyToClipboard(shareText + ' ' + permalink);
+          flashCopied(copyBtn, '✓ Copied — paste anywhere');
+          recordShareEvent();
+        });
+      }
+      if (linkBtn) {
+        linkBtn.addEventListener('click', async () => {
+          await copyToClipboard(permalink);
+          flashCopied(linkBtn, '✓ Link copied');
+          recordShareEvent();
+        });
+      }
+      if (xBtn) xBtn.addEventListener('click', recordShareEvent);
+      if (liBtn) liBtn.addEventListener('click', recordShareEvent);
+
       result.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    // Build a /roast permalink with the user's message base64-encoded into ?t=.
+    // Recipients open the link, see the same verdict you got. Cap at 2000 input
+    // chars so the resulting URL stays under typical browser limits.
+    function buildPermalink(text) {
+      const trimmed = (text || '').slice(0, 2000);
+      try {
+        // btoa needs binary-safe input; encodeURIComponent + unescape handles
+        // unicode chars (em dashes, accents, smart quotes from pasted messages).
+        const b64 = btoa(unescape(encodeURIComponent(trimmed)));
+        // URL-safe base64 keeps the param short and parser-friendly.
+        const safe = b64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+        return `https://rifflylabs.com/roast?t=${safe}`;
+      } catch {
+        return 'https://rifflylabs.com/roast';
+      }
+    }
+
+    function decodePermalink(param) {
+      if (!param) return '';
+      try {
+        const b64 = param.replace(/-/g, '+').replace(/_/g, '/');
+        // Re-pad to multiple of 4 for atob.
+        const padded = b64 + '='.repeat((4 - b64.length % 4) % 4);
+        return decodeURIComponent(escape(atob(padded)));
+      } catch {
+        return '';
+      }
+    }
+
+    // Fires the /api/roast-share endpoint at most once per page load. Awards
+    // the signed-in user +3 bonus drafts on their FIRST share ever; subsequent
+    // shares are server-side no-ops. Anonymous users skip the call entirely.
+    let _shareReported = false;
+    async function recordShareEvent() {
+      if (_shareReported) return;
+      const token = localStorage.getItem('riff_token');
+      if (!token) return; // anonymous — no bonus to award, no need to call
+      _shareReported = true;
+      try {
+        const res = await fetch('/api/roast-share', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        });
+        const data = await res.json();
+        if (data && data.ok && data.awarded > 0) {
+          showBonusToast(data.awarded);
+        }
+      } catch {
+        // best-effort; user already got the verdict, share already happened
+      }
+    }
+
+    function showBonusToast(n) {
+      const el = document.getElementById('share-bonus-toast');
+      if (!el) return;
+      el.textContent = `Thanks for sharing. +${n} bonus drafts added to your account.`;
+      el.style.display = 'block';
     }
 
     document.getElementById('roast-btn').addEventListener('click', () => {
       const text = document.getElementById('roast-input').value;
       render(text);
     });
+
+    // ?t=base64 deep link — pre-fill the textarea and auto-roast so the
+    // recipient lands on the same verdict the sharer got.
+    (function bootFromUrl() {
+      const params = new URLSearchParams(window.location.search);
+      const encoded = params.get('t');
+      if (!encoded) return;
+      const text = decodePermalink(encoded);
+      if (!text) return;
+      const input = document.getElementById('roast-input');
+      input.value = text;
+      // Slight delay so the page paints the textarea first, then renders.
+      setTimeout(() => render(text), 60);
+    })();
 
     document.getElementById('example-btn').addEventListener('click', () => {
       const chips = document.querySelectorAll('.example-chip');

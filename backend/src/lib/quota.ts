@@ -130,6 +130,12 @@ function humanResetDate(d: Date): string {
 
 export async function checkQuota(user: UserRow): Promise<QuotaResult> {
   const plan = user.plan;
+  // One-time bonus credits (e.g. from sharing a /roast result). Added to
+  // whichever window applies. Persists until the user's plan-window usage
+  // exceeds plan_limit + bonus_drafts; we don't decrement on every call
+  // here — see /api/generate.ts for the consume-on-success logic that
+  // would refine this in a future migration.
+  const bonus = Math.max(0, user.bonus_drafts || 0);
 
   // Hard daily ceiling for ALL users. Catches runaway scripts and
   // coordinated abuse before they hit the Anthropic bill.
@@ -152,10 +158,11 @@ export async function checkQuota(user: UserRow): Promise<QuotaResult> {
   // Free plan — rolling 7-day window.
   if (!isPaidPlan(plan)) {
     const used = await getUsageThisWeek(user.id);
-    const remaining = Math.max(0, FREE_WEEKLY_LIMIT - used);
+    const effectiveLimit = FREE_WEEKLY_LIMIT + bonus;
+    const remaining = Math.max(0, effectiveLimit - used);
     const base: QuotaInfo = {
       used,
-      limit: FREE_WEEKLY_LIMIT,
+      limit: effectiveLimit,
       remaining,
       plan,
       resetsAt: null,
@@ -165,7 +172,9 @@ export async function checkQuota(user: UserRow): Promise<QuotaResult> {
     if (remaining <= 0) {
       return {
         ok: false,
-        reason: 'Free-tier weekly limit reached (5 drafts/week). Upgrade to Pro for 200 drafts/month.',
+        reason: bonus > 0
+          ? `Weekly limit reached (${effectiveLimit} drafts including ${bonus} bonus). Upgrade to Pro for 200 drafts/month.`
+          : 'Free-tier weekly limit reached (5 drafts/week). Upgrade to Pro for 200 drafts/month.',
         reasonShort: 'Free weekly limit',
         ...base,
       };
@@ -174,7 +183,8 @@ export async function checkQuota(user: UserRow): Promise<QuotaResult> {
   }
 
   // Paid plans — calendar month window.
-  const limit = monthlyLimitForPlan(plan);
+  const planLimit = monthlyLimitForPlan(plan);
+  const limit = planLimit !== null ? planLimit + bonus : null;
   const resetsAt = startOfNextMonthUtc();
   const resetsLabel = humanResetDate(resetsAt);
   if (limit === null) {

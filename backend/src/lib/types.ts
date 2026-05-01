@@ -93,6 +93,13 @@ export interface UserRow {
   stripe_subscription_id: string | null;
   current_period_end: string | null;
   created_at: string;
+  // One-time bonus drafts awarded e.g. for sharing a /roast result.
+  // Added to the user's effective monthly limit until consumed.
+  // See schema-bonus-drafts.sql migration.
+  bonus_drafts?: number;
+  // Set when the user first POSTs to /api/roast-share. NULL until then.
+  // Used to gate the one-time +3 drafts award.
+  roast_shared_at?: string | null;
 }
 
 export interface UsageRow {
